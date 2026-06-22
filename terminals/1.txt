@@ -1,0 +1,8 @@
+---
+pid: 31340
+cwd: "C:\cygwin64\home\matt\ai_harness_app"
+command: "C:\\cygwin64\\bin\\bash.exe -c \"cd /home/matt/ai_harness_app && bash spinner.sh\" "
+started_at: 2026-06-17T22:17:26.476Z
+running_for_ms: 20006    
+---
+⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋⠋

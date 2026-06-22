@@ -1,0 +1,23 @@
+{
+  "name": "@harness/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "harness": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@harness/core-agent": "*",
+    "@harness/core-ai": "*",
+    "@harness/shared": "*",
+    "@harness/tui": "*"
+  }
+}

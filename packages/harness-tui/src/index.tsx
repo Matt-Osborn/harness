@@ -1,0 +1,36 @@
+import { render } from 'ink';
+import type { Agent } from '@harness/core-agent';
+import type { PermissionMode } from '@harness/shared';
+import { App } from './components/App.js';
+import type { Theme } from './theme.js';
+
+export function runTui(agent: Agent, options?: {
+  modelName?: string;
+  searchProvider?: string;
+  theme?: Theme;
+  permConfig?: {
+    mode?: PermissionMode;
+    tools?: Record<string, PermissionMode>;
+  };
+}): void {
+  const { waitUntilExit } = render(
+    <App
+      agent={agent}
+      modelName={options?.modelName}
+      searchProvider={options?.searchProvider}
+      theme={options?.theme}
+      permConfig={options?.permConfig}
+    />,
+  );
+
+  process.stdin.on('close', () => {
+    process.exit(0);
+  });
+
+  waitUntilExit().catch(() => {
+    process.exit(0);
+  });
+}
+
+export type { Theme } from './theme.js';
+export { darkTheme } from './theme.js';

@@ -1,0 +1,53 @@
+{
+  "name": "export_content",
+  "description": "Parse table or mermaid content and export to md, mm, html, txt, csv, svg, or png files. Example: formats=[\"md\",\"html\",\"mm\"], filename=\"sales_q1\".",
+  "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "content": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1000000,
+        "description": "Table or mermaid diagram text (markdown pipe table, HTML, ASCII, CSV/TSV, or mermaid)."
+      },
+      "formats": {
+        "minItems": 1,
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "md",
+            "mm",
+            "html",
+            "txt",
+            "csv",
+            "svg",
+            "png"
+          ]
+        },
+        "description": "Output formats, e.g. [\"md\", \"html\", \"mm\"]."
+      },
+      "filename": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200,
+        "description": "Base filename without extension, e.g. sales_q1."
+      },
+      "output_dir": {
+        "description": "Directory to write files. Defaults to process working directory.",
+        "type": "string"
+      },
+      "overwrite": {
+        "default": false,
+        "description": "Overwrite existing files when true.",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "content",
+      "formats",
+      "filename"
+    ]
+  }
+}
