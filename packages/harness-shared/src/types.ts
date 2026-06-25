@@ -89,12 +89,17 @@ export interface SearchResult {
   score?: number;
 }
 
+export interface CLIConfig {
+  styled?: boolean;
+}
+
 export interface Config {
   models: Record<string, ModelConfig>;
   default_model?: string;
   mcp_servers?: Record<string, MCPServerConfig>;
   permissions?: PermissionConfig;
   search?: SearchConfig;
+  cli?: CLIConfig;
 }
 
 export type SessionLabel = 'INTERACTIVE' | 'PROMPT';

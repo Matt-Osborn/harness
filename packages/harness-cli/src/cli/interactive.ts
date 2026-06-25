@@ -2,8 +2,9 @@ import * as readline from 'node:readline';
 import type { Agent } from '@harness/core-agent';
 import type { Message, SearchProviderType } from '@harness/shared';
 import { TextWrapper, SessionManager } from '@harness/shared';
+import { MarkdownRenderer } from './markdown.js';
 
-export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean): Promise<void> {
+export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean): Promise<void> {
   let currentSearch = searchProvider || 'auto';
   const searchProviders = ['tavily', 'duckduckgo', 'openrouter'];
   let rl: readline.Interface;
@@ -65,12 +66,15 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
 
   function reprintConversation(messages: Message[]): void {
     if (messages.length === 0) return;
+    const md = styled ? new MarkdownRenderer(wrapWidth) : null;
     for (const msg of messages) {
       if (msg.role === 'system') continue;
       if (msg.role === 'user') {
         process.stdout.write(`\x1b[32m❯\x1b[0m ${msg.content}\n\n`);
       } else if (msg.role === 'assistant') {
-        if (msg.content) process.stdout.write(`${msg.content}\n`);
+        if (msg.content) {
+          process.stdout.write(md ? md.render(msg.content) + '\n' : `${msg.content}\n`);
+        }
         if (msg.tool_calls) {
           for (const tc of msg.tool_calls) {
             process.stdout.write(`\x1b[33m⚡ ${tc.function.name}\x1b[0m\n`);
@@ -243,13 +247,20 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       rl.close();
 
       history.push({ role: 'user' as const, content: trimmed });
-      const textWrap = new TextWrapper(wrapWidth);
+      const textWrap = styled ? null : new TextWrapper(wrapWidth);
+      const md = styled ? new MarkdownRenderer(wrapWidth) : null;
+      let streamBuf = '';
       try {
         for await (const event of agent.run(history)) {
           switch (event.type) {
           case 'text': {
-            const out = textWrap.push(event.data as string);
-            if (out) process.stdout.write(out);
+            const chunk = event.data as string;
+            if (styled) {
+              streamBuf += chunk;
+            } else {
+              const out = (textWrap as TextWrapper).push(chunk);
+              if (out) process.stdout.write(out);
+            }
             break;
           }
             case 'tool_call': {
@@ -265,15 +276,30 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
               break;
             case 'done':
               history = event.data as Message[];
+              if (styled) {
+                const lastAssistant = [...history].reverse().find(m => m.role === 'assistant');
+                if (lastAssistant?.content) {
+                  process.stdout.write('\n' + md!.render(lastAssistant.content) + '\n');
+                } else if (streamBuf) {
+                  process.stdout.write('\n' + md!.render(streamBuf) + '\n');
+                }
+                streamBuf = '';
+              }
               saveSession();
               break;
           }
         }
       } catch (err) {
+        if (styled && streamBuf) {
+          process.stdout.write(md!.render(streamBuf) + '\n');
+          streamBuf = '';
+        }
         process.stdout.write(`\n\x1b[31mFatal: ${err instanceof Error ? err.message : String(err)}\x1b[0m`);
       } finally {
-        const remaining = textWrap.flush();
-        if (remaining) process.stdout.write(remaining + '\n');
+        if (!styled) {
+          const remaining = (textWrap as TextWrapper).flush();
+          if (remaining) process.stdout.write(remaining + '\n');
+        }
         startReadline();
       }
 

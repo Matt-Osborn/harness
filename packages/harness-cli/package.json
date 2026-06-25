@@ -18,6 +18,7 @@
     "@harness/core-agent": "*",
     "@harness/core-ai": "*",
     "@harness/shared": "*",
-    "@harness/tui": "*"
+    "@harness/tui": "*",
+    "@oakoliver/glamour": "^1.0.1"
   }
 }

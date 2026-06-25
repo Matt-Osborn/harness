@@ -6,8 +6,9 @@ import {
   WebFetchTool, WebSearchTool,
 } from '@harness/core-agent';
 import { PermissionEngine } from '../permissions/engine.js';
+import { MarkdownRenderer } from './markdown.js';
 
-export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string): Promise<void> {
+export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean): Promise<void> {
   const config = new ConfigManager();
 
   const valid = config.validateModel(modelName);
@@ -50,14 +51,22 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
   const sid = sessionId || sm.generateId();
 
   const messages = [{ role: 'user' as const, content: prompt }];
-  const textWrap = new TextWrapper(wrapWidth);
+  const useStyled = styled !== undefined ? styled : (process.stdout.isTTY ?? false);
+  const textWrap = useStyled ? null : new TextWrapper(wrapWidth);
+  const md = useStyled ? new MarkdownRenderer(wrapWidth) : null;
+  let streamBuf = '';
 
   try {
     for await (const event of agent.run(messages)) {
       switch (event.type) {
         case 'text': {
-          const out = textWrap.push(event.data as string);
-          if (out) process.stdout.write(out);
+          const chunk = event.data as string;
+          if (useStyled) {
+            streamBuf += chunk;
+          } else {
+            const out = (textWrap as TextWrapper).push(chunk);
+            if (out) process.stdout.write(out);
+          }
           break;
         }
         case 'tool_call':
@@ -69,8 +78,18 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
           process.stderr.write(`\n\x1b[31mError: ${String(event.data)}\x1b[0m\n`);
           break;
         case 'done': {
-          const remaining = textWrap.flush();
-          if (remaining) process.stdout.write(remaining);
+          if (useStyled) {
+            const lastAssistant = [...(event.data as Message[])].reverse().find(m => m.role === 'assistant');
+            if (lastAssistant?.content) {
+              process.stdout.write(md!.render(lastAssistant.content) + '\n');
+            } else if (streamBuf) {
+              process.stdout.write(md!.render(streamBuf) + '\n');
+            }
+            streamBuf = '';
+          } else {
+            const remaining = (textWrap as TextWrapper).flush();
+            if (remaining) process.stdout.write(remaining);
+          }
           const fullHistory = event.data as Message[];
           sm.save({
             id: sid,
@@ -81,14 +100,18 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
             createdAt: Date.now(),
             updatedAt: Date.now(),
           });
-          process.stdout.write('\n');
           break;
         }
       }
     }
   } catch (err) {
-    const remaining = textWrap.flush();
-    if (remaining) process.stdout.write(remaining);
+    if (useStyled && streamBuf) {
+      process.stdout.write(md!.render(streamBuf) + '\n');
+      streamBuf = '';
+    } else if (!useStyled) {
+      const remaining = (textWrap as TextWrapper).flush();
+      if (remaining) process.stdout.write(remaining);
+    }
     console.error('\nFatal error:', err instanceof Error ? err.message : String(err));
     process.exit(1);
   }

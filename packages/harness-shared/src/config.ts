@@ -2,7 +2,7 @@ import { readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parse } from 'smol-toml';
-import type { Config, ModelConfig, MCPServerConfig, PermissionConfig, PermissionMode, SearchConfig, SearchProviderType } from './types.js';
+import type { CLIConfig, Config, ModelConfig, MCPServerConfig, PermissionConfig, PermissionMode, SearchConfig, SearchProviderType } from './types.js';
 import { validateModelApiKey, validateSearchProviderApiKey } from './validation.js';
 import type { ValidationResult } from './validation.js';
 
@@ -102,6 +102,13 @@ export class ConfigManager {
         const s = raw.search as Record<string, unknown>;
         merged.search = { provider: (s.provider as SearchProviderType) || merged.search?.provider };
       }
+
+      if (raw.cli && typeof raw.cli === 'object') {
+        const c = raw.cli as Record<string, unknown>;
+        merged.cli = {
+          styled: typeof c.styled === 'boolean' ? c.styled : (merged.cli?.styled ?? false),
+        };
+      }
     }
 
     return merged;
@@ -125,6 +132,10 @@ export class ConfigManager {
 
   get permissions(): PermissionConfig | undefined {
     return this.config.permissions;
+  }
+
+  get styled(): boolean {
+    return this.config.cli?.styled ?? false;
   }
 
   getResolvedModel(modelName?: string): { config: ModelConfig; apiKey: string | undefined } | null {

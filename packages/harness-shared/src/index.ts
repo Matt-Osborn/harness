@@ -35,6 +35,7 @@ export type {
   SearchConfig,
   SearchProviderType,
   SearchResult,
+  CLIConfig,
   Config,
   AgentEvent,
 } from './types.js';

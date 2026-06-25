@@ -25,6 +25,8 @@ function showHelp(): void {
   -w, --width <cols>     Wrap output at column width (default: 80)
   -S, --session <id>     Resume a specific session
   -r, --resume           Resume the most recent session
+  --styled               Enable styled markdown output (buffers response, renders on completion)
+  --no-styled            Disable styled markdown output
   --sessions             List saved sessions
   -h, --help             Show this help message
 
@@ -58,7 +60,7 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
 }
 
 const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session']);
-const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help']);
+const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled']);
 
 function extractCommands(args: string[]): string[] {
   const cmds: string[] = [];
@@ -85,6 +87,12 @@ export async function run(): Promise<void> {
   const resumeSession = parseArg(args, '-S', '--session');
   const resumeLatest = args.includes('-r') || args.includes('--resume');
 
+  const flagStyled = args.includes('--styled') ? true : args.includes('--no-styled') ? false : undefined;
+  const envStyled = process.env.HARNESS_STYLED;
+  const envParsed = envStyled === 'true' || envStyled === '1' ? true : envStyled === 'false' || envStyled === '0' ? false : undefined;
+  const configStyled = new ConfigManager().styled;
+  const styled = flagStyled ?? envParsed ?? configStyled;
+
   if (prompt !== undefined) {
     const config = new ConfigManager();
     const valid = config.validateModel(model);
@@ -92,7 +100,7 @@ export async function run(): Promise<void> {
       console.error(`\x1b[31m${valid.message}\x1b[0m`);
       process.exit(1);
     }
-    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession);
+    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled);
     return;
   }
 
@@ -155,7 +163,7 @@ Always complete your full response — never stop after introducing a topic. Del
       console.log('The session will continue without web search capability.\n');
     }
 
-    await runInteractive(agent, model, searchOverride, wrapWidth, resumeSession, resumeLatest);
+    await runInteractive(agent, model, searchOverride, wrapWidth, resumeSession, resumeLatest, styled);
     return;
   }
 
