@@ -8,7 +8,7 @@ import {
 import { PermissionEngine } from '../permissions/engine.js';
 import { MarkdownRenderer } from './markdown.js';
 
-export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean): Promise<void> {
+export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number): Promise<void> {
   const config = new ConfigManager();
 
   const valid = config.validateModel(modelName);
@@ -40,6 +40,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
     new WebSearchTool(search),
   ];
 
+  if (temperatureOverride !== undefined) resolved.config.temperature = temperatureOverride;
   const provider = createProvider(resolved.config.model, resolved.config, resolved.apiKey);
   const agent = new Agent({
     provider,

@@ -31,6 +31,10 @@ export class Agent {
     this.permissionCheck = fn;
   }
 
+  setTemperature(t: number): void {
+    this.provider.setTemperature(t);
+  }
+
   async *run(messages: Message[], _signal?: AbortSignal): AsyncIterable<AgentEvent> {
     const userMessages = messages.filter(m => m.role !== 'system');
     const fullMessages: Message[] = [
@@ -77,10 +81,22 @@ export class Agent {
           case 'error':
             yield { type: 'error', data: event.data, timestamp: Date.now() };
             return;
-          case 'done':
-            // Done signal, check finish reason
+          case 'done': {
+            // Capture finish_reason from the done event data
+            const doneData = event.data as { finish_reason?: string } | null;
+            if (doneData?.finish_reason === 'length') {
+              finalFinishReason = 'length';
+            }
             break;
+          }
         }
+      }
+
+      if (finalFinishReason === 'length' && toolCallAccumulators.size === 0) {
+        if (accumulatedText) {
+          fullMessages.push({ role: 'assistant', content: accumulatedText });
+        }
+        continue;
       }
 
       if (toolCallAccumulators.size > 0 || finalFinishReason === 'tool_calls') {

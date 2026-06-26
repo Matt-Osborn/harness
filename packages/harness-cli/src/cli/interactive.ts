@@ -8,6 +8,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
   let currentSearch = searchProvider || 'auto';
   const searchProviders = ['tavily', 'duckduckgo', 'openrouter'];
   let rl: readline.Interface;
+  let currentTemp = 0.1;
   let treatNextCloseAsExit = true;
 
   const sm = new SessionManager();
@@ -154,6 +155,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write(`\x1b[1mLabel:\x1b[0m    INTERACTIVE\n`);
         process.stdout.write(`\x1b[1mModel:\x1b[0m    ${modelName || '(default)'}\n`);
         process.stdout.write(`\x1b[1mSearch:\x1b[0m   ${currentSearch}\n`);
+        process.stdout.write(`\x1b[1mTemp:\x1b[0m     ${currentTemp.toFixed(2)}\n`);
         process.stdout.write(`\x1b[1mMessages:\x1b[0m ${history.filter(m => m.role === 'user' || m.role === 'assistant').length}\n`);
         process.stdout.write(`\x1b[1mCreated:\x1b[0m  ${new Date(sessionCreatedAt).toLocaleString()}\n`);
         process.stdout.write(`\x1b[1mSaved:\x1b[0m    ${new Date(Date.now()).toLocaleString()}\n\n`);
@@ -231,6 +233,8 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write('  \x1b[33m/search <provider>\x1b[0m   Switch search provider\n');
         process.stdout.write('  \x1b[33m/key\x1b[0m                 Show usage for setting API keys\n');
         process.stdout.write('  \x1b[33m/key <ENV_VAR>\x1b[0m       Set an API key for this session\n');
+        process.stdout.write('  \x1b[33m/temperature\x1b[0m         Show current temperature\n');
+        process.stdout.write('  \x1b[33m/temperature <0-2>\x1b[0m   Set temperature for this session\n');
         process.stdout.write('  \x1b[33m/session\x1b[0m             Show current session info\n');
         process.stdout.write('  \x1b[33m/sessions\x1b[0m            List saved sessions\n');
         process.stdout.write('  \x1b[33m/resume [id]\x1b[0m        Resume most recent or specific session by id\n');
@@ -239,6 +243,26 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write('  \x1b[33m/help\x1b[0m                Show this help\n');
         process.stdout.write('  \x1b[33mCtrl+C\x1b[0m               Quit (without saving)\n');
         process.stdout.write('\n');
+        rl.prompt();
+        return;
+      }
+
+      if (trimmed.startsWith('/temperature')) {
+        const val = trimmed.slice(13).trim();
+        if (!val) {
+          process.stdout.write(`Temperature: \x1b[36m${currentTemp.toFixed(2)}\x1b[0m\n\n`);
+          rl.prompt();
+          return;
+        }
+        const t = parseFloat(val);
+        if (isNaN(t) || t < 0 || t > 2) {
+          process.stdout.write('\x1b[31mTemperature must be a number between 0 and 2.\x1b[0m\n\n');
+          rl.prompt();
+          return;
+        }
+        agent.setTemperature(t);
+        currentTemp = t;
+        process.stdout.write(`Temperature set to \x1b[36m${t.toFixed(2)}\x1b[0m\n\n`);
         rl.prompt();
         return;
       }

@@ -47,14 +47,18 @@ export class OpenAICompatibleProvider implements Provider {
   private baseUrl: string;
   private apiKey: string | undefined;
   private maxTokens: number | undefined;
-  private temperature: number | undefined;
+  private temperature: number;
 
   constructor(modelId: string, config: ModelConfig, apiKey?: string) {
     this.modelId = modelId;
     this.baseUrl = (config.base_url || 'https://api.openai.com/v1').replace(/\/+$/, '');
     this.apiKey = apiKey;
     this.maxTokens = config.max_tokens;
-    this.temperature = config.temperature;
+    this.temperature = config.temperature ?? 0.1;
+  }
+
+  setTemperature(t: number): void {
+    this.temperature = t;
   }
 
   private get headers(): Record<string, string> {
@@ -84,8 +88,8 @@ export class OpenAICompatibleProvider implements Provider {
       })),
     };
     if (tools && tools.length > 0) body.tools = tools;
-    body.max_tokens = this.maxTokens ?? 32768;
-    if (this.temperature !== undefined) body.temperature = this.temperature;
+    body.max_tokens = this.maxTokens ?? 4096;
+    body.temperature = this.temperature;
 
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -148,8 +152,8 @@ export class OpenAICompatibleProvider implements Provider {
       stream: true,
     };
     if (tools && tools.length > 0) body.tools = tools;
-    body.max_tokens = this.maxTokens ?? 32768;
-    if (this.temperature !== undefined) body.temperature = this.temperature;
+    body.max_tokens = this.maxTokens ?? 4096;
+    body.temperature = this.temperature;
 
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -180,12 +184,13 @@ export class OpenAICompatibleProvider implements Provider {
 
     const decoder = new TextDecoder();
     let buffer = '';
+    let lastFinishReason: string | null = null;
 
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
-          yield { type: 'done', data: null };
+          yield { type: 'done', data: { finish_reason: lastFinishReason ?? 'stop' } };
           break;
         }
 
@@ -199,7 +204,7 @@ export class OpenAICompatibleProvider implements Provider {
 
           const payload = trimmed.slice(6);
           if (payload === '[DONE]') {
-            yield { type: 'done', data: null };
+            yield { type: 'done', data: { finish_reason: lastFinishReason ?? 'stop' } };
             return;
           }
 
@@ -207,6 +212,7 @@ export class OpenAICompatibleProvider implements Provider {
             const chunk = JSON.parse(payload) as OpenAIChunk;
             const choice = chunk.choices?.[0];
             if (!choice) continue;
+            if (choice.finish_reason) lastFinishReason = choice.finish_reason;
 
             const delta = choice.delta;
             if (!delta) continue;

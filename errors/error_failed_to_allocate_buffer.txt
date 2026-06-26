@@ -1,0 +1,5 @@
+Fatal: OpenAI API error 500: {"error":{"message":"llama-server startup failed after projector CPU offload retry: llama-server process has terminated: exit status 0xc0000409:
+ The system detected an overrun of a stack-based buffer in this application. This overrun could potentially allow a malicious user to gain control of this application.: ggml
+_backend_cpu_buffer_type_alloc_buffer: failed to allocate buffer of size 1062606784\nalloc_tensor_range: failed to allocate CPU buffer of size 1062606784","type":"api_error"
+,"param":null,"code":null}}
+
