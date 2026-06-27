@@ -52,6 +52,28 @@ Any OpenAI-compatible API works — set `base_url` to:
 - `https://api.openai.com/v1` — OpenAI
 - `https://api.x.ai/v1` — xAI
 
+## Ollama VRAM Management
+
+Ollama keeps models loaded in GPU VRAM between requests (controlled by `keep_alive`, default 5m). Set `OLLAMA_KEEP_ALIVE=0` to unload immediately after each request — this minimizes VRAM usage at the cost of slightly slower subsequent requests.
+
+```bash
+export OLLAMA_KEEP_ALIVE=0
+```
+
+Check VRAM usage with `nvidia-smi` (cross-platform, included with NVIDIA drivers):
+
+```
+nvidia-smi
+# Look for Memory-Usage column — if high with no active requests, a stale process is likely
+```
+
+**Windows:** Ollama runs as a background system service (`llama-server.exe`). Stale processes can hold VRAM after crashes or unclean shutdowns. To free VRAM:
+- Task Manager → Details tab → find `llama-server.exe` → End task
+- Or admin PowerShell: `Stop-Process -Id <pid> -Force`
+- Or disable the service and run `ollama serve` manually in a terminal for clean Ctrl+C shutdown
+
+**Linux:** Run `ollama serve` in a dedicated terminal. Ctrl+C cleanly frees VRAM. No background service issues if run this way.
+
 ## Packages
 
 | Package | Description |

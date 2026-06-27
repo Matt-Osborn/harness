@@ -131,14 +131,14 @@ export async function run(): Promise<void> {
 
   if (commands.length === 0) {
     const config = new ConfigManager();
-    const valid = config.validateModel();
+    const valid = config.validateModel(model);
     if (!valid.valid) {
       console.log(`\x1b[31m${valid.message}\x1b[0m`);
       console.log('Run \x1b[33mharness init\x1b[0m to create a default config.');
       return;
     }
 
-    const resolved = config.getResolvedModel();
+    const resolved = config.getResolvedModel(model);
     const search = searchOverride || config.searchProvider;
     const isInter = process.stdin.isTTY ?? false;
     const permissions = new PermissionEngine(config, isInter);
