@@ -1,15 +1,16 @@
-import { ConfigManager, ensureConfigDir, SessionManager } from '@harness/shared';
+import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadProjectRules } from '@harness/shared';
 import type { SearchProviderType } from '@harness/shared';
 import { createProvider } from '@harness/core-ai';
 import {
   Agent,
   ReadTool, WriteTool, EditTool, BashTool,
-  WebFetchTool, WebSearchTool,
+  WebFetchTool, WebSearchTool, SkillTool,
 } from '@harness/core-agent';
 import { PermissionEngine } from '../permissions/engine.js';
 import { runPrintMode } from './print.js';
 import { runInteractive } from './interactive.js';
 import { runTui } from '@harness/tui';
+import { runSkillCommand, AGENTS_MD_TEMPLATE, hintLine } from './skill-command.js';
 
 function showHelp(): void {
   console.log(`
@@ -36,6 +37,7 @@ function showHelp(): void {
   sessions               List saved sessions
   config                 Show effective configuration
   init                   Create default config at ~/.harness/config.toml
+  skill <sub> [name]    Manage skills (list|enable|disable)
   tui                    Launch the TUI (terminal UI) mode
 
 \x1b[1mEXAMPLES:\x1b[0m
@@ -142,16 +144,15 @@ export async function run(): Promise<void> {
     const search = searchOverride || config.searchProvider;
     const isInter = process.stdin.isTTY ?? false;
     const permissions = new PermissionEngine(config, isInter);
+    const skillRegistry = new SkillRegistry();
     const tools = [
       new ReadTool(), new WriteTool(), new EditTool(), new BashTool(),
       new WebFetchTool(), new WebSearchTool(search),
+      new SkillTool(skillRegistry),
     ];
     const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
-    const agent = new Agent({
-      provider,
-      tools,
-      permissionCheck: (tn: string) => permissions.check(tn),
-      systemPrompt: `You are a helpful coding assistant running in an AI Harness.
+    const projectRules = loadProjectRules();
+    const basePrompt = `You are a helpful coding assistant running in an AI Harness.
 You have access to tools for reading, writing, editing files, executing shell commands,
 searching the web (web_search), and fetching web pages (web_fetch).
 Use web_search to find documentation, packages, tutorials, and any online information.
@@ -161,7 +162,15 @@ use the default markdown format. If a page returns garbled or heavily styled con
 supports query parameters like ?format, ?raw, or ?plain, consider appending them.
 When the user asks for information from the web, use your web tools to find it.
 Help the user accomplish their coding tasks efficiently.
-Always complete your full response — never stop after introducing a topic. Deliver the complete content you promised.`,
+Always complete your full response — never stop after introducing a topic. Deliver the complete content you promised.`;
+    const systemPrompt = projectRules
+      ? `${basePrompt}\n\n## Project Instructions\n\n${projectRules}`
+      : basePrompt;
+    const agent = new Agent({
+      provider,
+      tools,
+      permissionCheck: (tn: string) => permissions.check(tn),
+      systemPrompt,
     });
 
     const searchValid = config.validateSearchProvider(search);
@@ -224,16 +233,16 @@ Always complete your full response — never stop after introducing a topic. Del
 
       const resolved = config.getResolvedModel();
       const search = searchOverride || config.searchProvider;
+      const skillRegistry = new SkillRegistry();
       const tools = [
         new ReadTool(), new WriteTool(), new EditTool(), new BashTool(),
         new WebFetchTool(), new WebSearchTool(search),
+        new SkillTool(skillRegistry),
       ];
     if (temperatureOverride !== undefined) resolved!.config.temperature = temperatureOverride;
     const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
-      const agent = new Agent({
-        provider,
-        tools,
-        systemPrompt: `You are a helpful coding assistant running in an AI Harness.
+    const projectRules = loadProjectRules();
+    const basePrompt = `You are a helpful coding assistant running in an AI Harness.
 You have access to tools for reading, writing, editing files, executing shell commands,
 searching the web (web_search), and fetching web pages (web_fetch).
 Use web_search to find documentation, packages, tutorials, and any online information.
@@ -243,7 +252,14 @@ use the default markdown format. If a page returns garbled or heavily styled con
 supports query parameters like ?format, ?raw, or ?plain, consider appending them.
 When the user asks for information from the web, use your web tools to find it.
 Help the user accomplish their coding tasks efficiently.
-Always complete your full response — never stop after introducing a topic. Deliver the complete content you promised.`,
+Always complete your full response — never stop after introducing a topic. Deliver the complete content you promised.`;
+    const systemPrompt = projectRules
+      ? `${basePrompt}\n\n## Project Instructions\n\n${projectRules}`
+      : basePrompt;
+      const agent = new Agent({
+        provider,
+        tools,
+        systemPrompt,
       });
 
       const searchValid = config.validateSearchProvider(search);
@@ -262,10 +278,17 @@ Always complete your full response — never stop after introducing a topic. Del
       break;
     }
 
+    case 'skill': {
+      const registry = new SkillRegistry();
+      runSkillCommand(commands.slice(1), registry);
+      break;
+    }
+
     case 'init': {
       const dir = ensureConfigDir();
       const configPath = `${dir}/config.toml`;
-      const { writeFileSync, existsSync } = await import('node:fs');
+      const { writeFileSync, existsSync, readFileSync } = await import('node:fs');
+      const { join } = await import('node:path');
       if (existsSync(configPath)) {
         console.log(`Config already exists at ${configPath}`);
         return;
@@ -311,7 +334,29 @@ edit = "auto"
 `;
       writeFileSync(configPath, defaultConfig, 'utf-8');
       console.log(`Created config at ${configPath}`);
-      console.log('Edit it to add your API keys, then run \x1b[33mharness\x1b[0m to start.');
+      console.log('Edit it to add your API keys, then run \x1b[33mharness\x1b[0m to start.\n');
+
+      const agentsMdPath = join(process.cwd(), 'AGENTS.md');
+      if (!existsSync(agentsMdPath) && process.stdin.isTTY) {
+        const { createInterface } = await import('node:readline/promises');
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        try {
+          const answer = await rl.question('Create AGENTS.md for this project? [Y/n] ');
+          if (answer.toLowerCase() !== 'n') {
+            writeFileSync(agentsMdPath, AGENTS_MD_TEMPLATE, 'utf-8');
+            console.log(`Created AGENTS.md at ${agentsMdPath}`);
+
+            const backupAns = await rl.question('Enable file backup behavior? [y/N] ');
+            if (backupAns.toLowerCase() === 'y') {
+              const agentsMdContent = readFileSync(agentsMdPath, 'utf-8');
+              writeFileSync(agentsMdPath, agentsMdContent.trimEnd() + '\n' + hintLine('file-backup') + '\n', 'utf-8');
+              console.log('Enabled file-backup skill in AGENTS.md.');
+            }
+          }
+        } finally {
+          rl.close();
+        }
+      }
       break;
     }
     default:

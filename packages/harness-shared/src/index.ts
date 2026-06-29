@@ -17,6 +17,10 @@ export { TextWrapper } from './wrap-text.js';
 export { SessionManager } from './session.js';
 export type { SessionData, SessionLabel } from './types.js';
 
+export { SkillRegistry } from './skills.js';
+export type { SkillInfo } from './skills.js';
+export { loadProjectRules, findProjectRulesPath } from './project-rules.js';
+
 export type {
   Message,
   MessageRole,
