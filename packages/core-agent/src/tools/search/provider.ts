@@ -2,5 +2,5 @@ import type { SearchResult, SearchProviderType } from '@harness/shared';
 
 export interface SearchProvider {
   readonly name: SearchProviderType;
-  search(query: string, numResults?: number): Promise<SearchResult[]>;
+  search(query: string, numResults?: number, signal?: AbortSignal): Promise<SearchResult[]>;
 }

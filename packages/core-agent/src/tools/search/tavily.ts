@@ -11,10 +11,11 @@ export class TavilySearchProvider implements SearchProvider {
     this.apiKey = apiKey;
   }
 
-  async search(query: string, numResults = 8): Promise<SearchResult[]> {
+  async search(query: string, numResults = 8, signal?: AbortSignal): Promise<SearchResult[]> {
     const response = await fetch(TAVILY_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal,
       body: JSON.stringify({
         api_key: this.apiKey,
         query,

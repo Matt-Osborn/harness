@@ -25,6 +25,10 @@ export class WebFetchTool implements AgentTool {
         type: 'number',
         description: 'Timeout in seconds (max 120, default 30)',
       },
+      retries: {
+        type: 'number',
+        description: 'Number of retry attempts on transient errors (max 3, default 1)',
+      },
     },
     required: ['url'],
   };
@@ -33,59 +37,82 @@ export class WebFetchTool implements AgentTool {
     const url = String(args.url);
     const format = String(args.format || 'markdown') as 'markdown' | 'text';
     const timeout = Math.min(Number(args.timeout || 30), 120) * 1000;
+    const retries = Math.min(Number(args.retries || 1), 3);
 
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       return 'Error: URL must start with http:// or https://';
     }
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeout);
 
-    try {
-      const response = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; AIHarness/1.0; +https://github.com/your-org/ai-harness)',
-          Accept: 'text/html,text/plain,application/json,*/*',
-        },
-        redirect: 'follow',
-      });
+      try {
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; AIHarness/1.0; +https://github.com/your-org/ai-harness)',
+            Accept: 'text/html,text/plain,application/json,*/*',
+          },
+          redirect: 'follow',
+        });
 
-      if (!response.ok) {
-        return `Error: HTTP ${response.status} ${response.statusText}`;
+        if (!response.ok) {
+          if (response.status >= 500 || response.status === 429) {
+            if (attempt < retries) {
+              await new Promise(r => setTimeout(r, 1000 * attempt));
+              continue;
+            }
+            return `Error: HTTP ${response.status} ${response.statusText} (after ${retries} attempts)`;
+          }
+          return `Error: HTTP ${response.status} ${response.statusText}`;
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        const rawText = await response.text();
+
+        let result: string;
+        if (format === 'text') {
+          result = this.extractPlainText(rawText);
+        } else if (contentType.includes('text/html')) {
+          result = this.extractWithReadability(rawText, url) || NodeHtmlMarkdown.translate(rawText);
+        } else {
+          result = rawText;
+        }
+
+        result = result.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+        const lines = result.split('\n');
+
+        if (lines.length > MAX_LINES) {
+          result = lines.slice(0, MAX_LINES).join('\n') + `\n\n... [truncated: ${lines.length - MAX_LINES} lines omitted]`;
+        }
+        if (result.length > MAX_RESPONSE_LENGTH) {
+          result = result.slice(0, MAX_RESPONSE_LENGTH) + `\n\n... [truncated: ${result.length - MAX_RESPONSE_LENGTH} chars omitted]`;
+        }
+
+        return result || '(empty response)';
+      } catch (err) {
+        if (attempt < retries && this.isTransientError(err)) {
+          await new Promise(r => setTimeout(r, 1000 * attempt));
+          continue;
+        }
+        if (err instanceof Error && err.name === 'AbortError') {
+          return `Error: Request timed out${retries > 1 ? ` (after ${retries} attempts)` : ''}`;
+        }
+        return `Error fetching URL: ${err instanceof Error ? err.message : String(err)}`;
+      } finally {
+        clearTimeout(timer);
       }
-
-      const contentType = response.headers.get('content-type') || '';
-      const rawText = await response.text();
-
-      let result: string;
-      if (format === 'text') {
-        result = this.extractPlainText(rawText);
-      } else if (contentType.includes('text/html')) {
-        result = this.extractWithReadability(rawText, url) || NodeHtmlMarkdown.translate(rawText);
-      } else {
-        result = rawText;
-      }
-
-      result = result.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
-      const lines = result.split('\n');
-
-      if (lines.length > MAX_LINES) {
-        result = lines.slice(0, MAX_LINES).join('\n') + `\n\n... [truncated: ${lines.length - MAX_LINES} lines omitted]`;
-      }
-      if (result.length > MAX_RESPONSE_LENGTH) {
-        result = result.slice(0, MAX_RESPONSE_LENGTH) + `\n\n... [truncated: ${result.length - MAX_RESPONSE_LENGTH} chars omitted]`;
-      }
-
-      return result || '(empty response)';
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        return 'Error: Request timed out';
-      }
-      return `Error fetching URL: ${err instanceof Error ? err.message : String(err)}`;
-    } finally {
-      clearTimeout(timer);
     }
+
+    return 'Error: Request failed after all retries';
+  }
+
+  private isTransientError(err: unknown): boolean {
+    if (!(err instanceof Error)) return false;
+    if (err.name === 'AbortError') return true;
+    const msg = err.message.toLowerCase();
+    return msg.includes('fetch failed') || msg.includes('network') || msg.includes('econnrefused') || msg.includes('enotfound') || msg.includes('econnreset') || msg.includes('etimedout');
   }
 
   private extractWithReadability(html: string, url: string): string | null {

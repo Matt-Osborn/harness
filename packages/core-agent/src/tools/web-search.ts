@@ -25,6 +25,10 @@ export class WebSearchTool implements AgentTool {
         enum: ['tavily', 'duckduckgo', 'openrouter'],
         description: 'Search provider override. Default: from config or auto-detected.',
       },
+      timeout: {
+        type: 'number',
+        description: 'Timeout in seconds (max 30, default 10)',
+      },
     },
     required: ['query'],
   };
@@ -39,10 +43,18 @@ export class WebSearchTool implements AgentTool {
     const query = String(args.query);
     const numResults = Math.min(Number(args.numResults || 8), MAX_RESULTS);
     const provider = (args.provider as SearchProviderType) || this.defaultProvider;
+    const timeout = Math.min(Number(args.timeout || 10), 30) * 1000;
 
     try {
       const searchProvider = createSearchProvider(provider);
-      const results: SearchResult[] = await searchProvider.search(query, numResults);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeout);
+      let results: SearchResult[];
+      try {
+        results = await searchProvider.search(query, numResults, controller.signal);
+      } finally {
+        clearTimeout(timer);
+      }
 
       if (results.length === 0) {
         return `No results found for "${query}".`;

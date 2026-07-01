@@ -274,6 +274,9 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       const textWrap = styled ? null : new TextWrapper(wrapWidth);
       const md = styled ? new MarkdownRenderer(wrapWidth) : null;
       let streamBuf = '';
+      let lastCallLine = '';
+      let lastErrorMsg = '';
+      let suppressPair = false;
       try {
         for await (const event of agent.run(history)) {
           switch (event.type) {
@@ -289,12 +292,44 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
           }
             case 'tool_call': {
               const d = event.data as { name: string; args: string };
-              process.stdout.write(`\n\x1b[33m⚡ ${d.name}\x1b[0m`);
+              let target = '';
+              try {
+                const parsed = JSON.parse(d.args);
+                target = parsed.url || parsed.query || parsed.path || '';
+              } catch {}
+              const callLine = `${d.name}${target ? ' ' + target : ''}`;
+              if (callLine === lastCallLine && lastErrorMsg) {
+                suppressPair = true;
+              } else {
+                suppressPair = false;
+                lastCallLine = callLine;
+                process.stdout.write(`\n\x1b[33m⚡ ${callLine}\x1b[0m`);
+              }
               break;
             }
-            case 'tool_result':
-              process.stdout.write(` \x1b[32m✓\x1b[0m`);
+            case 'tool_result': {
+              if (suppressPair) {
+                suppressPair = false;
+                break;
+              }
+              const r = event.data as { name: string; result: string; denied?: boolean };
+              if (r.denied) {
+                process.stdout.write(` \x1b[33m⛔ denied\x1b[0m`);
+                lastErrorMsg = '';
+              } else if (r.result.startsWith('Error') || r.result.startsWith('Search failed:')) {
+                const msg = r.result.split('\n')[0].replace(/^Error( fetching URL)?:\s*/, '').trim();
+                if (msg === lastErrorMsg) {
+                  process.stdout.write(` \x1b[31mx\x1b[0m`);
+                } else {
+                  process.stdout.write(` \x1b[31m✗ ${msg}\x1b[0m`);
+                  lastErrorMsg = msg;
+                }
+              } else {
+                process.stdout.write(` \x1b[32m✓\x1b[0m`);
+                lastErrorMsg = '';
+              }
               break;
+            }
             case 'error':
               process.stdout.write(`\n\x1b[31mError: ${String(event.data)}\x1b[0m`);
               break;

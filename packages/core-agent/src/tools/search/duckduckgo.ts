@@ -6,11 +6,12 @@ const DDG_URL = 'https://html.duckduckgo.com/html/';
 export class DuckDuckGoSearchProvider implements SearchProvider {
   readonly name = 'duckduckgo' as const;
 
-  async search(query: string, numResults = 8): Promise<SearchResult[]> {
+  async search(query: string, numResults = 8, signal?: AbortSignal): Promise<SearchResult[]> {
     const response = await fetch(DDG_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ q: query }),
+      signal,
     });
 
     if (!response.ok) {

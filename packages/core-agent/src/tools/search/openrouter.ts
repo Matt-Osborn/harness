@@ -11,7 +11,7 @@ export class OpenRouterSearchProvider implements SearchProvider {
     this.apiKey = apiKey;
   }
 
-  async search(query: string, numResults = 8): Promise<SearchResult[]> {
+  async search(query: string, numResults = 8, signal?: AbortSignal): Promise<SearchResult[]> {
     const prompt = `You are a web search engine. For the query "${query}", return ${numResults} realistic, factual search results in this exact JSON format (no markdown, no backticks):
 [
   {"title": "...", "url": "https://...", "content": "brief snippet describing the result"}
@@ -26,6 +26,7 @@ Return only valid JSON, nothing else. Each result must have a plausible real URL
         Authorization: `Bearer ${this.apiKey}`,
         'HTTP-Referer': 'https://github.com/your-org/ai-harness',
       },
+      signal,
       body: JSON.stringify({
         model: 'deepseek/deepseek-v4-flash:free',
         messages: [{ role: 'user', content: prompt }],
