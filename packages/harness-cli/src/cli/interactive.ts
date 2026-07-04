@@ -277,6 +277,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       let lastCallLine = '';
       let lastErrorMsg = '';
       let suppressPair = false;
+      let justHadResult = false;
       try {
         for await (const event of agent.run(history)) {
           switch (event.type) {
@@ -285,6 +286,10 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
             if (styled) {
               streamBuf += chunk;
             } else {
+              if (justHadResult) {
+                process.stdout.write('\n');
+                justHadResult = false;
+              }
               const out = (textWrap as TextWrapper).push(chunk);
               if (out) process.stdout.write(out);
             }
@@ -328,6 +333,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
                 process.stdout.write(` \x1b[32m✓\x1b[0m`);
                 lastErrorMsg = '';
               }
+              justHadResult = true;
               break;
             }
             case 'error':

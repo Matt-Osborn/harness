@@ -162,7 +162,11 @@ use the default markdown format. If a page returns garbled or heavily styled con
 supports query parameters like ?format, ?raw, or ?plain, consider appending them.
 When the user asks for information from the web, use your web tools to find it.
 Help the user accomplish their coding tasks efficiently.
-Always complete your full response — never stop after introducing a topic. Deliver the complete content you promised.`;
+Always complete your full response — never stop after introducing a topic. Deliver the complete content you promised.
+Before calling tools, briefly explain your plan. If a tool fails (error, 404, timeout),
+do NOT retry with slightly different queries — explain what went wrong and either
+answer from what you already know or tell the user you couldn't find the information.
+Never silently retry the same kind of search over and over.`;
     const systemPrompt = projectRules
       ? `${basePrompt}\n\n## Project Instructions\n\n${projectRules}`
       : basePrompt;
@@ -252,7 +256,11 @@ use the default markdown format. If a page returns garbled or heavily styled con
 supports query parameters like ?format, ?raw, or ?plain, consider appending them.
 When the user asks for information from the web, use your web tools to find it.
 Help the user accomplish their coding tasks efficiently.
-Always complete your full response — never stop after introducing a topic. Deliver the complete content you promised.`;
+Always complete your full response — never stop after introducing a topic. Deliver the complete content you promised.
+Before calling tools, briefly explain your plan. If a tool fails (error, 404, timeout),
+do NOT retry with slightly different queries — explain what went wrong and either
+answer from what you already know or tell the user you couldn't find the information.
+Never silently retry the same kind of search over and over.`;
     const systemPrompt = projectRules
       ? `${basePrompt}\n\n## Project Instructions\n\n${projectRules}`
       : basePrompt;
