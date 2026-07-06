@@ -46,3 +46,6 @@ harness_sess_output_-_*
 endless_search_errors/
 search_fixes_plan.md
 new_session_-_fork_1_id.txt
+readme_changelog_and_next_todo.md
+branding/
+running_harness_in_dev_mode.md

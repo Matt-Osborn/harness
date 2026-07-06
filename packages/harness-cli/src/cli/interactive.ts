@@ -145,7 +145,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
 
       if (trimmed === '/key') {
         process.stdout.write('\x1b[33mUsage: /key ENV_VAR_NAME\x1b[0m — sets an environment variable for the current session.\n');
-        process.stdout.write('Common: OPENROUTER_API_KEY, TAVILY_API_KEY, OPENAI_API_KEY, DEEPSEEK_API_KEY\n\n');
+        process.stdout.write('Common: OPENROUTER_API_KEY, TAVILY_API_KEY, OPENAI_API_KEY, DEEPSEEK_API_KEY, OPENROUTER_SEARCH_MODEL\n\n');
         rl.prompt();
         return;
       }

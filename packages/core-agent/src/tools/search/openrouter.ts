@@ -28,7 +28,7 @@ Return only valid JSON, nothing else. Each result must have a plausible real URL
       },
       signal,
       body: JSON.stringify({
-        model: 'deepseek/deepseek-v4-flash',
+        model: process.env.OPENROUTER_SEARCH_MODEL || 'deepseek/deepseek-v4-flash',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.3,
         max_tokens: 2000,

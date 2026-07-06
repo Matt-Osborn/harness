@@ -5,8 +5,27 @@ A minimal, extensible AI agentic coding harness — CLI/TUI for interacting with
 
 ## Quick Start
 
+### Install
+
 ```bash
-# Create default config
+# Install dependencies (may need to approve esbuild's native binary download)
+npm install
+npm approve-scripts
+```
+
+> **Why `npm approve-scripts`?** The `esbuild` dependency uses a postinstall script to download the correct native binary for your platform. Newer npm versions block install scripts by default as a security measure. `npm approve-scripts` explicitly approves them — safe, esbuild is a widely used build tool.
+
+```bash
+# Make the `harness` command available globally
+npm link
+```
+
+> **Why `npm link`?** The `@harness/cli` package registers a global `bin` entry (`harness`). `npm link` symlinks it so you can run `harness` from any directory. Alternatives: `npx harness` or `node packages/harness-cli/dist/index.js`.
+
+### Usage
+
+```bash
+# Create default config and optionally enable file-backup skill
 harness init
 
 # Edit config to point to your model
@@ -51,6 +70,20 @@ Any OpenAI-compatible API works — set `base_url` to:
 - `http://localhost:8080/v1` — llama.cpp server
 - `https://api.openai.com/v1` — OpenAI
 - `https://api.x.ai/v1` — xAI
+
+### Environment Variables
+
+| Variable | Purpose |
+|----------|---------|
+| `OPENROUTER_API_KEY` | API key for OpenRouter provider |
+| `TAVILY_API_KEY` | API key for Tavily search provider |
+| `OPENAI_API_KEY` | API key for OpenAI-compatible providers |
+| `DEEPSEEK_API_KEY` | API key for DeepSeek provider |
+| `OPENROUTER_SEARCH_MODEL` | Model slug for OpenRouter search (default: `deepseek/deepseek-v4-flash`) |
+| `OLLAMA_KEEP_ALIVE` | Set to `0` to unload Ollama models from VRAM immediately |
+| `HARNESS_STYLED` | Set to `true`/`false` to force styled output on/off |
+
+Set any of these with `/key VAR_NAME` in an interactive session, or `export VAR_NAME=value` in your shell.
 
 ## Ollama VRAM Management
 
