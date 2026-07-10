@@ -16,6 +16,9 @@ npm approve-scripts
 > **Why `npm approve-scripts`?** The `esbuild` dependency uses a postinstall script to download the correct native binary for your platform. Newer npm versions block install scripts by default as a security measure. `npm approve-scripts` explicitly approves them — safe, esbuild is a widely used build tool.
 
 ```bash
+# Compile TypeScript
+npm run build
+
 # Make the `harness` command available globally
 npm link
 ```
