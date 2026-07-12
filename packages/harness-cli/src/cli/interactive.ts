@@ -1,7 +1,7 @@
 import * as readline from 'node:readline';
 import type { Agent } from '@harness/core-agent';
 import type { Message, SearchProviderType } from '@harness/shared';
-import { TextWrapper, SessionManager } from '@harness/shared';
+import { TextWrapper, SessionManager, isWSL } from '@harness/shared';
 import { MarkdownRenderer } from './markdown.js';
 
 export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean): Promise<void> {
@@ -337,7 +337,9 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
               break;
             }
             case 'error':
-              process.stdout.write(`\n\x1b[31mError: ${String(event.data)}\x1b[0m`);
+              console.error(`\n\x1b[31m─── Error ───\x1b[0m`);
+              console.error(`\x1b[31m  ${String(event.data)}\x1b[0m`);
+              console.error(`\x1b[31m─────────────\x1b[0m`);
               break;
             case 'done':
               history = event.data as Message[];
@@ -359,7 +361,13 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
           process.stdout.write(md!.render(streamBuf) + '\n');
           streamBuf = '';
         }
-        process.stdout.write(`\n\x1b[31mFatal: ${err instanceof Error ? err.message : String(err)}\x1b[0m`);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`\n\x1b[31m─── Error ───\x1b[0m`);
+        console.error(`\x1b[31m  ${msg.replace(/\n/g, '\n  ')}\x1b[0m`);
+        if (isWSL() && (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network') || msg.toLowerCase().includes('econn') || msg.toLowerCase().includes('enotfound') || msg.toLowerCase().includes('dns'))) {
+          console.error(`\x1b[33m  ℹ WSL tip: If a local model is running on Windows, use http://host.docker.internal:PORT instead of localhost\x1b[0m`);
+        }
+        console.error(`\x1b[31m─────────────\x1b[0m`);
       } finally {
         if (!styled) {
           const remaining = (textWrap as TextWrapper).flush();

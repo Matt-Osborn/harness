@@ -305,10 +305,10 @@ Never silently retry the same kind of search over and over.`;
 # Edit this file to configure your models, MCP servers, permissions, and search.
 
 [model.deepseek]
-model = "deepseek/deepseek-v4-flash:free"
+model = "deepseek/deepseek-v4-flash"
 base_url = "https://openrouter.ai/api/v1"
 api_key_env = "OPENROUTER_API_KEY"
-name = "DeepSeek V4 Flash (Free via OpenRouter)"
+name = "DeepSeek V4 Flash (via OpenRouter)"
 kind = "openai-compatible"
 
 [model.ollama]

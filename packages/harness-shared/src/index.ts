@@ -6,6 +6,7 @@ export {
 export {
   identifyModelProvider,
   isLocalUrl,
+  isWSL,
   getSearchProviderInfo,
   validateModelApiKey,
   validateSearchProviderApiKey,

@@ -76,7 +76,9 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
         case 'tool_result':
           break;
         case 'error':
-          process.stderr.write(`\n\x1b[31mError: ${String(event.data)}\x1b[0m\n`);
+          console.error(`\n\x1b[31m─── Error ───\x1b[0m`);
+          console.error(`\x1b[31m  ${String(event.data)}\x1b[0m`);
+          console.error(`\x1b[31m─────────────\x1b[0m`);
           break;
         case 'done': {
           if (useStyled) {

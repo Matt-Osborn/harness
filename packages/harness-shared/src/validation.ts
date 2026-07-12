@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 export interface ProviderKeyInfo {
   name: string;
   envVar: string;
@@ -81,6 +83,15 @@ export function identifyModelProvider(baseUrl: string): ProviderKeyInfo | null {
 export function isLocalUrl(baseUrl: string): boolean {
   const url = baseUrl.toLowerCase();
   return url.includes('localhost') || url.includes('127.0.0.1') || url.includes('0.0.0.0');
+}
+
+export function isWSL(): boolean {
+  try {
+    const version = readFileSync('/proc/version', 'utf-8').toLowerCase();
+    return version.includes('microsoft') || version.includes('wsl');
+  } catch {
+    return false;
+  }
 }
 
 export function getSearchProviderInfo(provider: string): ProviderKeyInfo | null {
