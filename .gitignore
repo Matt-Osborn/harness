@@ -48,5 +48,7 @@ search_fixes_plan.md
 new_session_-_fork_1_id.txt
 readme_changelog_and_next_todo.md
 branding/
-running_harness_in_dev_mode.md
-tool_example.md
+profiling/
+.clinic/
+.profile/
+plans/
