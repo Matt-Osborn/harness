@@ -59,6 +59,10 @@
   - `/key` command usage for setting API keys at runtime
 - HOWTO / manpage for advanced usage
 
+### Full Documentation
+
+- Install docs: add note showing both `npm link --workspace @harness/cli` and `cd packages/harness-cli && npm link` as equivalent options
+
 ## 🏗️ Infrastructure
 
 - **Git/version control config** — configurable git settings (GitHub, GitLab, Gitea, etc.) for autonomous commits

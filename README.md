@@ -20,7 +20,7 @@ npm approve-scripts
 npm run build
 
 # Make the `harness` command available globally
-npm link
+npm link --workspace @harness/cli
 ```
 
 > **Why `npm link`?** The `@harness/cli` package registers a global `bin` entry (`harness`). `npm link` symlinks it so you can run `harness` from any directory. Alternatives: `npx harness` or `node packages/harness-cli/dist/index.js`.
