@@ -3,6 +3,15 @@ import { AgentTool } from '../tool.js';
 
 const MAX_OUTPUT_LENGTH = 1_048_576;
 
+function resolveShell(): string | undefined {
+  if (process.platform !== 'win32') return process.env.SHELL || '/bin/sh';
+  const shell = process.env.SHELL;
+  if (shell && shell.startsWith('/')) {
+    return process.env.COMSPEC || 'cmd.exe';
+  }
+  return shell || process.env.COMSPEC || 'cmd.exe';
+}
+
 export class BashTool implements AgentTool {
   readonly name = 'bash';
   readonly description = 'Execute a shell command. Use this for running build commands, tests, git operations, and any other terminal operations. The command runs in the project root directory. Output is captured and returned.';
@@ -35,7 +44,7 @@ export class BashTool implements AgentTool {
         encoding: 'utf-8',
         maxBuffer: MAX_OUTPUT_LENGTH,
         windowsHide: true,
-        shell: process.env.SHELL,
+        shell: resolveShell(),
       });
       if (output.length > MAX_OUTPUT_LENGTH) {
         return output.slice(0, MAX_OUTPUT_LENGTH) + `\n... [output truncated at ${MAX_OUTPUT_LENGTH} characters]`;
@@ -47,7 +56,7 @@ export class BashTool implements AgentTool {
         if (msg.length > MAX_OUTPUT_LENGTH) {
           return msg.slice(0, MAX_OUTPUT_LENGTH) + `\n... [output truncated]`;
         }
-        return `Command exited with error:\n${msg}`;
+        return `Error executing command:\n${msg}`;
       }
       return `Command failed: ${String(err)}`;
     }
