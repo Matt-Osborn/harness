@@ -59,12 +59,9 @@
   - `/key` command usage for setting API keys at runtime
 - HOWTO / manpage for advanced usage
 
-### Full Documentation
-
-- Install docs: add note showing both `npm link --workspace @harness/cli` and `cd packages/harness-cli && npm link` as equivalent options
-
 ## 🏗️ Infrastructure
 
+- **Bash tool: improved `resolveShell()`** — when `SHELL` is a Cygwin Unix path, try common bash locations (Git Bash `C:\Program Files\Git\bin\bash.exe`, Cygwin paths) before falling back to `cmd.exe`. Also add error message tips for ENOENT/path-not-found so the model can give actionable advice. See `plans/improved_win_shell.md` and `plans/improved_errors.md` for details.
 - **Git/version control config** — configurable git settings (GitHub, GitLab, Gitea, etc.) for autonomous commits
 - **Fork command?** — evaluate if needed
 - **Model command clarity** — distinguish `harness --model`, `harness model list`, `/model` slash command; user should be able to: list models, view current model, set session model, set default model, add models
