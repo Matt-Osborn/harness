@@ -2,7 +2,7 @@ import type { Provider } from '@harness/core-ai';
 import type { Message, StreamEvent, AgentEvent, ToolCallDelta } from '@harness/shared';
 import type { AgentTool } from './tool.js';
 
-export type PermissionCheck = (toolName: string) => Promise<boolean>;
+export type PermissionCheck = (toolName: string, args?: Record<string, unknown>) => Promise<boolean>;
 
 export interface AgentOptions {
   provider: Provider;
@@ -129,8 +129,15 @@ export class Agent {
             continue;
           }
 
+          let args: Record<string, unknown>;
+          try {
+            args = JSON.parse(tc.function.arguments);
+          } catch {
+            args = {};
+          }
+
           if (this.permissionCheck) {
-            const allowed = await this.permissionCheck(tc.function.name);
+            const allowed = await this.permissionCheck(tc.function.name, args);
             if (!allowed) {
               const denyMsg = `Tool "${tc.function.name}" was denied by user. Tell the user why this tool was needed and ask if they want to allow it.`;
               fullMessages.push({
@@ -142,13 +149,6 @@ export class Agent {
               yield { type: 'tool_result', data: { name: tc.function.name, denied: true }, timestamp: Date.now() };
               continue;
             }
-          }
-
-          let args: Record<string, unknown>;
-          try {
-            args = JSON.parse(tc.function.arguments);
-          } catch {
-            args = {};
           }
 
           const result = await tool.execute(args, { workingDir: process.cwd() });

@@ -132,7 +132,7 @@ Never silently retry the same kind of search over and over.`;
     const agent = new Agent({
       provider,
       tools,
-      permissionCheck: (tn: string) => permissions.check(tn),
+      permissionCheck: (tn: string, args?: Record<string, unknown>) => permissions.check(tn, undefined, args),
       systemPrompt,
     });
 

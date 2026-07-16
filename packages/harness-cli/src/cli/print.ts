@@ -45,7 +45,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
   const agent = new Agent({
     provider,
     tools,
-    permissionCheck: (toolName: string) => permissions.check(toolName),
+    permissionCheck: (toolName: string, args?: Record<string, unknown>) => permissions.check(toolName, undefined, args),
   });
 
   const sm = new SessionManager();

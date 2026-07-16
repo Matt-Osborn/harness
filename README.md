@@ -137,8 +137,12 @@ The agent loop:
 ## Development
 
 ```bash
-npm install
-npm run build     # Compile TypeScript
+npm run build     # Compile TypeScript (runs npx tsc -b from root)
 npm run dev ...   # Run directly via tsx
 ```
+
+**Important notes:**
+
+- Always run `npm run build` from the **workspace root** — never from a sub-package directory. The root `tsconfig.json` uses project references; compiling from a sub-package will fail.
+- After pulling changes from remote (or editing `.ts` files), rebuild with `npm run build` — the harness runs compiled JavaScript, so changes don't take effect until you compile.
 

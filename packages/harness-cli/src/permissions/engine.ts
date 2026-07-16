@@ -23,7 +23,7 @@ export class PermissionEngine {
     return pc.mode || 'ask';
   }
 
-  async check(toolName: string, modelName?: string): Promise<boolean> {
+  async check(toolName: string, modelName?: string, args?: Record<string, unknown>): Promise<boolean> {
     const sid = this.sessionId;
 
     if (this.sessionGrants.get(sid)?.has(toolName)) return true;
@@ -39,11 +39,11 @@ export class PermissionEngine {
       case 'accept-edits': {
         const readOnly = ['read', 'grep', 'glob', 'web_fetch', 'web_search'];
         if (readOnly.includes(toolName)) return true;
-        return this.askUser(toolName);
+        return this.askUser(toolName, args);
       }
       case 'ask':
       default:
-        return this.askUser(toolName);
+        return this.askUser(toolName, args);
     }
   }
 
@@ -59,8 +59,12 @@ export class PermissionEngine {
     this.sessionDenies.get(sid)!.add(toolName);
   }
 
-  private async askUser(toolName: string): Promise<boolean> {
+  private async askUser(toolName: string, args?: Record<string, unknown>): Promise<boolean> {
     if (!this.interactive) return true;
+
+    const cmdLabel = (toolName === 'bash' && args?.command)
+      ? ` — \x1b[32m\`${String(args.command).slice(0, 100)}${String(args.command).length > 100 ? '...' : ''}\`\x1b[0m`
+      : '';
 
     return new Promise(resolve => {
       const rl = readline.createInterface({
@@ -68,7 +72,7 @@ export class PermissionEngine {
         output: process.stdout,
       });
 
-      const prompt = `\x1b[33mAllow tool:\x1b[0m \x1b[1m${toolName}\x1b[0m?  [\x1b[32my\x1b[0m]es  [\x1b[31mn\x1b[0m]o  [\x1b[36ma\x1b[0m]lways  [\x1b[35md\x1b[0m]eny-session  \x1b[33m>\x1b[0m `;
+      const prompt = `\x1b[33mAllow tool:\x1b[0m \x1b[1m${toolName}${cmdLabel}\x1b[0m?  [\x1b[32my\x1b[0m]es  [\x1b[31mn\x1b[0m]o  [\x1b[36ma\x1b[0m]lways  [\x1b[35md\x1b[0m]eny-session  \x1b[33m>\x1b[0m `;
 
       rl.question(prompt, (answer: string) => {
         rl.close();
