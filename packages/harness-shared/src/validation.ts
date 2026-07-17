@@ -1,5 +1,9 @@
 import { readFileSync } from 'node:fs';
 
+function yellow(text: string): string {
+  return process.stderr.isTTY ? `\x1b[33m${text}\x1b[0m` : text;
+}
+
 export interface ProviderKeyInfo {
   name: string;
   envVar: string;
@@ -112,12 +116,12 @@ export function validateModelApiKey(config: { base_url?: string; api_key?: strin
     if (provider) {
       return {
         valid: false,
-        message: `Model requires \x1b[33m${config.api_key_env}\x1b[0m environment variable (${provider.name}).\n  ${provider.instructions}\n  Then \x1b[33mexport ${config.api_key_env}=your-key\x1b[0m or set it in your shell profile.`,
+        message: `Model requires ${yellow(config.api_key_env)} environment variable (${provider.name}).\n  ${provider.instructions}\n  Then ${yellow(`export ${config.api_key_env}=your-key`)} or set it in your shell profile.`,
       };
     }
     return {
       valid: false,
-      message: `Model requires \x1b[33m${config.api_key_env}\x1b[0m environment variable but it is not set.`,
+      message: `Model requires ${yellow(config.api_key_env)} environment variable but it is not set.`,
     };
   }
 
@@ -126,12 +130,12 @@ export function validateModelApiKey(config: { base_url?: string; api_key?: strin
     if (provider) {
       return {
         valid: false,
-        message: `Model requires a \x1b[33m${provider.envVar}\x1b[0m API key (${provider.name}).\n  ${provider.instructions}\n  Add \x1b[33mapi_key_env = "${provider.envVar}"\x1b[0m to the model config, then \x1b[33mexport ${provider.envVar}=your-key\x1b[0m.`,
+        message: `Model requires a ${yellow(provider.envVar)} API key (${provider.name}).\n  ${provider.instructions}\n  Add ${yellow(`api_key_env = "${provider.envVar}"`)} to the model config, then ${yellow(`export ${provider.envVar}=your-key`)}.`,
       };
     }
     return {
       valid: false,
-      message: `Remote model at \x1b[33m${config.base_url}\x1b[0m may require an API key.\n  Set \x1b[33mapi_key_env\x1b[0m or \x1b[33mapi_key\x1b[0m in the model config.`,
+      message: `Remote model at ${yellow(config.base_url)} may require an API key.\n  Set ${yellow('api_key_env')} or ${yellow('api_key')} in the model config.`,
     };
   }
 
@@ -151,6 +155,6 @@ export function validateSearchProviderApiKey(provider: string): ValidationResult
 
   return {
     valid: false,
-    message: `\x1b[33m${info.name}\x1b[0m search requires \x1b[33m${info.envVar}\x1b[0m environment variable.\n  ${info.instructions}\n  Switch to duckduckgo (free, no key) with \x1b[33m--search duckduckgo\x1b[0m or set the env var.`,
+    message: `${yellow(info.name)} search requires ${yellow(info.envVar)} environment variable.\n  ${info.instructions}\n  Switch to duckduckgo (free, no key) with ${yellow('--search duckduckgo')} or set the env var.`,
   };
 }

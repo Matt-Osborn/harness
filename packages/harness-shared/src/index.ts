@@ -3,6 +3,8 @@ export {
   ensureConfigDir,
 } from './config.js';
 
+export { loadEnvFiles } from './env.js';
+
 export {
   identifyModelProvider,
   isLocalUrl,

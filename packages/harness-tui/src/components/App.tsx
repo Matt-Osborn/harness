@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Box, useApp, useInput } from 'ink';
 import type { Agent } from '@harness/core-agent';
+import { PermissionEngine } from '@harness/core-agent';
+import type { PermissionPromptFn, PermissionDecision } from '@harness/core-agent';
 import type { Message, PermissionMode } from '@harness/shared';
 import { SessionManager } from '@harness/shared';
 import { darkTheme } from '../theme.js';
@@ -11,8 +13,6 @@ import { InputBox } from './InputBox.js';
 import { StatusLine } from './StatusLine.js';
 import { ensureHighlighter } from '../markdown.js';
 import type { Theme } from '../theme.js';
-
-const READ_ONLY_TOOLS = ['read', 'grep', 'glob', 'web_fetch', 'web_search'];
 
 interface AppProps {
   agent: Agent;
@@ -36,9 +36,8 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
   const abortRef = useRef<AbortController | null>(null);
   const streamBufRef = useRef('');
   const isRunningRef = useRef(false);
-  const permResolveRef = useRef<((value: boolean) => void) | null>(null);
-  const sessionAllowRef = useRef<Set<string>>(new Set());
-  const sessionDenyRef = useRef<Set<string>>(new Set());
+  const permResolveRef = useRef<((value: PermissionDecision) => void) | null>(null);
+  const permEngineRef = useRef<PermissionEngine | null>(null);
 
   const [sessionId] = useState(() => smRef.current.generateId());
   const [messages, setMessages] = useState<Message[]>([]);
@@ -98,32 +97,41 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
 
   useInput((input) => {
     if (!pendingPermission || !permResolveRef.current) return;
-    const resolve = permResolveRef.current;
-    permResolveRef.current = null;
-    setPendingPermission(null);
-    if (input === 'y') resolve(true);
-    else if (input === 'a') {
-      sessionAllowRef.current.add(pendingPermission.toolName);
-      resolve(true);
-    } else if (input === 'n') resolve(false);
-    else if (input === 'd') {
-      sessionDenyRef.current.add(pendingPermission.toolName);
-      resolve(false);
+    if (input === 'y') {
+      permResolveRef.current('yes');
+      permResolveRef.current = null;
+      setPendingPermission(null);
+    } else if (input === 'a') {
+      permResolveRef.current('always');
+      permResolveRef.current = null;
+      setPendingPermission(null);
+    } else if (input === 'n') {
+      permResolveRef.current('no');
+      permResolveRef.current = null;
+      setPendingPermission(null);
+    } else if (input === 'd') {
+      permResolveRef.current('deny-session');
+      permResolveRef.current = null;
+      setPendingPermission(null);
     }
   });
 
   useEffect(() => {
-    agent.setPermissionCheck(async (toolName: string): Promise<boolean> => {
-      if (sessionAllowRef.current.has(toolName)) return true;
-      if (sessionDenyRef.current.has(toolName)) return false;
-      const mode = permConfig?.tools?.[toolName] || permConfig?.mode || 'ask';
-      if (mode === 'auto') return true;
-      if (mode === 'deny') return false;
-      if (mode === 'accept-edits' && READ_ONLY_TOOLS.includes(toolName)) return true;
+    const tuiPromptFn: PermissionPromptFn = async (toolName: string): Promise<PermissionDecision> => {
       setPendingPermission({ toolName });
       return new Promise(resolve => {
         permResolveRef.current = resolve;
       });
+    };
+
+    const engine = new PermissionEngine(permConfig, {
+      interactive: true,
+      promptFn: tuiPromptFn,
+    });
+    permEngineRef.current = engine;
+
+    agent.setPermissionCheck(async (toolName: string, args?: Record<string, unknown>): Promise<boolean> => {
+      return engine.check(toolName, undefined, args);
     });
   }, [agent, permConfig]);
 

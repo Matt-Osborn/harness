@@ -2,10 +2,8 @@ import { ConfigManager, TextWrapper, SessionManager } from '@harness/shared';
 import type { Message, SearchProviderType } from '@harness/shared';
 import { createProvider } from '@harness/core-ai';
 import {
-  Agent, ReadTool, WriteTool, EditTool, BashTool,
-  WebFetchTool, WebSearchTool,
+  Agent, createDefaultTools, resolveAutoProvider, isProviderAvailable, PermissionEngine,
 } from '@harness/core-agent';
-import { PermissionEngine } from '../permissions/engine.js';
 import { MarkdownRenderer } from './markdown.js';
 
 export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number): Promise<void> {
@@ -23,22 +21,14 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
     process.exit(1);
   }
 
-  const search = searchProvider || config.searchProvider;
-  const searchValid = config.validateSearchProvider(search);
-  if (!searchValid.valid) {
-    console.error(`\x1b[33mWarning: ${searchValid.message}\x1b[0m`);
+  const search = searchProvider || config.searchProvider || resolveAutoProvider();
+  if (!isProviderAvailable(search)) {
+    console.error(`\x1b[33mWarning: search provider "${search}" is unavailable (missing API key). Falling back to ${resolveAutoProvider()}.\x1b[0m`);
   }
 
-  const permissions = new PermissionEngine(config, false);
+  const permissions = new PermissionEngine(config.permissions, { interactive: false });
 
-  const tools = [
-    new ReadTool(),
-    new WriteTool(),
-    new EditTool(),
-    new BashTool(),
-    new WebFetchTool(),
-    new WebSearchTool(search),
-  ];
+  const tools = createDefaultTools({ searchProvider: search });
 
   if (temperatureOverride !== undefined) resolved.config.temperature = temperatureOverride;
   const provider = createProvider(resolved.config.model, resolved.config, resolved.apiKey);

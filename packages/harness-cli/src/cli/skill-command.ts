@@ -12,9 +12,9 @@ _Briefly describe what this project is._
 
 ## Build & Test
 
-- Build command: \`npm run build\`
-- Test command: \`npm test\`
-- Lint command: \`npm run lint\`
+- Build command: _e.g. \`npm run build\`_
+- Test command: _e.g. \`npm test\`_
+- Lint command: _e.g. \`npm run lint\` (if configured)_
 
 ## Project Structure
 

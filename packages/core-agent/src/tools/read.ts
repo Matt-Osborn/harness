@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { isAbsolute, resolve } from 'node:path';
 import { AgentTool } from '../tool.js';
 
 export class ReadTool implements AgentTool {
@@ -29,7 +30,7 @@ export class ReadTool implements AgentTool {
     const limit = args.limit ? Number(args.limit) : undefined;
 
     try {
-      const resolvedPath = path.startsWith('/') ? path : `${process.cwd()}/${path}`;
+      const resolvedPath = isAbsolute(path) ? path : resolve(process.cwd(), path);
       const content = await readFile(resolvedPath, 'utf-8');
       const lines = content.split('\n');
       const start = offset ? Math.max(0, offset - 1) : 0;

@@ -1,14 +1,16 @@
 import * as readline from 'node:readline';
-import type { Agent } from '@harness/core-agent';
+import { Agent } from '@harness/core-agent';
+import type { WebSearchTool } from '@harness/core-agent';
 import type { Message, SearchProviderType } from '@harness/shared';
 import { TextWrapper, SessionManager, isWSL } from '@harness/shared';
 import { MarkdownRenderer } from './markdown.js';
 
-export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean): Promise<void> {
-  let currentSearch = searchProvider || 'auto';
-  const searchProviders = ['tavily', 'duckduckgo', 'openrouter'];
+export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, initialTemp?: number): Promise<void> {
+  let currentSearch: SearchProviderType | 'auto' = searchProvider || 'auto';
+  let searchIsDefault = true;
+  const searchProviders: SearchProviderType[] = ['tavily', 'duckduckgo', 'openrouter'];
   let rl: readline.Interface;
-  let currentTemp = 0.1;
+  let currentTemp = initialTemp ?? 0.1;
   let treatNextCloseAsExit = true;
 
   const sm = new SessionManager();
@@ -111,8 +113,10 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
 
       if (trimmed.startsWith('/search ')) {
         const provider = trimmed.slice(8).trim().toLowerCase();
-        if (searchProviders.includes(provider)) {
-          currentSearch = provider;
+        if (searchProviders.includes(provider as SearchProviderType)) {
+          currentSearch = provider as SearchProviderType;
+          searchIsDefault = false;
+          if (searchTool) searchTool.setProvider(currentSearch);
           process.stdout.write(`\x1b[32mSearch provider switched to: ${provider}\x1b[0m\n\n`);
         } else {
           process.stdout.write(`\x1b[31mUnknown provider. Options: ${searchProviders.join(', ')}\x1b[0m\n\n`);
@@ -241,7 +245,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write('  \x1b[33m/exit\x1b[0m                Save session and exit\n');
         process.stdout.write('  \x1b[33m/quit\x1b[0m                Same as /exit\n');
         process.stdout.write('  \x1b[33m/help\x1b[0m                Show this help\n');
-        process.stdout.write('  \x1b[33mCtrl+C\x1b[0m               Quit (without saving)\n');
+        process.stdout.write('  \x1b[33mCtrl+C\x1b[0m               Quit (saves session)\n');
         process.stdout.write('\n');
         rl.prompt();
         return;
@@ -375,9 +379,6 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         }
         startReadline();
       }
-
-      process.stdout.write('\n\n');
-      rl.prompt();
     });
 
     rl.prompt();
@@ -390,8 +391,8 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
   });
 
   console.log('\x1b[1mAI Harness\x1b[0m — Interactive mode (Ctrl+C to quit)');
-  if (modelName) console.log(`Model: \x1b[36m${modelName}\x1b[0m`);
-  console.log(`Search: \x1b[36m${currentSearch}\x1b[0m`);
+  if (modelName) console.log(`Model: \x1b[36m${modelName}\x1b[0m${modelIsDefault ? ' \x1b[2m(default)\x1b[0m' : ''}`);
+  console.log(`Search: \x1b[36m${currentSearch}\x1b[0m${searchIsDefault ? ' \x1b[2m(default)\x1b[0m' : ''}`);
 
   if (resumeSessionId || resumeLatest) {
     const msgCount = history.filter(m => m.role === 'user' || m.role === 'assistant').length;

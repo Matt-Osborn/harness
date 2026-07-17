@@ -24,7 +24,8 @@ Return only valid JSON, nothing else. Each result must have a plausible real URL
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.apiKey}`,
-        'HTTP-Referer': 'https://github.com/your-org/ai-harness',
+        'HTTP-Referer': 'https://gitlab.com/x0rn/harness',
+        'X-Title': 'harness-cli',
       },
       signal,
       body: JSON.stringify({

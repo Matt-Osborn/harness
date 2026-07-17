@@ -1,12 +1,12 @@
-import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadProjectRules } from '@harness/shared';
+import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadProjectRules, loadEnvFiles } from '@harness/shared';
 import type { SearchProviderType } from '@harness/shared';
 import { createProvider } from '@harness/core-ai';
 import {
   Agent,
-  ReadTool, WriteTool, EditTool, BashTool,
-  WebFetchTool, WebSearchTool, SkillTool,
+  WebSearchTool, resolveAutoProvider, isProviderAvailable,
+  buildSystemPrompt, createDefaultTools, PermissionEngine,
 } from '@harness/core-agent';
-import { PermissionEngine } from '../permissions/engine.js';
+import { createCliPromptFn } from '../permissions/engine.js';
 import { runPrintMode } from './print.js';
 import { runInteractive } from './interactive.js';
 
@@ -42,9 +42,22 @@ export async function run(): Promise<void> {
     return;
   }
 
+  loadEnvFiles();
+
   const prompt = parseArg(args, '-p', '--prompt');
   const model = parseArg(args, '-m', '--model');
+
+  const searchFlagPresent = args.includes('-s') || args.includes('--search');
   const searchOverride = parseArg(args, '-s', '--search') as SearchProviderType | undefined;
+  if (searchFlagPresent && !searchOverride) {
+    console.log('\x1b[1mSearch providers:\x1b[0m');
+    console.log('  \x1b[36mtavily\x1b[0m       (requires TAVILY_API_KEY)');
+    console.log('  \x1b[36mduckduckgo\x1b[0m   (free, no key needed)');
+    console.log('  \x1b[36mopenrouter\x1b[0m   (requires OPENROUTER_API_KEY)');
+    console.log('\nUsage: \x1b[33mharness -s <provider>\x1b[0m or \x1b[33mharness --search <provider>\x1b[0m');
+    return;
+  }
+
   const wrapWidth = Math.max(20, parseInt(parseArg(args, '-w', '--width') || '80', 10) || 80);
   const resumeSession = parseArg(args, '-S', '--session');
   const resumeLatest = args.includes('-r') || args.includes('--resume');
@@ -92,6 +105,9 @@ export async function run(): Promise<void> {
 
   if (commands.length === 0) {
     const config = new ConfigManager();
+    for (const err of config.parseErrorMessages) {
+      console.log(`\x1b[33mWarning: config parse error in ${err}\x1b[0m`);
+    }
     const valid = config.validateModel(model);
     if (!valid.valid) {
       console.log(`\x1b[31m${valid.message}\x1b[0m`);
@@ -100,35 +116,22 @@ export async function run(): Promise<void> {
     }
 
     const resolved = config.getResolvedModel(model);
-    const search = searchOverride || config.searchProvider;
+    const displayName = model || config.defaultModel;
+    const modelIsDefault = !model;
+    if (temperatureOverride !== undefined) resolved!.config.temperature = temperatureOverride;
+    const initialTemp = resolved!.config.temperature ?? 0.1;
+    const search = searchOverride || config.searchProvider || resolveAutoProvider();
     const isInter = process.stdin.isTTY ?? false;
-    const permissions = new PermissionEngine(config, isInter);
+    const permissions = new PermissionEngine(config.permissions, {
+      interactive: isInter,
+      promptFn: isInter ? createCliPromptFn() : undefined,
+    });
     const skillRegistry = new SkillRegistry();
-    const tools = [
-      new ReadTool(), new WriteTool(), new EditTool(), new BashTool(),
-      new WebFetchTool(), new WebSearchTool(search),
-      new SkillTool(skillRegistry),
-    ];
+    const searchTool = new WebSearchTool(search);
+    const tools = createDefaultTools({ searchProvider: search, skillRegistry, searchTool });
     const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
     const projectRules = loadProjectRules();
-    const basePrompt = `You are a helpful coding assistant running in an AI Harness.
-You have access to tools for reading, writing, editing files, executing shell commands,
-searching the web (web_search), and fetching web pages (web_fetch).
-Use web_search to find documentation, packages, tutorials, and any online information.
-Use web_fetch to read specific pages by URL. For normal web pages (articles, docs),
-use the default markdown format. If a page returns garbled or heavily styled content
-(like terminal output rendered as HTML), try format "text" instead. If the URL
-supports query parameters like ?format, ?raw, or ?plain, consider appending them.
-When the user asks for information from the web, use your web tools to find it.
-Help the user accomplish their coding tasks efficiently.
-Always complete your full response — never stop after introducing a topic. Deliver the complete content you promised.
-Before calling tools, briefly explain your plan. If a tool fails (error, 404, timeout),
-do NOT retry with slightly different queries — explain what went wrong and either
-answer from what you already know or tell the user you couldn't find the information.
-Never silently retry the same kind of search over and over.`;
-    const systemPrompt = projectRules
-      ? `${basePrompt}\n\n## Project Instructions\n\n${projectRules}`
-      : basePrompt;
+    const systemPrompt = buildSystemPrompt(projectRules);
     const agent = new Agent({
       provider,
       tools,
@@ -136,13 +139,13 @@ Never silently retry the same kind of search over and over.`;
       systemPrompt,
     });
 
-    const searchValid = config.validateSearchProvider(search);
-    if (!searchValid.valid) {
-      console.log(`\x1b[33mWarning: ${searchValid.message}\x1b[0m`);
-      console.log('The session will continue without web search capability.\n');
+    if (!isProviderAvailable(search)) {
+      const fallback = resolveAutoProvider();
+      console.log(`\x1b[33mWarning: search provider "${search}" is unavailable (missing API key).\x1b[0m`);
+      console.log(`Falling back to: \x1b[36m${fallback}\x1b[0m\n`);
     }
 
-    await runInteractive(agent, model, searchOverride, wrapWidth, resumeSession, resumeLatest, styled);
+    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, initialTemp);
     return;
   }
 
@@ -196,48 +199,28 @@ Never silently retry the same kind of search over and over.`;
       }
 
       const resolved = config.getResolvedModel();
-      const search = searchOverride || config.searchProvider;
+      const search = searchOverride || config.searchProvider || resolveAutoProvider();
       const skillRegistry = new SkillRegistry();
-      const tools = [
-        new ReadTool(), new WriteTool(), new EditTool(), new BashTool(),
-        new WebFetchTool(), new WebSearchTool(search),
-        new SkillTool(skillRegistry),
-      ];
+      const tools = createDefaultTools({ searchProvider: search, skillRegistry });
     if (temperatureOverride !== undefined) resolved!.config.temperature = temperatureOverride;
     const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
     const projectRules = loadProjectRules();
-    const basePrompt = `You are a helpful coding assistant running in an AI Harness.
-You have access to tools for reading, writing, editing files, executing shell commands,
-searching the web (web_search), and fetching web pages (web_fetch).
-Use web_search to find documentation, packages, tutorials, and any online information.
-Use web_fetch to read specific pages by URL. For normal web pages (articles, docs),
-use the default markdown format. If a page returns garbled or heavily styled content
-(like terminal output rendered as HTML), try format "text" instead. If the URL
-supports query parameters like ?format, ?raw, or ?plain, consider appending them.
-When the user asks for information from the web, use your web tools to find it.
-Help the user accomplish their coding tasks efficiently.
-Always complete your full response — never stop after introducing a topic. Deliver the complete content you promised.
-Before calling tools, briefly explain your plan. If a tool fails (error, 404, timeout),
-do NOT retry with slightly different queries — explain what went wrong and either
-answer from what you already know or tell the user you couldn't find the information.
-Never silently retry the same kind of search over and over.`;
-    const systemPrompt = projectRules
-      ? `${basePrompt}\n\n## Project Instructions\n\n${projectRules}`
-      : basePrompt;
+    const systemPrompt = buildSystemPrompt(projectRules);
       const agent = new Agent({
         provider,
         tools,
         systemPrompt,
       });
 
-      const searchValid = config.validateSearchProvider(search);
-      if (!searchValid.valid) {
-        console.log(`\x1b[33mWarning: ${searchValid.message}\x1b[0m`);
+      if (!isProviderAvailable(search)) {
+        const fallback = resolveAutoProvider();
+        console.log(`\x1b[33mWarning: search provider "${search}" is unavailable (missing API key).\x1b[0m`);
+        console.log(`Falling back to: \x1b[36m${fallback}\x1b[0m`);
       }
 
       runTui(agent, {
         modelName: model,
-        searchProvider: searchOverride || config.searchProvider,
+        searchProvider: search,
         permConfig: {
           mode: config.permissions?.mode,
           tools: config.permissions?.tools,
@@ -303,6 +286,23 @@ edit = "auto"
       writeFileSync(configPath, defaultConfig, 'utf-8');
       console.log(`Created config at ${configPath}`);
       console.log('Edit it to add your API keys, then run \x1b[33mharness\x1b[0m to start.\n');
+
+      const envPath = `${dir}/.env`;
+      if (!existsSync(envPath)) {
+        const envTemplate = `# AI Harness Environment Variables
+# Set API keys here — works in all terminals (cmd.exe, PowerShell, Cygwin, Linux)
+# Shell environment variables always take precedence over this file.
+
+# OPENROUTER_API_KEY=sk-or-...
+# TAVILY_API_KEY=tvly-...
+# OPENAI_API_KEY=sk-...
+# DEEPSEEK_API_KEY=sk-...
+# OPENROUTER_SEARCH_MODEL=deepseek/deepseek-v4-flash
+`;
+        writeFileSync(envPath, envTemplate, 'utf-8');
+        console.log(`Created .env template at ${envPath}`);
+        console.log('Uncomment and fill in your API keys.\n');
+      }
 
       const agentsMdPath = join(process.cwd(), 'AGENTS.md');
       if (!existsSync(agentsMdPath) && process.stdin.isTTY) {

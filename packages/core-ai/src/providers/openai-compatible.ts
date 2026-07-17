@@ -71,71 +71,6 @@ export class OpenAICompatibleProvider implements Provider {
     return h;
   }
 
-  async sendMessages(
-    messages: Message[],
-    tools?: ToolDefinition[],
-  ): Promise<{
-    message: Message;
-    usage?: { input_tokens: number; output_tokens: number };
-  }> {
-    const body: Record<string, unknown> = {
-      model: this.modelId,
-      messages: messages.map(m => ({
-        role: m.role,
-        content: m.content || null,
-        tool_calls: m.tool_calls,
-        tool_call_id: m.tool_call_id,
-      })),
-    };
-    if (tools && tools.length > 0) body.tools = tools;
-    body.max_tokens = this.maxTokens ?? 4096;
-    body.temperature = this.temperature;
-
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: this.headers,
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => 'unknown error');
-      if (response.status === 401 || response.status === 403) {
-        const provider = identifyModelProvider(this.baseUrl);
-        const local = isLocalUrl(this.baseUrl);
-        if (!local && provider) {
-          throw new Error(
-            `Authentication failed for ${this.modelId} at ${this.baseUrl} (${response.status}).\n` +
-            `This model requires the ${provider.envVar} environment variable.\n` +
-            `${provider.instructions}\n` +
-            `Then restart the session or run: export ${provider.envVar}=your-key`
-          );
-        }
-      }
-      throw new Error(`OpenAI API error ${response.status}: ${errText}`);
-    }
-
-    const data = (await response.json()) as OpenAIChunk;
-    const choice = data.choices?.[0];
-    if (!choice?.message) {
-      throw new Error('No response from model');
-    }
-
-    return {
-      message: {
-        role: 'assistant',
-        content: choice.message.content || '',
-        tool_calls: choice.message.tool_calls?.map(tc => ({
-          id: tc.id,
-          type: 'function' as const,
-          function: { name: tc.function.name, arguments: tc.function.arguments },
-        })),
-      },
-      usage: data.usage
-        ? { input_tokens: data.usage.prompt_tokens, output_tokens: data.usage.completion_tokens }
-        : undefined,
-    };
-  }
-
   async *streamResponse(
     messages: Message[],
     tools?: ToolDefinition[],
@@ -150,6 +85,7 @@ export class OpenAICompatibleProvider implements Provider {
         tool_call_id: m.tool_call_id,
       })),
       stream: true,
+      stream_options: { include_usage: true },
     };
     if (tools && tools.length > 0) body.tools = tools;
     body.max_tokens = this.maxTokens ?? 4096;
@@ -210,6 +146,14 @@ export class OpenAICompatibleProvider implements Provider {
 
           try {
             const chunk = JSON.parse(payload) as OpenAIChunk;
+
+            if (chunk.usage) {
+              yield {
+                type: 'usage',
+                data: { input_tokens: chunk.usage.prompt_tokens, output_tokens: chunk.usage.completion_tokens },
+              };
+            }
+
             const choice = chunk.choices?.[0];
             if (!choice) continue;
             if (choice.finish_reason) lastFinishReason = choice.finish_reason;
@@ -232,13 +176,6 @@ export class OpenAICompatibleProvider implements Provider {
                 };
                 yield { type: 'tool_call_delta', data: tcd };
               }
-            }
-
-            if (chunk.usage) {
-              yield {
-                type: 'usage',
-                data: { input_tokens: chunk.usage.prompt_tokens, output_tokens: chunk.usage.completion_tokens },
-              };
             }
           } catch {
             // skip unparseable chunks

@@ -31,7 +31,7 @@ export class DuckDuckGoSearchProvider implements SearchProvider {
     let m: RegExpExecArray | null;
     while ((m = urlRegex.exec(html)) !== null && urls.length < max) {
       let href = m[1].replace(/\/\/duckduckgo\.com\/l\/\?uddg=/, '');
-      href = decodeURIComponent(href);
+      try { href = decodeURIComponent(href); } catch { /* keep encoded on malformed value */ }
       const title = m[2].replace(/<[^>]*>/g, '').trim();
       urls.push(href);
       results.push({ title, url: href, content: '' });

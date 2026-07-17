@@ -28,10 +28,12 @@ export interface ToolDefinition {
 
 export type StreamEventType = 'text' | 'tool_call_delta' | 'error' | 'done' | 'usage';
 
-export interface StreamEvent {
-  type: StreamEventType;
-  data: unknown;
-}
+export type StreamEvent =
+  | { type: 'text'; data: { content: string } }
+  | { type: 'tool_call_delta'; data: ToolCallDelta }
+  | { type: 'usage'; data: UsageData }
+  | { type: 'error'; data: string }
+  | { type: 'done'; data: { finish_reason: string } };
 
 export interface TextDelta {
   content: string;
@@ -114,8 +116,9 @@ export interface SessionData {
   updatedAt: number;
 }
 
-export interface AgentEvent {
-  type: 'text' | 'tool_call' | 'tool_result' | 'permission_request' | 'error' | 'done';
-  data: unknown;
-  timestamp: number;
-}
+export type AgentEvent =
+  | { type: 'text'; data: string; timestamp: number }
+  | { type: 'tool_call'; data: { name: string; args: string }; timestamp: number }
+  | { type: 'tool_result'; data: { name: string; result?: string; denied?: boolean; error?: string }; timestamp: number }
+  | { type: 'error'; data: string; timestamp: number }
+  | { type: 'done'; data: Message[]; timestamp: number };

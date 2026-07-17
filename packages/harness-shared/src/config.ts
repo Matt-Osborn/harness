@@ -15,10 +15,15 @@ function resolveApiKey(config: ModelConfig): string | undefined {
 export class ConfigManager {
   private config: Config;
   private configFiles: string[];
+  private parseErrors: string[] = [];
 
   constructor(startDir?: string) {
     this.configFiles = this.findConfigFiles(startDir || process.cwd());
     this.config = this.mergeConfigs(this.configFiles);
+  }
+
+  get parseErrorMessages(): string[] {
+    return [...this.parseErrors];
   }
 
   private findConfigFiles(startDir: string): string[] {
@@ -45,7 +50,8 @@ export class ConfigManager {
     try {
       const content = readFileSync(filePath, 'utf-8');
       return parse(content) as Record<string, unknown>;
-    } catch {
+    } catch (err) {
+      this.parseErrors.push(`${filePath}: ${err instanceof Error ? err.message : String(err)}`);
       return {};
     }
   }

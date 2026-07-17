@@ -1,6 +1,7 @@
 import type { Provider } from '@harness/core-ai';
 import type { Message, StreamEvent, AgentEvent, ToolCallDelta } from '@harness/shared';
 import type { AgentTool } from './tool.js';
+import { DEFAULT_SYSTEM_PROMPT } from './prompt.js';
 
 export type PermissionCheck = (toolName: string, args?: Record<string, unknown>) => Promise<boolean>;
 
@@ -22,7 +23,7 @@ export class Agent {
   constructor(options: AgentOptions) {
     this.provider = options.provider;
     this.tools = options.tools;
-    this.systemPrompt = options.systemPrompt || `You are a helpful coding assistant. You have access to tools to read, write, and edit files, and execute shell commands. Use them to help the user with their tasks.`;
+    this.systemPrompt = options.systemPrompt || DEFAULT_SYSTEM_PROMPT;
     this.maxIterations = options.maxIterations || 25;
     this.permissionCheck = options.permissionCheck;
   }
@@ -35,12 +36,13 @@ export class Agent {
     this.provider.setTemperature(t);
   }
 
-  async *run(messages: Message[], _signal?: AbortSignal): AsyncIterable<AgentEvent> {
+  async *run(messages: Message[], signal?: AbortSignal): AsyncIterable<AgentEvent> {
     const userMessages = messages.filter(m => m.role !== 'system');
     const fullMessages: Message[] = [
       { role: 'system', content: this.systemPrompt },
       ...userMessages,
     ];
+    const userHistory: Message[] = [...userMessages];
 
     let iterations = 0;
 
@@ -52,7 +54,7 @@ export class Agent {
       const toolCallAccumulators: Map<number, { id: string; name: string; args: string }> = new Map();
       let finalFinishReason: 'stop' | 'tool_calls' | 'length' | undefined;
 
-      const stream = this.provider.streamResponse(fullMessages, toolDefs, _signal);
+      const stream = this.provider.streamResponse(fullMessages, toolDefs, signal);
 
       for await (const event of stream) {
         switch (event.type) {
@@ -95,6 +97,15 @@ export class Agent {
       if (finalFinishReason === 'length' && toolCallAccumulators.size === 0) {
         if (accumulatedText) {
           fullMessages.push({ role: 'assistant', content: accumulatedText });
+          userHistory.push({ role: 'assistant', content: accumulatedText });
+        }
+        continue;
+      }
+
+      if (finalFinishReason === 'length' && toolCallAccumulators.size > 0) {
+        if (accumulatedText) {
+          fullMessages.push({ role: 'assistant', content: accumulatedText });
+          userHistory.push({ role: 'assistant', content: accumulatedText });
         }
         continue;
       }
@@ -112,19 +123,22 @@ export class Agent {
             })),
         };
         fullMessages.push(assistantMsg);
-
-        yield { type: 'tool_call', data: { name: assistantMsg.tool_calls![0]!.function.name, args: assistantMsg.tool_calls![0]!.function.arguments }, timestamp: Date.now() };
+        userHistory.push(assistantMsg);
 
         for (const tc of assistantMsg.tool_calls!) {
+          yield { type: 'tool_call', data: { name: tc.function.name, args: tc.function.arguments }, timestamp: Date.now() };
+
           const tool = this.tools.find(t => t.name === tc.function.name);
           if (!tool) {
             const errMsg = `Unknown tool: ${tc.function.name}`;
-            fullMessages.push({
+            const toolMsg: Message = {
               role: 'tool',
               content: errMsg,
               tool_call_id: tc.id,
               name: tc.function.name,
-            });
+            };
+            fullMessages.push(toolMsg);
+            userHistory.push(toolMsg);
             yield { type: 'tool_result', data: { name: tc.function.name, error: errMsg }, timestamp: Date.now() };
             continue;
           }
@@ -133,38 +147,53 @@ export class Agent {
           try {
             args = JSON.parse(tc.function.arguments);
           } catch {
-            args = {};
+            const parseErr = `Invalid arguments for tool "${tc.function.name}": could not parse JSON. Arguments received: "${tc.function.arguments}". Please call the tool with valid JSON arguments.`;
+            const toolMsg: Message = {
+              role: 'tool',
+              content: parseErr,
+              tool_call_id: tc.id,
+              name: tc.function.name,
+            };
+            fullMessages.push(toolMsg);
+            userHistory.push(toolMsg);
+            yield { type: 'tool_result', data: { name: tc.function.name, error: parseErr }, timestamp: Date.now() };
+            continue;
           }
 
           if (this.permissionCheck) {
             const allowed = await this.permissionCheck(tc.function.name, args);
             if (!allowed) {
               const denyMsg = `Tool "${tc.function.name}" was denied by user. Tell the user why this tool was needed and ask if they want to allow it.`;
-              fullMessages.push({
+              const toolMsg: Message = {
                 role: 'tool',
                 content: denyMsg,
                 tool_call_id: tc.id,
                 name: tc.function.name,
-              });
+              };
+              fullMessages.push(toolMsg);
+              userHistory.push(toolMsg);
               yield { type: 'tool_result', data: { name: tc.function.name, denied: true }, timestamp: Date.now() };
               continue;
             }
           }
 
-          const result = await tool.execute(args, { workingDir: process.cwd() });
-          fullMessages.push({
+          const result = await tool.execute(args, { workingDir: process.cwd(), signal });
+          const toolMsg: Message = {
             role: 'tool',
             content: result,
             tool_call_id: tc.id,
             name: tc.function.name,
-          });
+          };
+          fullMessages.push(toolMsg);
+          userHistory.push(toolMsg);
           yield { type: 'tool_result', data: { name: tc.function.name, result }, timestamp: Date.now() };
         }
       } else {
         if (accumulatedText) {
           fullMessages.push({ role: 'assistant', content: accumulatedText });
+          userHistory.push({ role: 'assistant', content: accumulatedText });
         }
-        yield { type: 'done', data: fullMessages, timestamp: Date.now() };
+        yield { type: 'done', data: userHistory, timestamp: Date.now() };
         return;
       }
     }

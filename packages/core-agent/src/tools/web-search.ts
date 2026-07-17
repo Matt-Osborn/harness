@@ -5,6 +5,20 @@ import { createSearchProvider } from './search/index.js';
 const MAX_RESULTS = 20;
 const MAX_LINE_LENGTH = 500;
 
+export function resolveAutoProvider(): SearchProviderType {
+  if (process.env.TAVILY_API_KEY) return 'tavily';
+  if (process.env.OPENROUTER_API_KEY) return 'openrouter';
+  return 'duckduckgo';
+}
+
+export function isProviderAvailable(provider?: SearchProviderType): boolean {
+  if (!provider) return true;
+  if (provider === 'duckduckgo') return true;
+  if (provider === 'tavily') return !!process.env.TAVILY_API_KEY;
+  if (provider === 'openrouter') return !!process.env.OPENROUTER_API_KEY;
+  return false;
+}
+
 export class WebSearchTool implements AgentTool {
   readonly name = 'web_search';
   readonly description = 'Search the web for information. Supports multiple providers: tavily (requires TAVILY_API_KEY), duckduckgo (free), openrouter (uses OPENROUTER_API_KEY). Use this for finding documentation, news, packages, tutorials, and any online information.';
@@ -39,11 +53,19 @@ export class WebSearchTool implements AgentTool {
     this.defaultProvider = defaultProvider;
   }
 
+  setProvider(provider: SearchProviderType): void {
+    this.defaultProvider = provider;
+  }
+
   async execute(args: Record<string, unknown>): Promise<string> {
     const query = String(args.query);
     const numResults = Math.min(Number(args.numResults || 8), MAX_RESULTS);
-    const provider = (args.provider as SearchProviderType) || this.defaultProvider;
+    let provider = (args.provider as SearchProviderType) || this.defaultProvider;
     const timeout = Math.min(Number(args.timeout || 10), 30) * 1000;
+
+    if (provider && !isProviderAvailable(provider)) {
+      provider = resolveAutoProvider();
+    }
 
     try {
       const searchProvider = createSearchProvider(provider);
