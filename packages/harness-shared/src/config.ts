@@ -2,7 +2,7 @@ import { readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parse } from 'smol-toml';
-import type { CLIConfig, Config, ContextConfig, ModelConfig, MCPServerConfig, PermissionConfig, PermissionMode, SearchConfig, SearchProviderType } from './types.js';
+import type { CLIConfig, Config, ContextConfig, FormatConfig, ModelConfig, MCPServerConfig, PermissionConfig, PermissionMode, SearchConfig, SearchProviderType } from './types.js';
 import { validateModelApiKey, validateSearchProviderApiKey } from './validation.js';
 import type { ValidationResult } from './validation.js';
 
@@ -128,6 +128,14 @@ export class ConfigManager {
         };
       }
 
+      if (raw.format && typeof raw.format === 'object') {
+        const f = raw.format as Record<string, unknown>;
+        merged.format = {
+          on_write: typeof f.on_write === 'boolean' ? f.on_write : (merged.format?.on_write ?? true),
+          tools: { ...merged.format?.tools, ...(f.tools as Record<string, string> || {}) },
+        };
+      }
+
       if (raw.compactification && typeof raw.compactification === 'object') {
         const comp = raw.compactification as Record<string, unknown>;
         if (comp.model && typeof comp.model === 'string') {
@@ -169,6 +177,10 @@ export class ConfigManager {
 
   get contextConfig(): ContextConfig | undefined {
     return this.config.context;
+  }
+
+  get formatConfig(): FormatConfig | undefined {
+    return this.config.format;
   }
 
   get compactificationConfig(): ModelConfig | undefined {

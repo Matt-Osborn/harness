@@ -37,6 +37,7 @@ export type {
   ProviderKind,
   ModelConfig,
   MCPServerConfig,
+  FormatConfig,
   PermissionConfig,
   PermissionMode,
   SearchConfig,

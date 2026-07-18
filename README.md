@@ -44,6 +44,20 @@ harness -p "explain this codebase"
 harness -m gpt-4 -p "refactor this function"
 ```
 
+## Recommended Tools
+
+The harness can auto-format files after writing (enabled by default). Install
+the formatters for languages you work with:
+
+| Formatter | Install command | For |
+|-----------|----------------|-----|
+| ruff | `pip install ruff` | Python |
+| prettier | `npm install -g prettier` | JavaScript, TypeScript, JSX, TSX |
+| rustfmt | `rustup component add rustfmt` | Rust, TOML |
+
+Run `harness init` after installing to verify they're detected. Formatters are
+skipped gracefully if not available — the harness continues to work normally.
+
 ## Configuration
 
 Models are configured via TOML files. The harness loads config from:

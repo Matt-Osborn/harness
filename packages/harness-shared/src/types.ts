@@ -103,6 +103,11 @@ export interface ContextConfig {
   response_budget?: number;
 }
 
+export interface FormatConfig {
+  on_write: boolean;
+  tools: Record<string, string>;
+}
+
 export interface Config {
   models: Record<string, ModelConfig>;
   default_model?: string;
@@ -112,6 +117,7 @@ export interface Config {
   cli?: CLIConfig;
   context?: ContextConfig;
   compactification?: ModelConfig;
+  format?: FormatConfig;
 }
 
 export type SessionLabel = 'INTERACTIVE' | 'PROMPT';

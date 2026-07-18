@@ -138,7 +138,7 @@ export async function run(): Promise<void> {
     });
     const skillRegistry = new SkillRegistry();
     const searchTool = new WebSearchTool(search);
-    const tools = createDefaultTools({ searchProvider: search, skillRegistry, searchTool });
+    const tools = createDefaultTools({ searchProvider: search, skillRegistry, searchTool, formatConfig: config.formatConfig });
     const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
     const projectRules = loadProjectRules();
     const systemPrompt = buildSystemPrompt(projectRules);
@@ -234,7 +234,7 @@ export async function run(): Promise<void> {
       const resolved = config.getResolvedModel();
       const search = searchOverride || config.searchProvider || resolveAutoProvider();
       const skillRegistry = new SkillRegistry();
-      const tools = createDefaultTools({ searchProvider: search, skillRegistry });
+      const tools = createDefaultTools({ searchProvider: search, skillRegistry, formatConfig: config.formatConfig });
     if (temperatureOverride !== undefined) resolved!.config.temperature = temperatureOverride;
     const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
     const projectRules = loadProjectRules();
@@ -294,6 +294,7 @@ export async function run(): Promise<void> {
       const configPath = `${dir}/config.toml`;
       const { writeFileSync, existsSync, readFileSync } = await import('node:fs');
       const { join } = await import('node:path');
+      const { execFileSync } = await import('node:child_process');
       if (existsSync(configPath)) {
         console.log(`Config already exists at ${configPath}`);
         return;
@@ -337,6 +338,11 @@ web_fetch = "ask"
 read = "auto"
 edit = "auto"
 
+[format]
+# Auto-format files after write/edit. Requires formatters on PATH.
+on_write = true
+tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{rs,toml}" = "rustfmt" }
+
 [context]
 # Context management settings
 # management = true           # Enable/disable context truncation and compaction
@@ -353,6 +359,30 @@ edit = "auto"
       writeFileSync(configPath, defaultConfig, 'utf-8');
       console.log(`Created config at ${configPath}`);
       console.log('Edit it to add your API keys, then run \x1b[33mharness\x1b[0m to start.\n');
+
+      const FORMATTER_INSTALL_HINTS: Record<string, string> = {
+        ruff: 'pip install ruff',
+        prettier: 'npm install -g prettier',
+        rustfmt: 'rustup component add rustfmt',
+        black: 'pip install black',
+      };
+      const formatterCmds = ['ruff', 'prettier', 'rustfmt'];
+      const missing: string[] = [];
+      for (const cmd of formatterCmds) {
+        try {
+          execFileSync(cmd, ['--version'], { stdio: 'ignore', timeout: 5000 });
+        } catch {
+          missing.push(cmd);
+        }
+      }
+      if (missing.length > 0) {
+        console.log(`\x1b[33m⚠ Some formatters in [format] config are not installed:\x1b[0m\n`);
+        for (const cmd of missing) {
+          const hint = FORMATTER_INSTALL_HINTS[cmd] || cmd;
+          console.log(`  \x1b[33m${cmd}\x1b[0m  → ${hint}`);
+        }
+        console.log(`\n  The harness will still work — formatting will be skipped\n  until these are available.\n`);
+      }
 
       const envPath = `${dir}/.env`;
       if (!existsSync(envPath)) {

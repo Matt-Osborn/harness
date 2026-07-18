@@ -17,7 +17,7 @@ export { SkillTool } from './tools/skill.js';
 export { createSearchProvider } from './tools/search/index.js';
 export type { SearchProvider } from './tools/search/index.js';
 
-import type { SearchProviderType, SkillRegistry } from '@harness/shared';
+import type { FormatConfig, SearchProviderType, SkillRegistry } from '@harness/shared';
 import { ReadTool } from './tools/read.js';
 import { WriteTool } from './tools/write.js';
 import { EditTool } from './tools/edit.js';
@@ -31,12 +31,13 @@ export function createDefaultTools(opts?: {
   searchProvider?: SearchProviderType;
   skillRegistry?: SkillRegistry;
   searchTool?: WebSearchTool;
+  formatConfig?: FormatConfig;
 }): AgentTool[] {
   const searchTool = opts?.searchTool ?? new WebSearchTool(opts?.searchProvider);
   const tools: AgentTool[] = [
     new ReadTool(),
-    new WriteTool(),
-    new EditTool(),
+    new WriteTool(opts?.formatConfig),
+    new EditTool(opts?.formatConfig),
     new BashTool(),
     new WebFetchTool(),
     searchTool,

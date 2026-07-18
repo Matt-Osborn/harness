@@ -28,7 +28,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
 
   const permissions = new PermissionEngine(config.permissions, { interactive: false });
 
-  const tools = createDefaultTools({ searchProvider: search });
+  const tools = createDefaultTools({ searchProvider: search, formatConfig: config.formatConfig });
 
   if (temperatureOverride !== undefined) resolved.config.temperature = temperatureOverride;
   const provider = createProvider(resolved.config.model, resolved.config, resolved.apiKey);
