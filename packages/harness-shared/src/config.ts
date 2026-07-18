@@ -114,6 +114,9 @@ export class ConfigManager {
         merged.cli = {
           styled: typeof c.styled === 'boolean' ? c.styled : (merged.cli?.styled ?? false),
         };
+        if (typeof c.status_line === 'boolean') {
+          merged.cli.status_line = c.status_line;
+        }
       }
 
       if (raw.context && typeof raw.context === 'object') {
@@ -158,6 +161,10 @@ export class ConfigManager {
 
   get styled(): boolean {
     return this.config.cli?.styled ?? false;
+  }
+
+  get cli(): CLIConfig | undefined {
+    return this.config.cli;
   }
 
   get contextConfig(): ContextConfig | undefined {

@@ -22,7 +22,7 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
 }
 
 const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature']);
-const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management']);
+const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line']);
 
 function extractCommands(args: string[]): string[] {
   const cmds: string[] = [];
@@ -77,6 +77,12 @@ export async function run(): Promise<void> {
   const flagContextMgmt = args.includes('--context-management') ? true : args.includes('--no-context-management') ? false : undefined;
   const envContextMgmt = process.env.HARNESS_CONTEXT_MANAGEMENT;
   const envCtxParsed = envContextMgmt === 'true' || envContextMgmt === '1' ? true : envContextMgmt === 'false' || envContextMgmt === '0' ? false : undefined;
+
+  const flagStatusLine = args.includes('--status-line') ? true : args.includes('--no-status-line') ? false : undefined;
+  const envStatusLine = process.env.HARNESS_STATUS_LINE;
+  const envStatusLineParsed = envStatusLine === 'true' || envStatusLine === '1' ? true : envStatusLine === 'false' || envStatusLine === '0' ? false : undefined;
+  const configCli = new ConfigManager().cli;
+  const statusEnabled = flagStatusLine ?? envStatusLineParsed ?? configCli?.status_line ?? true;
 
   if (prompt !== undefined) {
     const config = new ConfigManager();
@@ -171,7 +177,7 @@ export async function run(): Promise<void> {
       console.log(`Falling back to: \x1b[36m${fallback}\x1b[0m\n`);
     }
 
-    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, initialTemp);
+    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, initialTemp, statusEnabled);
     return;
   }
 

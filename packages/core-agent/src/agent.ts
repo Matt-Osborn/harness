@@ -30,6 +30,8 @@ export class Agent {
   private responseBudget: number;
   private contextManagement: boolean;
   private compactificationProvider?: Provider;
+  private _cachedTokens: number = 0;
+  private _cachedMsgLen: number = 0;
 
   constructor(options: AgentOptions) {
     this.provider = options.provider;
@@ -57,6 +59,9 @@ export class Agent {
   }
 
   private estimateTokens(messages: Message[]): number {
+    if (messages.length === this._cachedMsgLen) {
+      return this._cachedTokens;
+    }
     const totalChars = messages.reduce((sum, m) => {
       let len = m.content.length;
       if (m.tool_calls) {
@@ -66,7 +71,10 @@ export class Agent {
       }
       return sum + len;
     }, 0);
-    return Math.ceil(totalChars / 4);
+    const total = Math.ceil(totalChars / 4);
+    this._cachedTokens = total;
+    this._cachedMsgLen = messages.length;
+    return total;
   }
 
   private computeUsableWindow(): number {
@@ -167,11 +175,17 @@ export class Agent {
     }
 
     const result = compacted || [...messages];
-    while (result.length > 1 && this.estimateTokens(result) > usableWindow) {
+    let currentTokens = this.estimateTokens(result);
+    while (result.length > 1 && currentTokens > usableWindow) {
       const dropIdx = result.findIndex((m, i) => i > 0 && m.role !== 'system');
       if (dropIdx === -1) break;
+      const dropped = result[dropIdx];
+      const droppedTokens = Math.ceil((dropped.content.length + (dropped.tool_calls?.reduce((s, tc) => s + tc.function.arguments.length + tc.function.name.length, 0) || 0)) / 4);
+      currentTokens -= droppedTokens;
       result.splice(dropIdx, 1);
     }
+    this._cachedTokens = currentTokens;
+    this._cachedMsgLen = result.length;
     return result;
   }
 

@@ -94,6 +94,7 @@ export interface SearchResult {
 
 export interface CLIConfig {
   styled?: boolean;
+  status_line?: boolean;
 }
 
 export interface ContextConfig {

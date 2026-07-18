@@ -5,7 +5,7 @@ import type { Message, SearchProviderType } from '@harness/shared';
 import { TextWrapper, SessionManager, isWSL } from '@harness/shared';
 import { MarkdownRenderer } from './markdown.js';
 
-export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, initialTemp?: number): Promise<void> {
+export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, initialTemp?: number, statusEnabled: boolean = true): Promise<void> {
   let currentSearch: SearchProviderType | 'auto' = searchProvider || 'auto';
   let searchIsDefault = true;
   const searchProviders: SearchProviderType[] = ['tavily', 'duckduckgo', 'openrouter'];
@@ -282,8 +282,29 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       let lastErrorMsg = '';
       let suppressPair = false;
       let justHadResult = false;
+
+      let isWaiting = true;
+      let statusLine = '';
+      function showStatus(text: string): void {
+        if (!statusEnabled) return;
+        statusLine = text;
+        process.stdout.write('\r' + text + '\x1b[K');
+      }
+      function clearStatus(): void {
+        if (!statusLine) return;
+        process.stdout.write('\r\x1b[K');
+        statusLine = '';
+      }
+      const statusTimer = setInterval(() => {
+        if (statusEnabled && isWaiting && !statusLine) {
+          showStatus('\u280B thinking');
+        }
+      }, 500);
+
       try {
         for await (const event of agent.run(history)) {
+          isWaiting = false;
+          clearStatus();
           switch (event.type) {
           case 'text': {
             const chunk = event.data as string;
@@ -338,6 +359,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
                 lastErrorMsg = '';
               }
               justHadResult = true;
+              isWaiting = true;
               break;
             }
             case 'error':
@@ -373,6 +395,8 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         }
         console.error(`\x1b[31m─────────────\x1b[0m`);
       } finally {
+        clearInterval(statusTimer);
+        clearStatus();
         if (!styled) {
           const remaining = (textWrap as TextWrapper).flush();
           if (remaining) process.stdout.write(remaining + '\n');

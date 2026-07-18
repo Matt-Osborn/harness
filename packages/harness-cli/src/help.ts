@@ -18,6 +18,8 @@ export function showHelp(): void {
   --sessions             List saved sessions
   --context-management   Enable context management (default)
   --no-context-management Disable context management (no truncation/compaction)
+  --status-line          Show progress status bar (default)
+  --no-status-line       Hide progress status bar
   -h, --help             Show this help message
 
 \x1b[1mCOMMANDS:\x1b[0m

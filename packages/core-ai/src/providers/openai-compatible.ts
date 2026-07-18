@@ -115,6 +115,7 @@ export class OpenAICompatibleProvider implements Provider {
       headers: this.headers,
       body: JSON.stringify(body),
       signal,
+      keepalive: true,
     });
 
     if (!response.ok) {

@@ -66,6 +66,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
   const useStyled = styled !== undefined ? styled : (process.stdout.isTTY ?? false);
   const textWrap = useStyled ? null : new TextWrapper(wrapWidth);
   const md = useStyled ? new MarkdownRenderer(wrapWidth) : null;
+  const seenTools = new Set<string>();
   let streamBuf = '';
 
   try {
@@ -81,9 +82,14 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
           }
           break;
         }
-        case 'tool_call':
-          process.stdout.write(`\n\x1b[33m⚡ ${(event.data as { name: string }).name}\x1b[0m\n`);
+        case 'tool_call': {
+          const { name } = event.data as { name: string };
+          if (!seenTools.has(name)) {
+            seenTools.add(name);
+            process.stdout.write(`\n\x1b[33m⚡ ${name}\x1b[0m\n`);
+          }
           break;
+        }
         case 'tool_result':
           break;
         case 'error':
