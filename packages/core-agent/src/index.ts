@@ -1,5 +1,6 @@
 export { Agent } from './agent.js';
 export type { AgentOptions } from './agent.js';
+export type { PermissionCheck, PermissionBatchCheck } from './agent.js';
 export type { AgentTool, ToolContext } from './tool.js';
 export { DEFAULT_SYSTEM_PROMPT, buildSystemPrompt } from './prompt.js';
 export { PermissionEngine, READ_ONLY_TOOLS } from './permissions.js';

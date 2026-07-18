@@ -32,10 +32,31 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
 
   if (temperatureOverride !== undefined) resolved.config.temperature = temperatureOverride;
   const provider = createProvider(resolved.config.model, resolved.config, resolved.apiKey);
+
+  const ctxConfig = config.contextConfig;
+  const contextManagement = ctxConfig?.management ?? true;
+  const contextWindow = ctxConfig?.window ?? 32768;
+  const responseBudget = ctxConfig?.response_budget ?? 4096;
+
+  let compactificationProvider;
+  const compConfig = config.compactificationConfig;
+  if (compConfig && compConfig.model) {
+    const compApiKey = compConfig.api_key || (compConfig.api_key_env ? process.env[compConfig.api_key_env] : undefined);
+    try {
+      compactificationProvider = createProvider(compConfig.model, compConfig, compApiKey);
+    } catch {
+      // compactification model invalid — fall back to main provider
+    }
+  }
+
   const agent = new Agent({
     provider,
     tools,
     permissionCheck: (toolName: string, args?: Record<string, unknown>) => permissions.check(toolName, undefined, args),
+    contextManagement,
+    contextWindow,
+    responseBudget,
+    compactificationProvider,
   });
 
   const sm = new SessionManager();

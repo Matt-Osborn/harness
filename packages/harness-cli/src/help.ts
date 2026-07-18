@@ -16,6 +16,8 @@ export function showHelp(): void {
   --no-styled            Disable styled markdown output
   --temperature <0-2>    Set temperature for this session (default: 0.1)
   --sessions             List saved sessions
+  --context-management   Enable context management (default)
+  --no-context-management Disable context management (no truncation/compaction)
   -h, --help             Show this help message
 
 \x1b[1mCOMMANDS:\x1b[0m

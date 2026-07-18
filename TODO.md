@@ -10,6 +10,12 @@
 - **Bash tool permission prompt** — show the specific command being run, not just "bash"
 - **README install guide** — restored `npm run build` between `npm approve-scripts` and `npm link`; fixed `npm link` → `npm link --workspace @harness/cli`
 - **Git cleanup** — sanitized `.gitignore`, untracked artifacts/session files/errors/terminals/mcps via `git rm --cached`, deleted `test-profile.sh`
+- **Batched permission approvals** — `agent.ts` groups consecutive same-name tool calls; `PermissionEngine.batchCheck()` for batch prompts; `PermissionPromptFn` accepts optional `batchArgs`; CLI shows truncated commands (first 3 + `...and N more`); TUI batch prompt
+- **Improved search prompt** — `prompt.ts` restructured with "Search persistence" (persistent but bounded, 2-4 searches), "Knowing when to stop" (synthesize, don't chase diminishing returns)
+- **Context Management Phase A + B** — `agent.ts`: `truncateMessages()` estimates tokens (chars/4), drops oldest non-system messages to fit context window; `tryCompactification()` summarizes dropped messages via configurable provider (same or separate), injects as `[Summary of earlier conversation: ...]` user msg. Falls back to Phase A dropping on failure or when compactification is unavailable.
+- **contextManagement toggle** — `--context-management`/`--no-context-management` flag, `HARNESS_CONTEXT_MANAGEMENT` env var, `[context]` config section; precedence: flag > env > config > default `true`
+- **compactificationModel config** — independent `[compactification]` TOML section using full `ModelConfig` shape; optional `compactificationProvider` in `AgentOptions`; defaults to main provider if not configured
+- **Merged duplicate `length` blocks** — `agent.ts` had two identical `if` branches for `finalFinishReason === 'length'` (one with `size === 0`, one with `size > 0`). Merged into single branch.
 
 ## ✅ Completed (WS-A: Search correctness)
 
@@ -77,7 +83,6 @@ _(none — all immediate items resolved)_
 
 - `interactive.ts:2` — `import { Agent }` should be `import type { Agent }` (only used as type)
 - `bash.ts:77-79` — `stderr` buffer is unbounded (stdout is capped at `MAX_OUTPUT_LENGTH`, stderr is not). A command producing massive stderr could consume memory.
-- `agent.ts:97-111` — Two `length` blocks (`size === 0` and `size > 0`) do the exact same thing. Could be merged.
 - `App.tsx:40,131` — `permEngineRef` is set but never read (engine kept alive by `setPermissionCheck` closure). Redundant but harmless.
 - `cli/index.ts:72` — `new ConfigManager()` called twice (line 72 for `.styled`, line 105 again). Pre-existing.
 
@@ -89,9 +94,7 @@ _(none — all immediate items resolved)_
 - Investigate "Could not parse CSS stylesheet" warnings during `web_fetch`
 
 ### Context Management
-- **Phase A** — token estimation + message truncation in `agent.ts` (B10 usage events wired as prereq)
-- **Phase B** — compactification (summarize dropped messages)
-- **Token counter** — utility to count tokens in messages
+- **Token counter** — utility to count tokens in messages (Phase A uses chars/4 heuristic; formal tokenizer integration still pending)
 
 ### Code Quality (follow-ups)
 - **Discriminated union cleanup** — `AgentEvent`/`StreamEvent` are now discriminated unions (WS-D); consumer casts (`event.data as {...}`) can be removed incrementally for compile-time safety

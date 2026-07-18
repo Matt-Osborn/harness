@@ -43,6 +43,7 @@ export type {
   SearchProviderType,
   SearchResult,
   CLIConfig,
+  ContextConfig,
   Config,
   AgentEvent,
 } from './types.js';

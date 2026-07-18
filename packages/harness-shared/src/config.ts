@@ -2,7 +2,7 @@ import { readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parse } from 'smol-toml';
-import type { CLIConfig, Config, ModelConfig, MCPServerConfig, PermissionConfig, PermissionMode, SearchConfig, SearchProviderType } from './types.js';
+import type { CLIConfig, Config, ContextConfig, ModelConfig, MCPServerConfig, PermissionConfig, PermissionMode, SearchConfig, SearchProviderType } from './types.js';
 import { validateModelApiKey, validateSearchProviderApiKey } from './validation.js';
 import type { ValidationResult } from './validation.js';
 
@@ -115,6 +115,22 @@ export class ConfigManager {
           styled: typeof c.styled === 'boolean' ? c.styled : (merged.cli?.styled ?? false),
         };
       }
+
+      if (raw.context && typeof raw.context === 'object') {
+        const ctx = raw.context as Record<string, unknown>;
+        merged.context = {
+          management: typeof ctx.management === 'boolean' ? ctx.management : (merged.context?.management ?? true),
+          window: typeof ctx.window === 'number' ? ctx.window : merged.context?.window,
+          response_budget: typeof ctx.response_budget === 'number' ? ctx.response_budget : merged.context?.response_budget,
+        };
+      }
+
+      if (raw.compactification && typeof raw.compactification === 'object') {
+        const comp = raw.compactification as Record<string, unknown>;
+        if (comp.model && typeof comp.model === 'string') {
+          merged.compactification = comp as unknown as ModelConfig;
+        }
+      }
     }
 
     return merged;
@@ -142,6 +158,14 @@ export class ConfigManager {
 
   get styled(): boolean {
     return this.config.cli?.styled ?? false;
+  }
+
+  get contextConfig(): ContextConfig | undefined {
+    return this.config.context;
+  }
+
+  get compactificationConfig(): ModelConfig | undefined {
+    return this.config.compactification;
   }
 
   getResolvedModel(modelName?: string): { config: ModelConfig; apiKey: string | undefined } | null {

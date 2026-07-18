@@ -95,6 +95,12 @@ export interface CLIConfig {
   styled?: boolean;
 }
 
+export interface ContextConfig {
+  management?: boolean;
+  window?: number;
+  response_budget?: number;
+}
+
 export interface Config {
   models: Record<string, ModelConfig>;
   default_model?: string;
@@ -102,6 +108,8 @@ export interface Config {
   permissions?: PermissionConfig;
   search?: SearchConfig;
   cli?: CLIConfig;
+  context?: ContextConfig;
+  compactification?: ModelConfig;
 }
 
 export type SessionLabel = 'INTERACTIVE' | 'PROMPT';

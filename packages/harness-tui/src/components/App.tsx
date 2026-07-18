@@ -46,7 +46,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
   const [isRunning, setIsRunning] = useState(false);
   const [currentSearch, setCurrentSearch] = useState(searchProvider || 'auto');
   const [sessionCreatedAt] = useState(() => Date.now());
-  const [pendingPermission, setPendingPermission] = useState<{ toolName: string } | null>(null);
+  const [pendingPermission, setPendingPermission] = useState<{ toolName: string; batchCount?: number } | null>(null);
   const [currentTool, setCurrentTool] = useState<{ name: string; args: string } | null>(null);
   const [spinnerFrame, setSpinnerFrame] = useState(0);
 
@@ -117,8 +117,12 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
   });
 
   useEffect(() => {
-    const tuiPromptFn: PermissionPromptFn = async (toolName: string): Promise<PermissionDecision> => {
-      setPendingPermission({ toolName });
+    const tuiPromptFn: PermissionPromptFn = async (
+      toolName: string,
+      _args?: Record<string, unknown>,
+      batchArgs?: Record<string, unknown>[]
+    ): Promise<PermissionDecision> => {
+      setPendingPermission({ toolName, batchCount: batchArgs?.length });
       return new Promise(resolve => {
         permResolveRef.current = resolve;
       });
@@ -132,6 +136,9 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
 
     agent.setPermissionCheck(async (toolName: string, args?: Record<string, unknown>): Promise<boolean> => {
       return engine.check(toolName, undefined, args);
+    });
+    agent.setPermissionBatchCheck(async (toolName: string, argsList: Record<string, unknown>[]): Promise<boolean> => {
+      return engine.batchCheck(toolName, argsList);
     });
   }, [agent, permConfig]);
 

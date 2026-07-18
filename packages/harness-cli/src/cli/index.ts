@@ -22,7 +22,7 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
 }
 
 const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature']);
-const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled']);
+const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management']);
 
 function extractCommands(args: string[]): string[] {
   const cmds: string[] = [];
@@ -73,6 +73,10 @@ export async function run(): Promise<void> {
   const envParsed = envStyled === 'true' || envStyled === '1' ? true : envStyled === 'false' || envStyled === '0' ? false : undefined;
   const configStyled = new ConfigManager().styled;
   const styled = flagStyled ?? envParsed ?? configStyled;
+
+  const flagContextMgmt = args.includes('--context-management') ? true : args.includes('--no-context-management') ? false : undefined;
+  const envContextMgmt = process.env.HARNESS_CONTEXT_MANAGEMENT;
+  const envCtxParsed = envContextMgmt === 'true' || envContextMgmt === '1' ? true : envContextMgmt === 'false' || envContextMgmt === '0' ? false : undefined;
 
   if (prompt !== undefined) {
     const config = new ConfigManager();
@@ -132,11 +136,33 @@ export async function run(): Promise<void> {
     const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
     const projectRules = loadProjectRules();
     const systemPrompt = buildSystemPrompt(projectRules);
+
+    const ctxConfig = config.contextConfig;
+    const contextManagement = flagContextMgmt ?? envCtxParsed ?? ctxConfig?.management ?? true;
+    const contextWindow = ctxConfig?.window ?? 32768;
+    const responseBudget = ctxConfig?.response_budget ?? 4096;
+
+    let compactificationProvider;
+    const compConfig = config.compactificationConfig;
+    if (compConfig && compConfig.model) {
+      const compApiKey = compConfig.api_key || (compConfig.api_key_env ? process.env[compConfig.api_key_env] : undefined);
+      try {
+        compactificationProvider = createProvider(compConfig.model, compConfig, compApiKey);
+      } catch {
+        // compactification model invalid — fall back to main provider
+      }
+    }
+
     const agent = new Agent({
       provider,
       tools,
       permissionCheck: (tn: string, args?: Record<string, unknown>) => permissions.check(tn, undefined, args),
+      permissionBatchCheck: isInter ? (tn: string, argsList: Record<string, unknown>[]) => permissions.batchCheck(tn, argsList) : undefined,
       systemPrompt,
+      contextManagement,
+      contextWindow,
+      responseBudget,
+      compactificationProvider,
     });
 
     if (!isProviderAvailable(search)) {
@@ -206,10 +232,31 @@ export async function run(): Promise<void> {
     const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
     const projectRules = loadProjectRules();
     const systemPrompt = buildSystemPrompt(projectRules);
+
+    const ctxConfig = config.contextConfig;
+    const contextManagement = flagContextMgmt ?? envCtxParsed ?? ctxConfig?.management ?? true;
+    const contextWindow = ctxConfig?.window ?? 32768;
+    const responseBudget = ctxConfig?.response_budget ?? 4096;
+
+    let compactificationProvider;
+    const compConfig = config.compactificationConfig;
+    if (compConfig && compConfig.model) {
+      const compApiKey = compConfig.api_key || (compConfig.api_key_env ? process.env[compConfig.api_key_env] : undefined);
+      try {
+        compactificationProvider = createProvider(compConfig.model, compConfig, compApiKey);
+      } catch {
+        // compactification model invalid — fall back to main provider
+      }
+    }
+
       const agent = new Agent({
         provider,
         tools,
         systemPrompt,
+        contextManagement,
+        contextWindow,
+        responseBudget,
+        compactificationProvider,
       });
 
       if (!isProviderAvailable(search)) {
@@ -282,6 +329,19 @@ web_search = "ask"
 web_fetch = "ask"
 read = "auto"
 edit = "auto"
+
+[context]
+# Context management settings
+# management = true           # Enable/disable context truncation and compaction
+# window = 32768              # Context window in tokens
+# response_budget = 4096      # Tokens reserved for model response
+
+# [compactification]
+# Independent model for summarization (optional; uses main model by default)
+# model = "qwen3.5:latest"
+# base_url = "http://localhost:11434/v1"
+# kind = "openai-compatible"
+# api_key_env = "OPENROUTER_API_KEY"
 `;
       writeFileSync(configPath, defaultConfig, 'utf-8');
       console.log(`Created config at ${configPath}`);

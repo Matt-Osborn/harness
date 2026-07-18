@@ -4,7 +4,11 @@ export const READ_ONLY_TOOLS = ['read', 'grep', 'glob', 'web_fetch', 'web_search
 
 export type PermissionDecision = 'yes' | 'no' | 'always' | 'deny-session';
 
-export type PermissionPromptFn = (toolName: string, args?: Record<string, unknown>) => Promise<PermissionDecision>;
+export type PermissionPromptFn = (
+  toolName: string,
+  args?: Record<string, unknown>,
+  batchArgs?: Record<string, unknown>[]
+) => Promise<PermissionDecision>;
 
 export interface PermissionEngineOptions {
   interactive: boolean;
@@ -67,10 +71,51 @@ export class PermissionEngine {
     this.sessionDenies.get(sid)!.add(toolName);
   }
 
+  async batchCheck(toolName: string, argsList: Record<string, unknown>[]): Promise<boolean> {
+    const sid = this.sessionId;
+
+    if (this.sessionGrants.get(sid)?.has(toolName)) return true;
+    if (this.sessionDenies.get(sid)?.has(toolName)) return false;
+
+    const mode = this.getEffectiveMode(toolName);
+
+    switch (mode) {
+      case 'auto':
+        return true;
+      case 'deny':
+        return false;
+      case 'accept-edits':
+        if (READ_ONLY_TOOLS.includes(toolName)) return true;
+        return this.askUserBatch(toolName, argsList);
+      case 'ask':
+      default:
+        return this.askUserBatch(toolName, argsList);
+    }
+  }
+
   private async askUser(toolName: string, args?: Record<string, unknown>): Promise<boolean> {
     if (!this.interactive) return true;
     if (!this.promptFn) return true;
     const decision = await this.promptFn(toolName, args);
+    switch (decision) {
+      case 'always':
+        this.grantSession(toolName);
+        return true;
+      case 'deny-session':
+        this.denySession(toolName);
+        return false;
+      case 'no':
+        return false;
+      case 'yes':
+      default:
+        return true;
+    }
+  }
+
+  private async askUserBatch(toolName: string, batchArgs: Record<string, unknown>[]): Promise<boolean> {
+    if (!this.interactive) return true;
+    if (!this.promptFn) return true;
+    const decision = await this.promptFn(toolName, undefined, batchArgs);
     switch (decision) {
       case 'always':
         this.grantSession(toolName);

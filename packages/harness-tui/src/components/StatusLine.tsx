@@ -5,7 +5,7 @@ import type { Theme } from '../theme.js';
 const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
 interface StatusLineProps {
-  pendingPermission: { toolName: string } | null;
+  pendingPermission: { toolName: string; batchCount?: number } | null;
   currentTool: { name: string; args: string } | null;
   isRunning: boolean;
   spinnerFrame: number;
@@ -14,11 +14,13 @@ interface StatusLineProps {
 
 export const StatusLine = memo(function StatusLine({ pendingPermission, currentTool, isRunning, spinnerFrame, theme }: StatusLineProps) {
   if (pendingPermission) {
+    const label = pendingPermission.batchCount && pendingPermission.batchCount > 1
+      ? `Allow ${pendingPermission.batchCount} ${pendingPermission.toolName} commands`
+      : `Allow ${pendingPermission.toolName}`;
     return (
       <Box height={1} paddingX={1} marginBottom={1}>
         <Text color={theme.warning}>🔒 </Text>
-        <Text bold color={theme.text}>Allow </Text>
-        <Text bold color={theme.secondary}>{pendingPermission.toolName}</Text>
+        <Text bold color={theme.text}>{label}</Text>
         <Text color={theme.text}>?  </Text>
         <Text color={theme.success}>[y]es</Text>
         <Text color={theme.text}>  </Text>

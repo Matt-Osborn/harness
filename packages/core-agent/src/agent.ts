@@ -1,9 +1,10 @@
 import type { Provider } from '@harness/core-ai';
-import type { Message, StreamEvent, AgentEvent, ToolCallDelta } from '@harness/shared';
+import type { Message, StreamEvent, AgentEvent, ToolCall, ToolCallDelta } from '@harness/shared';
 import type { AgentTool } from './tool.js';
 import { DEFAULT_SYSTEM_PROMPT } from './prompt.js';
 
 export type PermissionCheck = (toolName: string, args?: Record<string, unknown>) => Promise<boolean>;
+export type PermissionBatchCheck = (toolName: string, argsList: Record<string, unknown>[]) => Promise<boolean>;
 
 export interface AgentOptions {
   provider: Provider;
@@ -11,6 +12,11 @@ export interface AgentOptions {
   systemPrompt?: string;
   maxIterations?: number;
   permissionCheck?: PermissionCheck;
+  permissionBatchCheck?: PermissionBatchCheck;
+  contextWindow?: number;
+  responseBudget?: number;
+  contextManagement?: boolean;
+  compactificationProvider?: Provider;
 }
 
 export class Agent {
@@ -19,6 +25,11 @@ export class Agent {
   private systemPrompt: string;
   private maxIterations: number;
   private permissionCheck?: PermissionCheck;
+  private permissionBatchCheck?: PermissionBatchCheck;
+  private contextWindow: number;
+  private responseBudget: number;
+  private contextManagement: boolean;
+  private compactificationProvider?: Provider;
 
   constructor(options: AgentOptions) {
     this.provider = options.provider;
@@ -26,14 +37,127 @@ export class Agent {
     this.systemPrompt = options.systemPrompt || DEFAULT_SYSTEM_PROMPT;
     this.maxIterations = options.maxIterations || 25;
     this.permissionCheck = options.permissionCheck;
+    this.permissionBatchCheck = options.permissionBatchCheck;
+    this.contextWindow = options.contextWindow ?? 32768;
+    this.responseBudget = options.responseBudget ?? 4096;
+    this.contextManagement = options.contextManagement ?? true;
+    this.compactificationProvider = options.compactificationProvider;
   }
 
   setPermissionCheck(fn: PermissionCheck): void {
     this.permissionCheck = fn;
   }
 
+  setPermissionBatchCheck(fn: PermissionBatchCheck): void {
+    this.permissionBatchCheck = fn;
+  }
+
   setTemperature(t: number): void {
     this.provider.setTemperature(t);
+  }
+
+  private estimateTokens(messages: Message[]): number {
+    const totalChars = messages.reduce((sum, m) => {
+      let len = m.content.length;
+      if (m.tool_calls) {
+        for (const tc of m.tool_calls) {
+          len += tc.function.arguments.length + tc.function.name.length;
+        }
+      }
+      return sum + len;
+    }, 0);
+    return Math.ceil(totalChars / 4);
+  }
+
+  private computeUsableWindow(): number {
+    return this.contextWindow - this.responseBudget;
+  }
+
+  private findDroppableCount(messages: Message[], usableWindow: number): number {
+    const systemMsg = messages[0];
+    const rest = messages.slice(1);
+    let keeperChars = systemMsg.content.length;
+    let dropCount = 0;
+    for (let i = 0; i < rest.length; i++) {
+      const msgChars = rest[i].content.length + (rest[i].tool_calls?.reduce((s, tc) => s + tc.function.arguments.length + tc.function.name.length, 0) || 0);
+      if (Math.ceil((keeperChars + msgChars) / 4) > usableWindow) {
+        dropCount = rest.length - i;
+        break;
+      }
+      keeperChars += msgChars;
+    }
+    return dropCount;
+  }
+
+  private async tryCompactification(messages: Message[], usableWindow: number): Promise<Message[] | null> {
+    const dropCount = this.findDroppableCount(messages, usableWindow);
+    if (dropCount === 0) return null;
+
+    const systemMsg = messages[0];
+    const toCompactify = messages.slice(1, 1 + dropCount);
+    const keeper = messages.slice(1 + dropCount);
+
+    const historyText = toCompactify.map(m => {
+      let text = `[${m.role.toUpperCase()}]: ${m.content}`;
+      if (m.tool_calls) {
+        for (const tc of m.tool_calls) {
+          text += `\n  [tool_call: ${tc.function.name}(${tc.function.arguments})]`;
+        }
+      }
+      return text;
+    }).join('\n\n');
+
+    const summaryPrompt = `Summarize the following conversation history concisely, preserving key facts, decisions, file paths, and context needed to continue a software engineering task. Focus on what was done, what was discussed, and what remains to be done:\n\n${historyText}`;
+
+    const summaryProvider = this.compactificationProvider || this.provider;
+
+    try {
+      const stream = summaryProvider.streamResponse(
+        [{ role: 'user', content: summaryPrompt }],
+        undefined,
+        undefined,
+      );
+
+      let summary = '';
+      for await (const event of stream) {
+        if (event.type === 'text') {
+          const data = event.data as { content: string };
+          summary += data.content;
+        }
+      }
+
+      if (summary.trim()) {
+        const summaryMsg: Message = {
+          role: 'user',
+          content: `[Summary of earlier conversation: ${summary.trim()}]`,
+        };
+        return [systemMsg, summaryMsg, ...keeper];
+      }
+    } catch {
+      // Compactification failed — fall through to Phase A dropping
+    }
+
+    return null;
+  }
+
+  private async truncateMessages(messages: Message[]): Promise<Message[]> {
+    if (!this.contextManagement) return messages;
+
+    const usableWindow = this.computeUsableWindow();
+    if (this.estimateTokens(messages) <= usableWindow) return messages;
+
+    const compacted = await this.tryCompactification(messages, usableWindow);
+    if (compacted && this.estimateTokens(compacted) <= usableWindow) {
+      return compacted;
+    }
+
+    const result = compacted || [...messages];
+    while (result.length > 1 && this.estimateTokens(result) > usableWindow) {
+      const dropIdx = result.findIndex((m, i) => i > 0 && m.role !== 'system');
+      if (dropIdx === -1) break;
+      result.splice(dropIdx, 1);
+    }
+    return result;
   }
 
   async *run(messages: Message[], signal?: AbortSignal): AsyncIterable<AgentEvent> {
@@ -45,6 +169,8 @@ export class Agent {
     const userHistory: Message[] = [...userMessages];
 
     let iterations = 0;
+    let consecutiveLengthIterations = 0;
+    let consecutiveToolIterations = 0;
 
     while (iterations < this.maxIterations) {
       iterations++;
@@ -54,7 +180,8 @@ export class Agent {
       const toolCallAccumulators: Map<number, { id: string; name: string; args: string }> = new Map();
       let finalFinishReason: 'stop' | 'tool_calls' | 'length' | undefined;
 
-      const stream = this.provider.streamResponse(fullMessages, toolDefs, signal);
+      const truncatedMessages = await this.truncateMessages(fullMessages);
+      const stream = this.provider.streamResponse(truncatedMessages, toolDefs, signal);
 
       for await (const event of stream) {
         switch (event.type) {
@@ -78,13 +205,11 @@ export class Agent {
             break;
           }
           case 'usage':
-            // We could track usage here
             break;
           case 'error':
             yield { type: 'error', data: event.data, timestamp: Date.now() };
             return;
           case 'done': {
-            // Capture finish_reason from the done event data
             const doneData = event.data as { finish_reason?: string } | null;
             if (doneData?.finish_reason === 'length') {
               finalFinishReason = 'length';
@@ -94,15 +219,17 @@ export class Agent {
         }
       }
 
-      if (finalFinishReason === 'length' && toolCallAccumulators.size === 0) {
-        if (accumulatedText) {
-          fullMessages.push({ role: 'assistant', content: accumulatedText });
-          userHistory.push({ role: 'assistant', content: accumulatedText });
+      if (finalFinishReason === 'length') {
+        consecutiveLengthIterations++;
+        consecutiveToolIterations = 0;
+        if (consecutiveLengthIterations >= 3) {
+          if (accumulatedText) {
+            fullMessages.push({ role: 'assistant', content: accumulatedText });
+            userHistory.push({ role: 'assistant', content: accumulatedText });
+          }
+          yield { type: 'done', data: userHistory, timestamp: Date.now() };
+          return;
         }
-        continue;
-      }
-
-      if (finalFinishReason === 'length' && toolCallAccumulators.size > 0) {
         if (accumulatedText) {
           fullMessages.push({ role: 'assistant', content: accumulatedText });
           userHistory.push({ role: 'assistant', content: accumulatedText });
@@ -125,70 +252,184 @@ export class Agent {
         fullMessages.push(assistantMsg);
         userHistory.push(assistantMsg);
 
-        for (const tc of assistantMsg.tool_calls!) {
-          yield { type: 'tool_call', data: { name: tc.function.name, args: tc.function.arguments }, timestamp: Date.now() };
+        const toolCalls = assistantMsg.tool_calls!;
 
-          const tool = this.tools.find(t => t.name === tc.function.name);
-          if (!tool) {
-            const errMsg = `Unknown tool: ${tc.function.name}`;
-            const toolMsg: Message = {
-              role: 'tool',
-              content: errMsg,
-              tool_call_id: tc.id,
-              name: tc.function.name,
-            };
-            fullMessages.push(toolMsg);
-            userHistory.push(toolMsg);
-            yield { type: 'tool_result', data: { name: tc.function.name, error: errMsg }, timestamp: Date.now() };
-            continue;
+        const groups: { name: string; indices: number[] }[] = [];
+        for (let i = 0; i < toolCalls.length; i++) {
+          const name = toolCalls[i].function.name;
+          const last = groups[groups.length - 1];
+          if (last && last.name === name) {
+            last.indices.push(i);
+          } else {
+            groups.push({ name, indices: [i] });
           }
+        }
 
-          let args: Record<string, unknown>;
-          try {
-            args = JSON.parse(tc.function.arguments);
-          } catch {
-            const parseErr = `Invalid arguments for tool "${tc.function.name}": could not parse JSON. Arguments received: "${tc.function.arguments}". Please call the tool with valid JSON arguments.`;
-            const toolMsg: Message = {
-              role: 'tool',
-              content: parseErr,
-              tool_call_id: tc.id,
-              name: tc.function.name,
-            };
-            fullMessages.push(toolMsg);
-            userHistory.push(toolMsg);
-            yield { type: 'tool_result', data: { name: tc.function.name, error: parseErr }, timestamp: Date.now() };
-            continue;
-          }
+        for (const group of groups) {
+          const isBatch = group.indices.length > 1 && this.permissionBatchCheck;
 
-          if (this.permissionCheck) {
-            const allowed = await this.permissionCheck(tc.function.name, args);
+          if (isBatch) {
+            const parsedCalls: { tc: ToolCall; args: Record<string, unknown> | null }[] = [];
+
+            for (const idx of group.indices) {
+              const tc = toolCalls[idx];
+              yield { type: 'tool_call', data: { name: tc.function.name, args: tc.function.arguments }, timestamp: Date.now() };
+
+              let args: Record<string, unknown> | null;
+              try {
+                args = JSON.parse(tc.function.arguments);
+              } catch {
+                args = null;
+                const parseErr = `Invalid arguments for tool "${tc.function.name}": could not parse JSON. Arguments received: "${tc.function.arguments}". Please call the tool with valid JSON arguments.`;
+                const toolMsg: Message = {
+                  role: 'tool',
+                  content: parseErr,
+                  tool_call_id: tc.id,
+                  name: tc.function.name,
+                };
+                fullMessages.push(toolMsg);
+                userHistory.push(toolMsg);
+                yield { type: 'tool_result', data: { name: tc.function.name, error: parseErr }, timestamp: Date.now() };
+              }
+              parsedCalls.push({ tc, args });
+            }
+
+            const validArgs = parsedCalls
+              .filter(pc => pc.args !== null)
+              .map(pc => pc.args as Record<string, unknown>);
+
+            if (validArgs.length === 0) continue;
+
+            const allowed = await this.permissionBatchCheck!(group.name, validArgs);
+
             if (!allowed) {
-              const denyMsg = `Tool "${tc.function.name}" was denied by user. Tell the user why this tool was needed and ask if they want to allow it.`;
+              for (const pc of parsedCalls) {
+                if (pc.args === null) continue;
+                const denyMsg = `Tool "${pc.tc.function.name}" was denied by user. Explain what you were trying to do and give your best answer based on available information. Do NOT call any more tools — just respond to the user directly.`;
+                const toolMsg: Message = {
+                  role: 'tool',
+                  content: denyMsg,
+                  tool_call_id: pc.tc.id,
+                  name: pc.tc.function.name,
+                };
+                fullMessages.push(toolMsg);
+                userHistory.push(toolMsg);
+                yield { type: 'tool_result', data: { name: pc.tc.function.name, denied: true }, timestamp: Date.now() };
+              }
+              continue;
+            }
+
+            for (const pc of parsedCalls) {
+              if (pc.args === null) continue;
+              const tc = pc.tc;
+              const tool = this.tools.find(t => t.name === tc.function.name);
+              if (!tool) {
+                const errMsg = `Unknown tool: ${tc.function.name}`;
+                const toolMsg: Message = {
+                  role: 'tool',
+                  content: errMsg,
+                  tool_call_id: tc.id,
+                  name: tc.function.name,
+                };
+                fullMessages.push(toolMsg);
+                userHistory.push(toolMsg);
+                yield { type: 'tool_result', data: { name: tc.function.name, error: errMsg }, timestamp: Date.now() };
+                continue;
+              }
+
+              const result = await tool.execute(pc.args, { workingDir: process.cwd(), signal });
               const toolMsg: Message = {
                 role: 'tool',
-                content: denyMsg,
+                content: result,
                 tool_call_id: tc.id,
                 name: tc.function.name,
               };
               fullMessages.push(toolMsg);
               userHistory.push(toolMsg);
-              yield { type: 'tool_result', data: { name: tc.function.name, denied: true }, timestamp: Date.now() };
-              continue;
+              yield { type: 'tool_result', data: { name: tc.function.name, result }, timestamp: Date.now() };
+            }
+          } else {
+            for (const idx of group.indices) {
+              const tc = toolCalls[idx];
+              yield { type: 'tool_call', data: { name: tc.function.name, args: tc.function.arguments }, timestamp: Date.now() };
+
+              const tool = this.tools.find(t => t.name === tc.function.name);
+              if (!tool) {
+                const errMsg = `Unknown tool: ${tc.function.name}`;
+                const toolMsg: Message = {
+                  role: 'tool',
+                  content: errMsg,
+                  tool_call_id: tc.id,
+                  name: tc.function.name,
+                };
+                fullMessages.push(toolMsg);
+                userHistory.push(toolMsg);
+                yield { type: 'tool_result', data: { name: tc.function.name, error: errMsg }, timestamp: Date.now() };
+                continue;
+              }
+
+              let args: Record<string, unknown>;
+              try {
+                args = JSON.parse(tc.function.arguments);
+              } catch {
+                const parseErr = `Invalid arguments for tool "${tc.function.name}": could not parse JSON. Arguments received: "${tc.function.arguments}". Please call the tool with valid JSON arguments.`;
+                const toolMsg: Message = {
+                  role: 'tool',
+                  content: parseErr,
+                  tool_call_id: tc.id,
+                  name: tc.function.name,
+                };
+                fullMessages.push(toolMsg);
+                userHistory.push(toolMsg);
+                yield { type: 'tool_result', data: { name: tc.function.name, error: parseErr }, timestamp: Date.now() };
+                continue;
+              }
+
+              if (this.permissionCheck) {
+                const allowed = await this.permissionCheck(tc.function.name, args);
+                if (!allowed) {
+                  const denyMsg = `Tool "${tc.function.name}" was denied by user. Explain what you were trying to do and give your best answer based on available information. Do NOT call any more tools — just respond to the user directly.`;
+                  const toolMsg: Message = {
+                    role: 'tool',
+                    content: denyMsg,
+                    tool_call_id: tc.id,
+                    name: tc.function.name,
+                  };
+                  fullMessages.push(toolMsg);
+                  userHistory.push(toolMsg);
+                  yield { type: 'tool_result', data: { name: tc.function.name, denied: true }, timestamp: Date.now() };
+                  continue;
+                }
+              }
+
+              const result = await tool.execute(args, { workingDir: process.cwd(), signal });
+              const toolMsg: Message = {
+                role: 'tool',
+                content: result,
+                tool_call_id: tc.id,
+                name: tc.function.name,
+              };
+              fullMessages.push(toolMsg);
+              userHistory.push(toolMsg);
+              yield { type: 'tool_result', data: { name: tc.function.name, result }, timestamp: Date.now() };
             }
           }
+        }
+        consecutiveToolIterations++;
+        consecutiveLengthIterations = 0;
 
-          const result = await tool.execute(args, { workingDir: process.cwd(), signal });
-          const toolMsg: Message = {
+        if (consecutiveToolIterations >= 6) {
+          fullMessages.push({
             role: 'tool',
-            content: result,
-            tool_call_id: tc.id,
-            name: tc.function.name,
-          };
-          fullMessages.push(toolMsg);
-          userHistory.push(toolMsg);
-          yield { type: 'tool_result', data: { name: tc.function.name, result }, timestamp: Date.now() };
+            content: 'You have been calling tools repeatedly without producing a final answer. STOP calling tools now and give your best answer based on what you have gathered so far.',
+            tool_call_id: 'max-iterations-guard',
+            name: 'system',
+          });
+          consecutiveToolIterations = 0;
         }
       } else {
+        consecutiveToolIterations = 0;
+        consecutiveLengthIterations = 0;
         if (accumulatedText) {
           fullMessages.push({ role: 'assistant', content: accumulatedText });
           userHistory.push({ role: 'assistant', content: accumulatedText });
