@@ -127,6 +127,10 @@ _(none — all immediate items resolved)_
   - Control: `HARNESS_LOG_LEVEL` env var, `[logging]` config section, `--log-level` flag
   - Precedence: flag > env > config > default(`warn`)
 
+### Prompt Caching
+- **Option B: Client-side prefix dedup** — detect stable message prefix across iterations, send only delta from last known-good prefix. Works with any provider, no API support needed.
+- **Option C: Session-level caching** — on session resume, re-send only messages appended since the previous cached prefix. Reduces resume token cost significantly.
+
 ### Infrastructure
 - **Bash tool: improved `resolveShell()`** — when `SHELL` is a Cygwin Unix path, try common bash locations (Git Bash `C:\Program Files\Git\bin\bash.exe`, Cygwin paths) before falling back to `cmd.exe`. Also add error message tips for ENOENT/path-not-found so the model can give actionable advice. See `plans/improved_win_shell.md` and `plans/improved_errors.md` for details.
 - **Logging diagnostic**: run `HARNESS_LOG_LEVEL=debug harness` to confirm text events arrive in interactive mode (see `text_event_diagnostic.md`)

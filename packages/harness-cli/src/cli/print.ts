@@ -35,7 +35,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
 
   const ctxConfig = config.contextConfig;
   const contextManagement = ctxConfig?.management ?? true;
-  const contextWindow = ctxConfig?.window ?? 32768;
+  const contextWindow = ctxConfig?.window;
   const responseBudget = ctxConfig?.response_budget ?? 4096;
 
   let compactificationProvider;

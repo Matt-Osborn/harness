@@ -38,7 +38,7 @@ export class Agent {
     this.maxIterations = options.maxIterations || 25;
     this.permissionCheck = options.permissionCheck;
     this.permissionBatchCheck = options.permissionBatchCheck;
-    this.contextWindow = options.contextWindow ?? 32768;
+    this.contextWindow = options.contextWindow ?? this.provider.contextWindow ?? 32768;
     this.responseBudget = options.responseBudget ?? 4096;
     this.contextManagement = options.contextManagement ?? true;
     this.compactificationProvider = options.compactificationProvider;
@@ -87,6 +87,21 @@ export class Agent {
       keeperChars += msgChars;
     }
     return dropCount;
+  }
+
+  private applyCaching(messages: Message[]): Message[] {
+    return messages.map((m, i) => {
+      if (i === 0 && m.role === 'system') {
+        return { ...m, cache_control: { type: 'ephemeral' } };
+      }
+      if (m.content.startsWith('[Summary of earlier conversation:')) {
+        return { ...m, cache_control: { type: 'ephemeral' } };
+      }
+      if ((m.role === 'user' || m.role === 'tool') && i > 0 && i % 4 === 0) {
+        return { ...m, cache_control: { type: 'ephemeral' } };
+      }
+      return m;
+    });
   }
 
   private async tryCompactification(messages: Message[], usableWindow: number): Promise<Message[] | null> {
@@ -181,7 +196,8 @@ export class Agent {
       let finalFinishReason: 'stop' | 'tool_calls' | 'length' | undefined;
 
       const truncatedMessages = await this.truncateMessages(fullMessages);
-      const stream = this.provider.streamResponse(truncatedMessages, toolDefs, signal);
+      const messagesToSend = this.applyCaching(truncatedMessages);
+      const stream = this.provider.streamResponse(messagesToSend, toolDefs, signal);
 
       for await (const event of stream) {
         switch (event.type) {

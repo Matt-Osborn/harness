@@ -44,13 +44,28 @@ interface OpenAIChunk {
 
 export class OpenAICompatibleProvider implements Provider {
   readonly modelId: string;
+  readonly contextWindow: number;
   private baseUrl: string;
   private apiKey: string | undefined;
   private maxTokens: number | undefined;
   private temperature: number;
 
+  static inferContextWindow(modelId: string): number {
+    const id = modelId.toLowerCase();
+    if (id.includes('deepseek-v4') || id.includes('deepseek/v4')) return 131072;
+    if (id.includes('gpt-4') || id.includes('gpt4')) return 131072;
+    if (id.includes('claude')) return 131072;
+    if (id.includes('gemini')) return 131072;
+    if ((id.includes('qwen') || id.includes('qwq')) && (id.includes('3') || id.includes('4') || id.includes('5'))) return 131072;
+    if (id.includes('llama') && !id.includes('2')) return 131072;
+    if (id.includes('glm') || id.includes('chatglm')) return 131072;
+    if (id.includes('kimi') || id.includes('moonshot')) return 131072;
+    return 32768;
+  }
+
   constructor(modelId: string, config: ModelConfig, apiKey?: string) {
     this.modelId = modelId;
+    this.contextWindow = OpenAICompatibleProvider.inferContextWindow(modelId);
     this.baseUrl = (config.base_url || 'https://api.openai.com/v1').replace(/\/+$/, '');
     this.apiKey = apiKey;
     this.maxTokens = config.max_tokens;
@@ -78,12 +93,16 @@ export class OpenAICompatibleProvider implements Provider {
   ): AsyncIterable<StreamEvent> {
     const body: Record<string, unknown> = {
       model: this.modelId,
-      messages: messages.map(m => ({
-        role: m.role,
-        content: m.content || null,
-        tool_calls: m.tool_calls,
-        tool_call_id: m.tool_call_id,
-      })),
+      messages: messages.map(m => {
+        const msg: Record<string, unknown> = {
+          role: m.role,
+          content: m.content || null,
+        };
+        if (m.tool_calls) msg.tool_calls = m.tool_calls;
+        if (m.tool_call_id) msg.tool_call_id = m.tool_call_id;
+        if (m.cache_control) msg.cache_control = m.cache_control;
+        return msg;
+      }),
       stream: true,
       stream_options: { include_usage: true },
     };
