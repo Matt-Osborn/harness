@@ -177,7 +177,8 @@ export async function run(): Promise<void> {
       console.log(`Falling back to: \x1b[36m${fallback}\x1b[0m\n`);
     }
 
-    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, initialTemp, statusEnabled);
+    const searchIsDefault = !searchFlagPresent;
+    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, searchIsDefault, initialTemp, statusEnabled);
     return;
   }
 
@@ -323,7 +324,7 @@ kind = "openai-compatible"
 default = "deepseek"
 
 [search]
-provider = "duckduckgo"
+provider = "tavily"
 
 [permissions]
 mode = "ask"

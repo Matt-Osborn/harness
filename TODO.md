@@ -85,6 +85,7 @@ _(none — all immediate items resolved)_
 - `bash.ts:77-79` — `stderr` buffer is unbounded (stdout is capped at `MAX_OUTPUT_LENGTH`, stderr is not). A command producing massive stderr could consume memory.
 - `App.tsx:40,131` — `permEngineRef` is set but never read (engine kept alive by `setPermissionCheck` closure). Redundant but harmless.
 - `cli/index.ts:72` — `new ConfigManager()` called twice (line 72 for `.styled`, line 105 again). Pre-existing.
+- **Interactive mode tool call dedup** — tool `⚡ name` lines still print on every call for always-approved tools (same issue as fixed in `-p` mode). Low priority: status line keeps output manageable; worth implementing for `--no-status-line` users.
 
 ## 📋 WS-E: Deferred Roadmap
 

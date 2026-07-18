@@ -5,9 +5,8 @@ import type { Message, SearchProviderType } from '@harness/shared';
 import { TextWrapper, SessionManager, isWSL } from '@harness/shared';
 import { MarkdownRenderer } from './markdown.js';
 
-export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, initialTemp?: number, statusEnabled: boolean = true): Promise<void> {
+export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true): Promise<void> {
   let currentSearch: SearchProviderType | 'auto' = searchProvider || 'auto';
-  let searchIsDefault = true;
   const searchProviders: SearchProviderType[] = ['tavily', 'duckduckgo', 'openrouter'];
   let rl: readline.Interface;
   let currentTemp = initialTemp ?? 0.1;
