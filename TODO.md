@@ -116,8 +116,10 @@ _(none — all immediate items resolved)_
 - **Model command clarity** — distinguish `harness --model`, `harness model list`, `/model` slash command; user should be able to: list models, view current model, set session model, set default model, add models
 
 ### UI/UX
-- **Plan mode / build mode toggle** — formalize plan mode as a first-class concept (not just conversation loop state). When in plan mode, agent may only read/inspect, not write. When in build mode, all tools available. User should be able to toggle at runtime.
-- **Colors/themes** — systematic color scheme (or user-configurable themes)
+- **⏳ Plan mode / build mode toggle** — formalized in `plans/theming_and_mode_plan.md`. PermissionEngine mode, CLI flags, Tab key toggle, slash commands, prompt indicator. Ready to implement.
+- **⏳ CliTheme system** — formalized in `plans/theming_and_mode_plan.md`. `CliTheme` class with ANSI defaults, hex→ANSI-8-bit conversion, config TOML `[theme]` section. Ready to implement.
+- **Truecolor upgrade** — see `plans/truecolor_upgrade_plan.md`. Full 24-bit color output with `NO_COLOR`/`CLICOLOR` support and ANSI fallback. Deferred — needs COLORTERM detection and hex→truecolor escape generation.
+- **JSON theme file format** — OpenCode-compatible JSON themes (`defs` + `theme` with dark/light variants). Load from `~/.config/harness/themes/*.json`. Phase 2 after CliTheme is implemented.
 - **Persistent status bar** — pinned at bottom of terminal for tool calls, thinking, status (C2)
 
 ### Logging

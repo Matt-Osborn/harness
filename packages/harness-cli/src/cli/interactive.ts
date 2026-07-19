@@ -282,8 +282,10 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       let suppressPair = false;
       let justHadResult = false;
 
+      const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
       let isWaiting = true;
       let statusLine = '';
+      let spinnerFrame = 0;
       function showStatus(text: string): void {
         if (!statusEnabled) return;
         statusLine = text;
@@ -295,10 +297,11 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         statusLine = '';
       }
       const statusTimer = setInterval(() => {
-        if (statusEnabled && isWaiting && !statusLine) {
-          showStatus('\u280B thinking');
+        if (statusEnabled && isWaiting) {
+          showStatus(`${SPINNER_FRAMES[spinnerFrame % SPINNER_FRAMES.length]} thinking`);
+          spinnerFrame++;
         }
-      }, 500);
+      }, 200);
 
       try {
         for await (const event of agent.run(history)) {
