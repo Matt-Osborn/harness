@@ -2,7 +2,7 @@ import { readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parse } from 'smol-toml';
-import type { CLIConfig, Config, ContextConfig, FormatConfig, ModelConfig, MCPServerConfig, PermissionConfig, PermissionMode, SearchConfig, SearchProviderType } from './types.js';
+import type { CLIConfig, Config, ContextConfig, FormatConfig, ModelConfig, MCPServerConfig, PermissionConfig, PermissionMode, SearchConfig, SearchProviderType, ThemeConfig } from './types.js';
 import { validateModelApiKey, validateSearchProviderApiKey } from './validation.js';
 import type { ValidationResult } from './validation.js';
 
@@ -136,6 +136,13 @@ export class ConfigManager {
         };
       }
 
+      if (raw.theme && typeof raw.theme === 'object') {
+        const t = raw.theme as Record<string, unknown>;
+        merged.theme = {
+          colors: { ...merged.theme?.colors, ...(t.colors as Record<string, string> || {}) },
+        };
+      }
+
       if (raw.compactification && typeof raw.compactification === 'object') {
         const comp = raw.compactification as Record<string, unknown>;
         if (comp.model && typeof comp.model === 'string') {
@@ -181,6 +188,10 @@ export class ConfigManager {
 
   get formatConfig(): FormatConfig | undefined {
     return this.config.format;
+  }
+
+  get themeConfig(): ThemeConfig | undefined {
+    return this.config.theme;
   }
 
   get compactificationConfig(): ModelConfig | undefined {

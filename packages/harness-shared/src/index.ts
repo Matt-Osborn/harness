@@ -22,6 +22,8 @@ export type { SessionData, SessionLabel } from './types.js';
 
 export { SkillRegistry } from './skills.js';
 export type { SkillInfo } from './skills.js';
+
+export { CliTheme } from './cli-theme.js';
 export { loadProjectRules, findProjectRulesPath } from './project-rules.js';
 
 export type {
@@ -38,6 +40,7 @@ export type {
   ModelConfig,
   MCPServerConfig,
   FormatConfig,
+  ThemeConfig,
   PermissionConfig,
   PermissionMode,
   SearchConfig,

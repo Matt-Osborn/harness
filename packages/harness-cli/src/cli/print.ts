@@ -1,4 +1,4 @@
-import { ConfigManager, TextWrapper, SessionManager } from '@harness/shared';
+import { ConfigManager, TextWrapper, SessionManager, CliTheme } from '@harness/shared';
 import type { Message, SearchProviderType } from '@harness/shared';
 import { createProvider } from '@harness/core-ai';
 import {
@@ -6,12 +6,13 @@ import {
 } from '@harness/core-agent';
 import { MarkdownRenderer } from './markdown.js';
 
-export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number): Promise<void> {
+export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, theme?: CliTheme): Promise<void> {
   const config = new ConfigManager();
+  const t = theme ?? new CliTheme(config.themeConfig?.colors);
 
   const valid = config.validateModel(modelName);
   if (!valid.valid) {
-    console.error(`\x1b[31m${valid.message}\x1b[0m`);
+    console.error(t.error(valid.message));
     process.exit(1);
   }
 
@@ -23,7 +24,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
 
   const search = searchProvider || config.searchProvider || resolveAutoProvider();
   if (!isProviderAvailable(search)) {
-    console.error(`\x1b[33mWarning: search provider "${search}" is unavailable (missing API key). Falling back to ${resolveAutoProvider()}.\x1b[0m`);
+    console.error(t.warning(`Warning: search provider "${search}" is unavailable (missing API key). Falling back to ${resolveAutoProvider()}.`));
   }
 
   const permissions = new PermissionEngine(config.permissions, { interactive: false });
@@ -86,16 +87,16 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
           const { name } = event.data as { name: string };
           if (!seenTools.has(name)) {
             seenTools.add(name);
-            process.stdout.write(`\n\x1b[33m⚡ ${name}\x1b[0m\n`);
+            process.stdout.write(`\n${t.warning(`⚡ ${name}`)}\n`);
           }
           break;
         }
         case 'tool_result':
           break;
         case 'error':
-          console.error(`\n\x1b[31m─── Error ───\x1b[0m`);
-          console.error(`\x1b[31m  ${String(event.data)}\x1b[0m`);
-          console.error(`\x1b[31m─────────────\x1b[0m`);
+          console.error(t.error(`\n─── Error ───`));
+          console.error(t.error(`  ${String(event.data)}`));
+          console.error(t.error(`─────────────`));
           break;
         case 'done': {
           if (useStyled) {

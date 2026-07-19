@@ -1,4 +1,4 @@
-import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadProjectRules, loadEnvFiles } from '@harness/shared';
+import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadProjectRules, loadEnvFiles, CliTheme } from '@harness/shared';
 import type { SearchProviderType } from '@harness/shared';
 import { createProvider } from '@harness/core-ai';
 import {
@@ -49,12 +49,13 @@ export async function run(): Promise<void> {
 
   const searchFlagPresent = args.includes('-s') || args.includes('--search');
   const searchOverride = parseArg(args, '-s', '--search') as SearchProviderType | undefined;
+  const t = new CliTheme();
   if (searchFlagPresent && !searchOverride) {
-    console.log('\x1b[1mSearch providers:\x1b[0m');
-    console.log('  \x1b[36mtavily\x1b[0m       (requires TAVILY_API_KEY)');
-    console.log('  \x1b[36mduckduckgo\x1b[0m   (free, no key needed)');
-    console.log('  \x1b[36mopenrouter\x1b[0m   (requires OPENROUTER_API_KEY)');
-    console.log('\nUsage: \x1b[33mharness -s <provider>\x1b[0m or \x1b[33mharness --search <provider>\x1b[0m');
+    console.log(t.bold('Search providers:'));
+    console.log(`  ${t.accent('tavily')}       (requires TAVILY_API_KEY)`);
+    console.log(`  ${t.accent('duckduckgo')}   (free, no key needed)`);
+    console.log(`  ${t.accent('openrouter')}   (requires OPENROUTER_API_KEY)`);
+    console.log(`\nUsage: ${t.warning('harness -s <provider>')} or ${t.warning('harness --search <provider>')}`);
     return;
   }
 
@@ -72,6 +73,7 @@ export async function run(): Promise<void> {
   const envStyled = process.env.HARNESS_STYLED;
   const envParsed = envStyled === 'true' || envStyled === '1' ? true : envStyled === 'false' || envStyled === '0' ? false : undefined;
   const configStyled = new ConfigManager().styled;
+  const tGlobal = new CliTheme();
   const styled = flagStyled ?? envParsed ?? configStyled;
 
   const flagContextMgmt = args.includes('--context-management') ? true : args.includes('--no-context-management') ? false : undefined;
@@ -87,25 +89,27 @@ export async function run(): Promise<void> {
   if (prompt !== undefined) {
     const config = new ConfigManager();
     const valid = config.validateModel(model);
+    const tPrompt = new CliTheme(config.themeConfig?.colors);
     if (!valid.valid) {
-      console.error(`\x1b[31m${valid.message}\x1b[0m`);
+      console.error(tPrompt.error(valid.message));
       process.exit(1);
     }
-    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride);
+    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, tPrompt);
     return;
   }
 
   if (args.includes('--sessions') || args[0] === 'sessions') {
     const sm = new SessionManager();
     const all = sm.list();
+    const tSessions = new CliTheme();
     if (all.length === 0) {
-      console.log('\x1b[33mNo saved sessions.\x1b[0m');
+      console.log(tSessions.warning('No saved sessions.'));
       return;
     }
     console.log('');
     for (const s of all) {
       const msgCount = s.messages.filter(m => m.role === 'user' || m.role === 'assistant').length;
-      console.log(`  \x1b[36m${s.id}\x1b[0m  ${s.label}  ${msgCount} msgs  ${new Date(s.updatedAt).toLocaleString()}`);
+      console.log(`  ${tSessions.accent(s.id)}  ${s.label}  ${msgCount} msgs  ${new Date(s.updatedAt).toLocaleString()}`);
     }
     console.log('');
     return;
@@ -115,13 +119,14 @@ export async function run(): Promise<void> {
 
   if (commands.length === 0) {
     const config = new ConfigManager();
+    const tInteractive = new CliTheme(config.themeConfig?.colors);
     for (const err of config.parseErrorMessages) {
-      console.log(`\x1b[33mWarning: config parse error in ${err}\x1b[0m`);
+      console.log(tInteractive.warning(`Warning: config parse error in ${err}`));
     }
     const valid = config.validateModel(model);
     if (!valid.valid) {
-      console.log(`\x1b[31m${valid.message}\x1b[0m`);
-      console.log('Run \x1b[33mharness init\x1b[0m to create a default config.');
+      console.log(tInteractive.error(valid.message));
+      console.log(`Run ${tInteractive.warning('harness init')} to create a default config.`);
       return;
     }
 
@@ -173,12 +178,12 @@ export async function run(): Promise<void> {
 
     if (!isProviderAvailable(search)) {
       const fallback = resolveAutoProvider();
-      console.log(`\x1b[33mWarning: search provider "${search}" is unavailable (missing API key).\x1b[0m`);
-      console.log(`Falling back to: \x1b[36m${fallback}\x1b[0m\n`);
+      console.log(tInteractive.warning(`Warning: search provider "${search}" is unavailable (missing API key).`));
+      console.log(`Falling back to: ${tInteractive.accent(fallback)}\n`);
     }
 
     const searchIsDefault = !searchFlagPresent;
-    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, searchIsDefault, initialTemp, statusEnabled);
+    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, searchIsDefault, initialTemp, statusEnabled, tInteractive);
     return;
   }
 
@@ -186,18 +191,19 @@ export async function run(): Promise<void> {
     case 'model':
     case 'models': {
       const config = new ConfigManager();
+      const tModels = new CliTheme(config.themeConfig?.colors);
       const models = config.allModels;
       if (models.length === 0) {
-        console.log('No models configured. Run \x1b[33mharness init\x1b[0m to create a default config.');
+        console.log(`No models configured. Run ${tModels.warning('harness init')} to create a default config.`);
         return;
       }
       console.log('');
       for (const { name, config: mc } of models) {
         const isDefault = name === config.defaultModel;
-        const prefix = isDefault ? '\x1b[32m*\x1b[0m ' : '  ';
+        const prefix = isDefault ? `${tModels.success('*')} ` : '  ';
         const keyOk = config.validateModel(name).valid;
-        const keyStatus = keyOk ? '\x1b[32m✓ key set\x1b[0m' : '\x1b[33m⚠ no key\x1b[0m';
-        console.log(`${prefix}\x1b[1m${name}\x1b[0m: ${mc.name || mc.model} (\x1b[36m${mc.kind}\x1b[0m) ${keyStatus}`);
+        const keyStatus = keyOk ? tModels.success('✓ key set') : tModels.warning('⚠ no key');
+        console.log(`${prefix}${tModels.bold(name)}: ${mc.name || mc.model} (${tModels.accent(mc.kind)}) ${keyStatus}`);
         if (mc.base_url) console.log(`     url: ${mc.base_url}`);
       }
       console.log('');
@@ -205,18 +211,19 @@ export async function run(): Promise<void> {
     }
     case 'config': {
       const config = new ConfigManager();
-      console.log('\x1b[1mConfig sources:\x1b[0m');
+      const tConfig = new CliTheme(config.themeConfig?.colors);
+      console.log(tConfig.bold('Config sources:'));
       for (const path of config.configPaths) console.log(`  ${path}`);
       if (config.configPaths.length === 0) console.log('  (none)');
       console.log('');
-      console.log(`\x1b[1mDefault model:\x1b[0m  ${config.defaultModel || '(none)'}`);
+      console.log(`${tConfig.bold('Default model:')}  ${config.defaultModel || '(none)'}`);
       const modelValid = config.validateModel();
-      if (!modelValid.valid) console.log(`  \x1b[33m${modelValid.message.replace(/\n/g, '\n  ')}\x1b[0m`);
-      console.log(`\x1b[1mPermission:\x1b[0m    ${config.permissions?.mode || 'ask (default)'}`);
-      console.log(`\x1b[1mSearch provider:\x1b[0m ${config.searchProvider || 'auto-detect'}`);
+      if (!modelValid.valid) console.log(`  ${tConfig.warning(modelValid.message.replace(/\n/g, '\n  '))}`);
+      console.log(`${tConfig.bold('Permission:')}    ${config.permissions?.mode || 'ask (default)'}`);
+      console.log(`${tConfig.bold('Search provider:')} ${config.searchProvider || 'auto-detect'}`);
       const searchValid = config.validateSearchProvider();
-      if (!searchValid.valid) console.log(`  \x1b[33m${searchValid.message.replace(/\n/g, '\n  ')}\x1b[0m`);
-      console.log(`\x1b[1mMCP servers:\x1b[0m  ${Object.keys(config.mcpServers || {}).length} configured`);
+      if (!searchValid.valid) console.log(`  ${tConfig.warning(searchValid.message.replace(/\n/g, '\n  '))}`);
+      console.log(`${tConfig.bold('MCP servers:')}  ${Object.keys(config.mcpServers || {}).length} configured`);
       break;
     }
     case 'sessions':
@@ -225,9 +232,10 @@ export async function run(): Promise<void> {
     case 'tui': {
       const { runTui } = await import('@harness/tui');
       const config = new ConfigManager();
+      const tTui = new CliTheme(config.themeConfig?.colors);
       const valid = config.validateModel();
       if (!valid.valid) {
-        console.log(`\x1b[31m${valid.message}\x1b[0m`);
+        console.log(tTui.error(valid.message));
         return;
       }
 
@@ -268,8 +276,8 @@ export async function run(): Promise<void> {
 
       if (!isProviderAvailable(search)) {
         const fallback = resolveAutoProvider();
-        console.log(`\x1b[33mWarning: search provider "${search}" is unavailable (missing API key).\x1b[0m`);
-        console.log(`Falling back to: \x1b[36m${fallback}\x1b[0m`);
+        console.log(tTui.warning(`Warning: search provider "${search}" is unavailable (missing API key).`));
+        console.log(`Falling back to: ${tTui.accent(fallback)}`);
       }
 
       runTui(agent, {
@@ -358,7 +366,7 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
 `;
       writeFileSync(configPath, defaultConfig, 'utf-8');
       console.log(`Created config at ${configPath}`);
-      console.log('Edit it to add your API keys, then run \x1b[33mharness\x1b[0m to start.\n');
+      console.log(`Edit it to add your API keys, then run ${tGlobal.warning('harness')} to start.\n`);
 
       const FORMATTER_INSTALL_HINTS: Record<string, string> = {
         ruff: 'pip install ruff',
@@ -376,10 +384,10 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
         }
       }
       if (missing.length > 0) {
-        console.log(`\x1b[33m⚠ Some formatters in [format] config are not installed:\x1b[0m\n`);
+        console.log(tGlobal.warning('⚠ Some formatters in [format] config are not installed:') + '\n');
         for (const cmd of missing) {
           const hint = FORMATTER_INSTALL_HINTS[cmd] || cmd;
-          console.log(`  \x1b[33m${cmd}\x1b[0m  → ${hint}`);
+          console.log(`  ${tGlobal.warning(cmd)}  → ${hint}`);
         }
         console.log(`\n  The harness will still work — formatting will be skipped\n  until these are available.\n`);
       }
@@ -425,7 +433,7 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
       break;
     }
     default:
-      console.error(`\x1b[31mUnknown command: ${args[0]}\x1b[0m`);
+      console.error(tGlobal.error(`Unknown command: ${args[0]}`));
       showHelp();
       process.exit(1);
   }

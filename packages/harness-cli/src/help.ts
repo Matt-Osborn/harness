@@ -1,11 +1,14 @@
-export function showHelp(): void {
-  console.log(`
-\x1b[1mAI Harness\x1b[0m — Agentic Coding CLI
+import { CliTheme } from '@harness/shared';
 
-\x1b[1mUSAGE:\x1b[0m
+export function showHelp(): void {
+  const t = new CliTheme();
+  console.log(`
+${t.bold('AI Harness')} — Agentic Coding CLI
+
+${t.bold('USAGE:')}
   harness [OPTIONS] [COMMAND]
 
-\x1b[1mOPTIONS:\x1b[0m
+${t.bold('OPTIONS:')}
   -p, --prompt <text>    Run a single prompt in print mode
   -m, --model <name>     Specify which model to use
   -s, --search <provider> Search provider (tavily, duckduckgo, openrouter)
@@ -22,7 +25,7 @@ export function showHelp(): void {
   --no-status-line       Hide progress status bar
   -h, --help             Show this help message
 
-\x1b[1mCOMMANDS:\x1b[0m
+${t.bold('COMMANDS:')}
   model                  List configured models
   sessions               List saved sessions
   config                 Show effective configuration
@@ -30,7 +33,7 @@ export function showHelp(): void {
   skill <sub> [name]    Manage skills (list|enable|disable)
   tui                    Launch the TUI (terminal UI) mode
 
-\x1b[1mEXAMPLES:\x1b[0m
+${t.bold('EXAMPLES:')}
   harness                          Start interactive mode
   harness -p "refactor this class" Run a single prompt
   harness -m deepseek -p "hello"   Use a specific model

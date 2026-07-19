@@ -2,10 +2,11 @@ import * as readline from 'node:readline';
 import { Agent } from '@harness/core-agent';
 import type { WebSearchTool } from '@harness/core-agent';
 import type { Message, SearchProviderType } from '@harness/shared';
-import { TextWrapper, SessionManager, isWSL } from '@harness/shared';
+import { TextWrapper, SessionManager, isWSL, CliTheme } from '@harness/shared';
 import { MarkdownRenderer } from './markdown.js';
 
-export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true): Promise<void> {
+export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true, theme?: CliTheme): Promise<void> {
+  const t = theme ?? new CliTheme();
   let currentSearch: SearchProviderType | 'auto' = searchProvider || 'auto';
   const searchProviders: SearchProviderType[] = ['tavily', 'duckduckgo', 'openrouter'];
   let rl: readline.Interface;
@@ -34,7 +35,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       sessionCreatedAt = loaded.createdAt;
       history = loaded.messages;
     } else {
-      console.error(`\x1b[31mSession not found: ${resumeSessionId}\x1b[0m`);
+      console.error(t.error(`Session not found: ${resumeSessionId}`));
       process.exit(1);
     }
   } else {
@@ -55,13 +56,13 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
   }
 
   process.on('uncaughtException', (err) => {
-    console.error('\n\x1b[31mUncaught exception:', err.message, '\x1b[0m');
+    console.error(t.error(`\nUncaught exception: ${err.message}`));
     saveSession();
     process.exit(1);
   });
 
   process.on('unhandledRejection', (reason) => {
-    console.error('\n\x1b[31mUnhandled rejection:', String(reason), '\x1b[0m');
+    console.error(t.error(`\nUnhandled rejection: ${String(reason)}`));
     saveSession();
     process.exit(1);
   });
@@ -72,14 +73,14 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
     for (const msg of messages) {
       if (msg.role === 'system') continue;
       if (msg.role === 'user') {
-        process.stdout.write(`\x1b[32m❯\x1b[0m ${msg.content}\n\n`);
+        process.stdout.write(`${t.success('❯')} ${msg.content}\n\n`);
       } else if (msg.role === 'assistant') {
         if (msg.content) {
           process.stdout.write(md ? md.render(msg.content) + '\n' : `${msg.content}\n`);
         }
         if (msg.tool_calls) {
           for (const tc of msg.tool_calls) {
-            process.stdout.write(`\x1b[33m⚡ ${tc.function.name}\x1b[0m\n`);
+            process.stdout.write(`${t.warning(`⚡ ${tc.function.name}`)}\n`);
           }
         }
         process.stdout.write('\n');
@@ -92,7 +93,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       input: process.stdin,
       output: process.stdout,
       terminal: true,
-      prompt: '\x1b[32m❯\x1b[0m ',
+      prompt: `${t.success('❯')} `,
     });
 
     rl.on('close', () => {
@@ -116,16 +117,16 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
           currentSearch = provider as SearchProviderType;
           searchIsDefault = false;
           if (searchTool) searchTool.setProvider(currentSearch);
-          process.stdout.write(`\x1b[32mSearch provider switched to: ${provider}\x1b[0m\n\n`);
+          process.stdout.write(`${t.success(`Search provider switched to: ${provider}`)}\n\n`);
         } else {
-          process.stdout.write(`\x1b[31mUnknown provider. Options: ${searchProviders.join(', ')}\x1b[0m\n\n`);
+          process.stdout.write(`${t.error(`Unknown provider. Options: ${searchProviders.join(', ')}`)}\n\n`);
         }
         rl.prompt();
         return;
       }
 
       if (trimmed === '/search') {
-        process.stdout.write(`\x1b[33mCurrent search provider: ${currentSearch}\x1b[0m\n`);
+        process.stdout.write(`${t.warning(`Current search provider: ${currentSearch}`)}\n`);
         process.stdout.write(`Options: ${searchProviders.join(', ')}\n\n`);
         rl.prompt();
         return;
@@ -134,34 +135,34 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       if (trimmed.startsWith('/key ')) {
         const envVar = trimmed.slice(5).trim().toUpperCase();
         if (!envVar) {
-          process.stdout.write('\x1b[31mUsage: /key ENV_VAR_NAME\x1b[0m\n\n');
+          process.stdout.write(t.error('Usage: /key ENV_VAR_NAME') + '\n\n');
           rl.prompt();
           return;
         }
-        rl.question(`Enter value for \x1b[33m${envVar}\x1b[0m: `, (value) => {
+        rl.question(`Enter value for ${t.warning(envVar)}: `, (value) => {
           process.env[envVar] = value;
-          process.stdout.write(`\x1b[32mSet ${envVar}\x1b[0m\n\n`);
+          process.stdout.write(`${t.success(`Set ${envVar}`)}\n\n`);
           rl.prompt();
         });
         return;
       }
 
       if (trimmed === '/key') {
-        process.stdout.write('\x1b[33mUsage: /key ENV_VAR_NAME\x1b[0m — sets an environment variable for the current session.\n');
+        process.stdout.write(t.warning('Usage: /key ENV_VAR_NAME') + ' — sets an environment variable for the current session.\n');
         process.stdout.write('Common: OPENROUTER_API_KEY, TAVILY_API_KEY, OPENAI_API_KEY, DEEPSEEK_API_KEY, OPENROUTER_SEARCH_MODEL\n\n');
         rl.prompt();
         return;
       }
 
       if (trimmed === '/session') {
-        process.stdout.write(`\x1b[1mSession:\x1b[0m  ${sessionId}\n`);
-        process.stdout.write(`\x1b[1mLabel:\x1b[0m    INTERACTIVE\n`);
-        process.stdout.write(`\x1b[1mModel:\x1b[0m    ${modelName || '(default)'}\n`);
-        process.stdout.write(`\x1b[1mSearch:\x1b[0m   ${currentSearch}\n`);
-        process.stdout.write(`\x1b[1mTemp:\x1b[0m     ${currentTemp.toFixed(2)}\n`);
-        process.stdout.write(`\x1b[1mMessages:\x1b[0m ${history.filter(m => m.role === 'user' || m.role === 'assistant').length}\n`);
-        process.stdout.write(`\x1b[1mCreated:\x1b[0m  ${new Date(sessionCreatedAt).toLocaleString()}\n`);
-        process.stdout.write(`\x1b[1mSaved:\x1b[0m    ${new Date(Date.now()).toLocaleString()}\n\n`);
+        process.stdout.write(`${t.bold('Session:')}  ${sessionId}\n`);
+        process.stdout.write(`${t.bold('Label:')}    INTERACTIVE\n`);
+        process.stdout.write(`${t.bold('Model:')}    ${modelName || '(default)'}\n`);
+        process.stdout.write(`${t.bold('Search:')}   ${currentSearch}\n`);
+        process.stdout.write(`${t.bold('Temp:')}     ${currentTemp.toFixed(2)}\n`);
+        process.stdout.write(`${t.bold('Messages:')} ${history.filter(m => m.role === 'user' || m.role === 'assistant').length}\n`);
+        process.stdout.write(`${t.bold('Created:')}  ${new Date(sessionCreatedAt).toLocaleString()}\n`);
+        process.stdout.write(`${t.bold('Saved:')}    ${new Date(Date.now()).toLocaleString()}\n\n`);
         rl.prompt();
         return;
       }
@@ -169,14 +170,14 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       if (trimmed === '/sessions') {
         const all = sm.list();
         if (all.length === 0) {
-          process.stdout.write('\x1b[33mNo saved sessions.\x1b[0m\n\n');
+          process.stdout.write(t.warning('No saved sessions.') + '\n\n');
           rl.prompt();
           return;
         }
         for (const s of all) {
           const msgCount = s.messages.filter(m => m.role === 'user' || m.role === 'assistant').length;
-          const isCurrent = s.id === sessionId ? ' \x1b[32m← current\x1b[0m' : '';
-          process.stdout.write(`  \x1b[36m${s.id}\x1b[0m  ${s.label}  ${msgCount} msgs  ${new Date(s.updatedAt).toLocaleString()}${isCurrent}\n`);
+          const isCurrent = s.id === sessionId ? ` ${t.success('← current')}` : '';
+          process.stdout.write(`  ${t.accent(s.id)}  ${s.label}  ${msgCount} msgs  ${new Date(s.updatedAt).toLocaleString()}${isCurrent}\n`);
         }
         process.stdout.write('\n');
         rl.prompt();
@@ -187,7 +188,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         const targetId = trimmed.slice(8).trim();
         const loaded = sm.load(targetId);
         if (!loaded) {
-          process.stdout.write(`\x1b[31mSession not found: ${targetId}\x1b[0m\n\n`);
+          process.stdout.write(`${t.error(`Session not found: ${targetId}`)}\n\n`);
           rl.prompt();
           return;
         }
@@ -198,7 +199,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         sessionCreatedAt = loaded.createdAt;
         history = loaded.messages;
 
-        process.stdout.write(`\x1b[32mResumed session ${sessionId}\x1b[0m  (${history.filter(m => m.role === 'user' || m.role === 'assistant').length} messages)\n\n`);
+        process.stdout.write(`${t.success(`Resumed session ${sessionId}`)}  (${history.filter(m => m.role === 'user' || m.role === 'assistant').length} messages)\n\n`);
         reprintConversation(history);
         rl.prompt();
         return;
@@ -207,7 +208,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       if (trimmed === '/resume') {
         const latest = sm.getLatest('INTERACTIVE');
         if (!latest) {
-          process.stdout.write('\x1b[33mNo saved sessions to resume.\x1b[0m\n\n');
+          process.stdout.write(t.warning('No saved sessions to resume.') + '\n\n');
           rl.prompt();
           return;
         }
@@ -218,7 +219,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         sessionCreatedAt = latest.createdAt;
         history = latest.messages;
 
-        process.stdout.write(`\x1b[32mResumed session ${sessionId}\x1b[0m  (${history.filter(m => m.role === 'user' || m.role === 'assistant').length} messages)\n\n`);
+        process.stdout.write(`${t.success(`Resumed session ${sessionId}`)}  (${history.filter(m => m.role === 'user' || m.role === 'assistant').length} messages)\n\n`);
         reprintConversation(history);
         rl.prompt();
         return;
@@ -231,20 +232,20 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       }
 
       if (trimmed === '/help') {
-        process.stdout.write('\x1b[1mCommands:\x1b[0m\n');
-        process.stdout.write('  \x1b[33m/search\x1b[0m              Show current search provider\n');
-        process.stdout.write('  \x1b[33m/search <provider>\x1b[0m   Switch search provider\n');
-        process.stdout.write('  \x1b[33m/key\x1b[0m                 Show usage for setting API keys\n');
-        process.stdout.write('  \x1b[33m/key <ENV_VAR>\x1b[0m       Set an API key for this session\n');
-        process.stdout.write('  \x1b[33m/temperature\x1b[0m         Show current temperature\n');
-        process.stdout.write('  \x1b[33m/temperature <0-2>\x1b[0m   Set temperature for this session\n');
-        process.stdout.write('  \x1b[33m/session\x1b[0m             Show current session info\n');
-        process.stdout.write('  \x1b[33m/sessions\x1b[0m            List saved sessions\n');
-        process.stdout.write('  \x1b[33m/resume [id]\x1b[0m        Resume most recent or specific session by id\n');
-        process.stdout.write('  \x1b[33m/exit\x1b[0m                Save session and exit\n');
-        process.stdout.write('  \x1b[33m/quit\x1b[0m                Same as /exit\n');
-        process.stdout.write('  \x1b[33m/help\x1b[0m                Show this help\n');
-        process.stdout.write('  \x1b[33mCtrl+C\x1b[0m               Quit (saves session)\n');
+        process.stdout.write(t.bold('Commands:') + '\n');
+        process.stdout.write(`  ${t.warning('/search')}              Show current search provider\n`);
+        process.stdout.write(`  ${t.warning('/search <provider>')}   Switch search provider\n`);
+        process.stdout.write(`  ${t.warning('/key')}                 Show usage for setting API keys\n`);
+        process.stdout.write(`  ${t.warning('/key <ENV_VAR>')}       Set an API key for this session\n`);
+        process.stdout.write(`  ${t.warning('/temperature')}         Show current temperature\n`);
+        process.stdout.write(`  ${t.warning('/temperature <0-2>')}   Set temperature for this session\n`);
+        process.stdout.write(`  ${t.warning('/session')}             Show current session info\n`);
+        process.stdout.write(`  ${t.warning('/sessions')}            List saved sessions\n`);
+        process.stdout.write(`  ${t.warning('/resume [id]')}        Resume most recent or specific session by id\n`);
+        process.stdout.write(`  ${t.warning('/exit')}                Save session and exit\n`);
+        process.stdout.write(`  ${t.warning('/quit')}                Same as /exit\n`);
+        process.stdout.write(`  ${t.warning('/help')}                Show this help\n`);
+        process.stdout.write(`  ${t.warning('Ctrl+C')}               Quit (saves session)\n`);
         process.stdout.write('\n');
         rl.prompt();
         return;
@@ -253,19 +254,19 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       if (trimmed.startsWith('/temperature')) {
         const val = trimmed.slice(13).trim();
         if (!val) {
-          process.stdout.write(`Temperature: \x1b[36m${currentTemp.toFixed(2)}\x1b[0m\n\n`);
+          process.stdout.write(`Temperature: ${t.accent(currentTemp.toFixed(2))}\n\n`);
           rl.prompt();
           return;
         }
-        const t = parseFloat(val);
-        if (isNaN(t) || t < 0 || t > 2) {
-          process.stdout.write('\x1b[31mTemperature must be a number between 0 and 2.\x1b[0m\n\n');
+        const tempVal = parseFloat(val);
+        if (isNaN(tempVal) || tempVal < 0 || tempVal > 2) {
+          process.stdout.write(t.error('Temperature must be a number between 0 and 2.') + '\n\n');
           rl.prompt();
           return;
         }
-        agent.setTemperature(t);
-        currentTemp = t;
-        process.stdout.write(`Temperature set to \x1b[36m${t.toFixed(2)}\x1b[0m\n\n`);
+        agent.setTemperature(tempVal);
+        currentTemp = tempVal;
+        process.stdout.write(`Temperature set to ${t.accent(tempVal.toFixed(2))}\n\n`);
         rl.prompt();
         return;
       }
@@ -335,7 +336,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
               } else {
                 suppressPair = false;
                 lastCallLine = callLine;
-                process.stdout.write(`\n\x1b[33m⚡ ${callLine}\x1b[0m`);
+                process.stdout.write(`\n${t.warning(`⚡ ${callLine}`)}`);
               }
               break;
             }
@@ -346,18 +347,18 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
               }
               const r = event.data as { name: string; result: string; denied?: boolean };
               if (r.denied) {
-                process.stdout.write(` \x1b[33m⛔ denied\x1b[0m`);
+                process.stdout.write(` ${t.warning('⛔ denied')}`);
                 lastErrorMsg = '';
               } else if (r.result.startsWith('Error') || r.result.startsWith('Search failed:')) {
                 const msg = r.result.split('\n')[0].replace(/^Error( fetching URL)?:\s*/, '').trim();
                 if (msg === lastErrorMsg) {
-                  process.stdout.write(` \x1b[31mx\x1b[0m`);
+                  process.stdout.write(` ${t.error('x')}`);
                 } else {
-                  process.stdout.write(` \x1b[31m✗ ${msg}\x1b[0m`);
+                  process.stdout.write(` ${t.error(`✗ ${msg}`)}`);
                   lastErrorMsg = msg;
                 }
               } else {
-                process.stdout.write(` \x1b[32m✓\x1b[0m`);
+                process.stdout.write(` ${t.success('✓')}`);
                 lastErrorMsg = '';
               }
               justHadResult = true;
@@ -365,9 +366,9 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
               break;
             }
             case 'error':
-              console.error(`\n\x1b[31m─── Error ───\x1b[0m`);
-              console.error(`\x1b[31m  ${String(event.data)}\x1b[0m`);
-              console.error(`\x1b[31m─────────────\x1b[0m`);
+              console.error(t.error(`\n─── Error ───`));
+              console.error(t.error(`  ${String(event.data)}`));
+              console.error(t.error(`─────────────`));
               break;
             case 'done':
               history = event.data as Message[];
@@ -390,12 +391,12 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
           streamBuf = '';
         }
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`\n\x1b[31m─── Error ───\x1b[0m`);
-        console.error(`\x1b[31m  ${msg.replace(/\n/g, '\n  ')}\x1b[0m`);
+        console.error(t.error(`\n─── Error ───`));
+        console.error(t.error(`  ${msg.replace(/\n/g, '\n  ')}`));
         if (isWSL() && (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network') || msg.toLowerCase().includes('econn') || msg.toLowerCase().includes('enotfound') || msg.toLowerCase().includes('dns'))) {
-          console.error(`\x1b[33m  ℹ WSL tip: If a local model is running on Windows, use http://host.docker.internal:PORT instead of localhost\x1b[0m`);
+          console.error(t.warning('  ℹ WSL tip: If a local model is running on Windows, use http://host.docker.internal:PORT instead of localhost'));
         }
-        console.error(`\x1b[31m─────────────\x1b[0m`);
+        console.error(t.error(`─────────────`));
       } finally {
         clearInterval(statusTimer);
         clearStatus();
@@ -416,19 +417,19 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
     process.exit(0);
   });
 
-  console.log('\x1b[1mAI Harness\x1b[0m — Interactive mode (Ctrl+C to quit)');
-  if (modelName) console.log(`Model: \x1b[36m${modelName}\x1b[0m${modelIsDefault ? ' \x1b[2m(default)\x1b[0m' : ''}`);
-  console.log(`Search: \x1b[36m${currentSearch}\x1b[0m${searchIsDefault ? ' \x1b[2m(default)\x1b[0m' : ''}`);
+  console.log(`${t.bold('AI Harness')} — Interactive mode (Ctrl+C to quit)`);
+  if (modelName) console.log(`Model: ${t.accent(modelName)}${modelIsDefault ? ` ${t.dim('(default)')}` : ''}`);
+  console.log(`Search: ${t.accent(currentSearch)}${searchIsDefault ? ` ${t.dim('(default)')}` : ''}`);
 
   if (resumeSessionId || resumeLatest) {
     const msgCount = history.filter(m => m.role === 'user' || m.role === 'assistant').length;
-    console.log(`Session: \x1b[36m${sessionId}\x1b[0m  (resumed, ${msgCount} messages)\n`);
+    console.log(`Session: ${t.accent(sessionId)}  (resumed, ${msgCount} messages)\n`);
     reprintConversation(history);
   } else {
-    console.log(`Session: \x1b[36m${sessionId}\x1b[0m  (new)`);
+    console.log(`Session: ${t.accent(sessionId)}  (new)`);
   }
 
-  console.log('Type \x1b[33m/help\x1b[0m for available commands');
+  console.log(`Type ${t.warning('/help')} for available commands`);
   console.log('');
 
   startReadline();

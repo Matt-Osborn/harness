@@ -108,6 +108,10 @@ export interface FormatConfig {
   tools: Record<string, string>;
 }
 
+export interface ThemeConfig {
+  colors?: Record<string, string>;
+}
+
 export interface Config {
   models: Record<string, ModelConfig>;
   default_model?: string;
@@ -118,6 +122,7 @@ export interface Config {
   context?: ContextConfig;
   compactification?: ModelConfig;
   format?: FormatConfig;
+  theme?: ThemeConfig;
 }
 
 export type SessionLabel = 'INTERACTIVE' | 'PROMPT';
