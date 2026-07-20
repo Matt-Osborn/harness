@@ -10,7 +10,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
   let currentSearch: SearchProviderType | 'auto' = searchProvider || 'auto';
   const searchProviders: SearchProviderType[] = ['tavily', 'duckduckgo', 'openrouter'];
   let rl: readline.Interface;
-  let currentTemp = initialTemp ?? 0.1;
+  let currentTemp = initialTemp;
   let treatNextCloseAsExit = true;
 
   const sm = new SessionManager();
@@ -159,7 +159,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write(`${t.bold('Label:')}    INTERACTIVE\n`);
         process.stdout.write(`${t.bold('Model:')}    ${modelName || '(default)'}\n`);
         process.stdout.write(`${t.bold('Search:')}   ${currentSearch}\n`);
-        process.stdout.write(`${t.bold('Temp:')}     ${currentTemp.toFixed(2)}\n`);
+        process.stdout.write(`${t.bold('Temp:')}     ${currentTemp !== undefined ? currentTemp.toFixed(2) : 'default'}\n`);
         process.stdout.write(`${t.bold('Messages:')} ${history.filter(m => m.role === 'user' || m.role === 'assistant').length}\n`);
         process.stdout.write(`${t.bold('Created:')}  ${new Date(sessionCreatedAt).toLocaleString()}\n`);
         process.stdout.write(`${t.bold('Saved:')}    ${new Date(Date.now()).toLocaleString()}\n\n`);
@@ -254,7 +254,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       if (trimmed.startsWith('/temperature')) {
         const val = trimmed.slice(13).trim();
         if (!val) {
-          process.stdout.write(`Temperature: ${t.accent(currentTemp.toFixed(2))}\n\n`);
+          process.stdout.write(`Temperature: ${t.accent(currentTemp !== undefined ? currentTemp.toFixed(2) : 'default')}\n\n`);
           rl.prompt();
           return;
         }

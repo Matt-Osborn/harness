@@ -1,0 +1,471 @@
+.TH HARNESS 1 "2026-07-19" "AI Harness" "User Commands"
+.SH NAME
+harness \- AI coding harness \(em agentic CLI for local and remote LLMs
+.SH SYNOPSIS
+.B harness
+[\fIOPTIONS\fR] [\fICOMMAND\fR]
+.SH DESCRIPTION
+.B harness
+is an agentic coding assistant that runs in your terminal. It connects to any
+OpenAI-compatible API \(em including local models via Ollama, llama.cpp, vLLM,
+remote providers like OpenRouter, OpenAI, Anthropic, and others \(em and
+provides tools for reading, writing, editing files, running shell commands,
+and searching the web.
+.PP
+The harness operates in three modes:
+.IP \(bu 3
+\fBInteractive REPL\fR (default): type prompts, get responses, use slash commands
+.IP \(bu
+\fBPrint mode\fR (\fB\-p\fR/\fB\-\-prompt\fR): run a single prompt and print the response
+.IP \(bu
+\fBTUI mode\fR (\fB\&tui\fR): blessed-contrib terminal UI for multi-session management
+.SH OPTIONS
+.SS Model Settings
+.TP
+.BI \-m " <name>" , \-\-model " <name>"
+Select a model by key from the
+.B [model.<name>]
+sections in config.toml.
+Defaults to the model set in
+.BR [models] " " default .
+.TP
+.BI \-\-temperature " <0\-2>"
+Override the sampling temperature for this session.
+When unset, the model uses its own default.
+.TP
+.BI \-\-top\-p " <0\-1>"
+Override top_p (nucleus sampling) for this session.
+When unset, the model uses its own default.
+.TP
+.BI \-\-seed " <int>"
+Override the random seed for deterministic sampling.
+When unset, no seed is sent and the model samples nondeterministically.
+.TP
+.BR \-\-drop\-params ", " \-\-no\-drop\-params
+Strip unsupported parameters automatically
+(e.g. temperature on reasoning models like OpenAI o-series,
+DeepSeek Reasoner, or models running on older local servers).
+See
+.B drop_params_extra
+in
+.BR [model.<name>]
+to extend the stripped-param list per model.
+.SS Output and Display
+.TP
+.BI \-w " <cols>" , \-\-width " <cols>"
+Set the output wrap width in columns (minimum 20, default 80).
+.TP
+.BR \-\-styled ", " \-\-no\-styled
+Enable or disable styled Markdown rendering.
+Styled mode buffers the full response, renders it, and writes it
+on completion. Unstyled mode streams tokens as they arrive.
+Auto-detected from config and
+.B HARNESS_STYLED
+env var; defaults to unstyled.
+.TP
+.BR \-\-status\-line ", " \-\-no\-status\-line
+Show or hide the progress spinner during model thinking.
+Defaults to enabled.
+.SS Session Management
+.TP
+.BI \-S " <id>" , \-\-session " <id>"
+Resume a specific session by its ID
+(e.g.
+.BR 20250719\-142300\-a1b2 ).
+.TP
+.BR \-r ", " \-\-resume
+Resume the most recent INTERACTIVE session.
+.TP
+.B \-\-sessions
+List all saved sessions with their IDs, labels, message counts,
+and timestamps.
+.SS Context Management
+.TP
+.BR \-\-context\-management ", " \-\-no\-context\-management
+Enable or disable automatic context truncation and compaction.
+When enabled, the harness drops older messages and/or summarizes
+them when the conversation exceeds the usable context window.
+Defaults to enabled.
+.SS Miscellaneous
+.TP
+.BI \-p " <text>" , \-\-prompt " <text>"
+Run a single prompt in print mode and exit.
+.TP
+.BI \-s " <provider>" , \-\-search " <provider>"
+Set the search provider.
+Valid providers:
+.BR tavily ,
+.BR duckduckgo ,
+.BR openrouter .
+If the flag is given without a value, the harness lists available
+providers and exits.
+.TP
+.BR \-h ", " \-\-help
+Display this help message and exit.
+.SH COMMANDS
+.TP
+.B model
+List configured models. Shows name, display name, kind, key status,
+and base URL. The default model is marked with
+.BR * .
+.TP
+.B sessions
+List saved sessions (same as
+.BR \-\-sessions ).
+.TP
+.B config
+Show the effective configuration: config file paths, default model,
+permission mode, search provider, and MCP server count.
+.TP
+.B init
+Create the default configuration at
+.BR ~/.harness/config.toml ,
+a
+.B .env
+template at
+.BR ~/.harness/.env ,
+and optionally an
+.B AGENTS.md
+file for the current project.
+.TP
+.BI "skill " <sub> " [" name ]
+Manage skills.
+.I sub
+is one of:
+.RS
+.TP
+.B list
+List available skills and their enabled status.
+.TP
+.BI enable " <name>"
+Enable a skill by adding a hint to AGENTS.md.
+.TP
+.BI disable " <name>"
+Disable a skill by removing its hint from AGENTS.md.
+.RE
+.TP
+.B tui
+Launch the blessed-contrib Terminal UI for multi-session management.
+Applies the same flag overrides as interactive mode
+.RB ( \-\-temperature ,
+.BR \-\-top\-p ,
+.BR \-\-seed ,
+.BR \-\-drop\-params ,
+.BR \-\-context\-management ,
+etc.).
+.SH INTERACTIVE SLASH COMMANDS
+The following commands are available inside the interactive REPL:
+.TP
+.B /help
+Show the list of available slash commands.
+.TP
+.B /search
+Show the current search provider.
+.TP
+.BI "/search " <provider>
+Switch search provider
+.RB ( tavily ", " duckduckgo ", " openrouter ).
+.TP
+.B /key
+Show usage for setting temporary API keys.
+.TP
+.BI "/key " <ENV_VAR>
+Set an environment variable (e.g. an API key) for the current session.
+Prompts for the value without echoing.
+.TP
+.B /temperature
+Show the current temperature setting.
+.TP
+.BI "/temperature " <0\-2>
+Set the temperature for the current session.
+.TP
+.B /session
+Show current session info: ID, model, search provider, temperature,
+message count, creation and last-save timestamps.
+.TP
+.B /sessions
+List all saved sessions (same as
+.BR \-\-sessions ).
+.TP
+.BI "/resume " [<id>]
+Resume the most recent session (no argument) or a specific session by ID.
+.TP
+.BR /exit ", " /quit
+Save the current session and exit.
+.TP
+.B "Ctrl+C, Ctrl+D"
+Save the current session and exit.
+.SH CONFIGURATION
+Configuration is written in TOML format. Files are loaded in order:
+global first, then project files walking up from the working directory.
+Later files override earlier ones.
+.SS Model Definition
+.RS
+.nf
+[model.<name>]
+model       = "deepseek/deepseek-v4-flash"   # Required: model identifier
+kind        = "openai-compatible"             # Required: provider kind
+base_url    = "https://openrouter.ai/api/v1"  # API endpoint
+api_key     = "sk-..."                        # Inline API key (less secure)
+api_key_env = "OPENROUTER_API_KEY"            # Env var holding the key
+name        = "DeepSeek V4 Flash"             # Human-readable display name
+max_tokens  = 4096                            # Max response tokens
+temperature = 0.7                             # Sampling temperature (0\(en2)
+top_p       = 0.9                             # Nucleus sampling (0\(en1)
+seed        = 42                              # Deterministic seed
+stop        = ["\\n\\n"]                      # Stop sequences
+drop_params = true                            # Auto-strip unsupported params
+drop_params_extra = ["stream_options"]        # Extra params to always strip
+.RE
+.SS Models Table
+.RS
+.nf
+[models]
+default = "deepseek"
+.RE
+.SS MCP Servers
+.RS
+.nf
+[mcp_servers.<name>]
+command = "npx"
+args    = ["-y", "@modelcontextprotocol/server-filesystem", "."]
+env     = { KEY = "value" }
+.RE
+.SS Permissions
+.RS
+.nf
+[permissions]
+mode = "ask"  # auto | ask | accept-edits | deny
+
+[permissions.tools]
+bash       = "ask"
+write      = "ask"
+read       = "auto"
+edit       = "auto"
+web_search = "ask"
+web_fetch  = "ask"
+.RE
+.SS Search
+.RS
+.nf
+[search]
+provider = "tavily"  # tavily | duckduckgo | openrouter
+.RE
+.SS CLI
+.RS
+.nf
+[cli]
+styled      = false  # Enable styled Markdown by default
+status_line = true   # Show progress spinner
+.RE
+.SS Context
+.RS
+.nf
+[context]
+management      = true   # Enable context truncation/compaction
+window          = 32768  # Context window in tokens
+response_budget = 4096   # Tokens reserved for model response
+.RE
+.SS Formatting
+.RS
+.nf
+[format]
+on_write = true
+tools = { "*.py" = "ruff format", "*.{js,ts}" = "prettier --write" }
+.RE
+.SS Theme
+.RS
+.nf
+[theme]
+colors = { error = "#ff4444", success = "#44ff44" }
+.RE
+.SS Compactification
+.RS
+.nf
+[compactification]
+model       = "qwen3.5:latest"
+base_url    = "http://localhost:11434/v1"
+kind        = "openai-compatible"
+api_key_env = "OPENROUTER_API_KEY"
+.RE
+.PP
+The compactification section defines an optional separate model used
+for summarizing older conversation history. When unset, the main model
+is used for summarization.
+.SH FILES
+.TP
+.B ~/.harness/config.toml
+Global user configuration file.
+.TP
+.B <project>/.harness/config.toml
+Per-project configuration (searched upward from CWD).
+.TP
+.B ~/.harness/sessions/
+Directory containing session JSON files. Each file records the
+conversation history, model, search provider, and timestamps.
+.TP
+.B ~/.harness/.env
+User-level environment variables (loaded before project .env).
+.TP
+.B <cwd>/.env
+Project-level environment variables (override user .env).
+Shell env vars take precedence over both.
+.TP
+.B ~/.harness/drop_params_cache.json
+Cache of parameter restrictions discovered per model. Prevents
+repeated API errors when a model rejects certain parameters.
+.TP
+.B <project>/AGENTS.md
+Project rules file appended to the system prompt. Also contains
+skill activation hints (\fB<!-- @harness skill:<name> -->\fR).
+.TP
+.B <project>/CLAUDE.md
+Fallback project rules if AGENTS.md is not found.
+.TP
+.B ~/.config/harness/skills/<name>/SKILL.md
+Global skill definitions.
+.TP
+.B <project>/.harness/skills/<name>/SKILL.md
+Project-level skill definitions.
+.SH ENVIRONMENT
+.SS Display/Behavior
+.TP
+.B HARNESS_STYLED
+Set to
+.B true
+or
+.B 1
+to enable styled Markdown output;
+.B false
+or
+.B 0
+to disable. Overridden by
+.BR \-\-styled "/" \-\-no-styled .
+.TP
+.B HARNESS_CONTEXT_MANAGEMENT
+Set to
+.B true
+or
+.B 1
+to enable context management;
+.B false
+or
+.B 0
+to disable. Overridden by
+.BR \-\-context-management "/" \-\-no-context-management .
+.TP
+.B HARNESS_STATUS_LINE
+Set to
+.B true
+or
+.B 1
+to show the progress spinner;
+.B false
+or
+.B 0
+to hide. Overridden by
+.BR \-\-status-line "/" \-\-no-status-line .
+.SS Model API Keys
+.TP
+.B OPENROUTER_API_KEY
+API key for OpenRouter (also used for OpenRouter search).
+.TP
+.B OPENAI_API_KEY
+API key for OpenAI.
+.TP
+.B DEEPSEEK_API_KEY
+API key for DeepSeek.
+.TP
+.B XAI_API_KEY
+API key for xAI.
+.TP
+.B GROQ_API_KEY
+API key for Groq.
+.TP
+.B ANTHROPIC_API_KEY
+API key for Anthropic.
+.PP
+Any model can alternatively use a custom env var via
+.B api_key_env
+in its config section.
+.SS Search Providers
+.TP
+.B TAVILY_API_KEY
+API key for Tavily search.
+.TP
+.B OPENROUTER_SEARCH_MODEL
+Model identifier to use for OpenRouter-powered search.
+Defaults to
+.BR deepseek/deepseek-v4-flash .
+.PP
+DuckDuckGo search is free and requires no API key.
+.SS Shell
+.TP
+.B SHELL
+Shell to use for the bash tool on non-Windows systems.
+Defaults to
+.BR /bin/sh .
+.TP
+.B COMSPEC
+Shell to use for the bash tool on Windows.
+Defaults to
+.BR cmd.exe .
+.SH EXIT STATUS
+.TP
+0
+Success (help displayed, prompt completed, or clean exit).
+.TP
+1
+General error (invalid config, unknown command, model validation
+failure, or runtime error).
+.SH EXAMPLES
+.TP
+Start interactive mode:
+.B harness
+.TP
+Run a single prompt with a specific model:
+.B "harness \-m deepseek \-p \(dqExplain monads\(dq"
+.TP
+Start with a different temperature:
+.B "harness \-\-temperature 0.8"
+.TP
+Use a deterministic seed for reproducibility:
+.B "harness \-\-seed 42 \-\-top-p 1"
+.TP
+Resume the most recent session:
+.B "harness \-r"
+.TP
+Resume a specific session:
+.B "harness \-S 20250719\-142300\-a1b2"
+.TP
+Use DuckDuckGo for search (no API key needed):
+.B "harness \-\-search duckduckgo"
+.TP
+Disable context management for a session:
+.B "harness \-\-no-context-management"
+.TP
+Enable styled Markdown output:
+.B "harness \-\-styled"
+.TP
+List configured models:
+.B "harness model"
+.TP
+Show effective configuration:
+.B "harness config"
+.TP
+Initialize configuration:
+.B "harness init"
+.TP
+Launch TUI mode:
+.B "harness tui"
+.TP
+Disable automatic parameter stripping:
+.B "harness \-\-no-drop-params"
+.SH SEE ALSO
+.BR sh (1),
+.BR git (1),
+.BR tmux (1)
+.PP
+Documentation and source:
+.UR https://github.com/matt/harness
+.UE

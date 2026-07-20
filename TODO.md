@@ -85,7 +85,7 @@ _(none — all immediate items resolved)_
 - `bash.ts:77-79` — `stderr` buffer is unbounded (stdout is capped at `MAX_OUTPUT_LENGTH`, stderr is not). A command producing massive stderr could consume memory.
 - `App.tsx:40,131` — `permEngineRef` is set but never read (engine kept alive by `setPermissionCheck` closure). Redundant but harmless.
 - `cli/index.ts:72` — `new ConfigManager()` called twice (line 72 for `.styled`, line 105 again). Pre-existing.
-- **Interactive mode tool call dedup** — tool `⚡ name` lines still print on every call for always-approved tools (same issue as fixed in `-p` mode). Low priority: status line keeps output manageable; worth implementing for `--no-status-line` users.
+- **Interactive mode tool call dedup** — tool `⚡ name` lines still print on every call for always-approved tools (same issue as fixed in `-p` mode). Moderate priority: status line improves but doesn't fully solve the noise.
 
 ## 📋 WS-E: Deferred Roadmap
 
@@ -96,6 +96,9 @@ _(none — all immediate items resolved)_
 
 ### Context Management
 - **Token counter** — utility to count tokens in messages (Phase A uses chars/4 heuristic; formal tokenizer integration still pending)
+
+### Testing
+- **Test suite** — vitest installed (v3.2.6) but zero config, zero tests. Plan at `plans/testing_suite_plan.md` (11 test files across 3 phases, ~3.5 hrs).
 
 ### Code Quality (follow-ups)
 - **Discriminated union cleanup** — `AgentEvent`/`StreamEvent` are now discriminated unions (WS-D); consumer casts (`event.data as {...}`) can be removed incrementally for compile-time safety
@@ -116,8 +119,8 @@ _(none — all immediate items resolved)_
 - **Model command clarity** — distinguish `harness --model`, `harness model list`, `/model` slash command; user should be able to: list models, view current model, set session model, set default model, add models
 
 ### UI/UX
-- **⏳ Plan mode / build mode toggle** — formalized in `plans/theming_and_mode_plan.md`. PermissionEngine mode, CLI flags, Tab key toggle, slash commands, prompt indicator. Ready to implement.
-- **⏳ CliTheme system** — formalized in `plans/theming_and_mode_plan.md`. `CliTheme` class with ANSI defaults, hex→ANSI-8-bit conversion, config TOML `[theme]` section. Ready to implement.
+- **Plan mode / build mode toggle** — formalized in `plans/theming_and_mode_plan.md`. PermissionEngine mode, CLI flags, Tab key toggle, slash commands, prompt indicator. See `plans/plan_build_mode_retrospective.md` — first attempt had Tab latency issues via `completer`, needs direct keypress approach.
+- **✅ CliTheme system (Phase 1)** — done. `CliTheme` class with ANSI defaults, hex→ANSI-8-bit conversion, config TOML `[theme]` section, all inline ANSI replaced.
 - **Truecolor upgrade** — see `plans/truecolor_upgrade_plan.md`. Full 24-bit color output with `NO_COLOR`/`CLICOLOR` support and ANSI fallback. Deferred — needs COLORTERM detection and hex→truecolor escape generation.
 - **JSON theme file format** — OpenCode-compatible JSON themes (`defs` + `theme` with dark/light variants). Load from `~/.config/harness/themes/*.json`. Phase 2 after CliTheme is implemented.
 - **Persistent status bar** — pinned at bottom of terminal for tool calls, thinking, status (C2)

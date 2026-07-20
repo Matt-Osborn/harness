@@ -64,6 +64,11 @@ export interface ModelConfig {
   kind: ProviderKind;
   max_tokens?: number;
   temperature?: number;
+  top_p?: number;
+  seed?: number;
+  stop?: string | string[];
+  drop_params?: boolean;
+  drop_params_extra?: string[];
 }
 
 export interface MCPServerConfig {

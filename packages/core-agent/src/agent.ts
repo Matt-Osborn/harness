@@ -54,7 +54,7 @@ export class Agent {
     this.permissionBatchCheck = fn;
   }
 
-  setTemperature(t: number): void {
+  setTemperature(t: number | undefined): void {
     this.provider.setTemperature(t);
   }
 

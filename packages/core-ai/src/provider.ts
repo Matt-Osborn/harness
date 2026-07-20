@@ -4,7 +4,7 @@ export interface Provider {
   readonly modelId: string;
   readonly contextWindow?: number;
 
-  setTemperature(t: number): void;
+  setTemperature(t: number | undefined): void;
 
   streamResponse(
     messages: Message[],

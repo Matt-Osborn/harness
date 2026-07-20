@@ -6,7 +6,7 @@ import {
 } from '@harness/core-agent';
 import { MarkdownRenderer } from './markdown.js';
 
-export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, theme?: CliTheme): Promise<void> {
+export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme): Promise<void> {
   const config = new ConfigManager();
   const t = theme ?? new CliTheme(config.themeConfig?.colors);
 
@@ -32,6 +32,9 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
   const tools = createDefaultTools({ searchProvider: search, formatConfig: config.formatConfig });
 
   if (temperatureOverride !== undefined) resolved.config.temperature = temperatureOverride;
+  if (topPOverride !== undefined) resolved.config.top_p = topPOverride;
+  if (seedOverride !== undefined) resolved.config.seed = seedOverride;
+  if (dropParamsOverride !== undefined) resolved.config.drop_params = dropParamsOverride;
   const provider = createProvider(resolved.config.model, resolved.config, resolved.apiKey);
 
   const ctxConfig = config.contextConfig;

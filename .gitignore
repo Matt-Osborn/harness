@@ -6,7 +6,6 @@ dist/
 output/
 session_docs/
 session_ids/
-docs/
 mcps
 .harness-backup
 errors/

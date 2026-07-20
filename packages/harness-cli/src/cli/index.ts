@@ -11,7 +11,7 @@ import { runPrintMode } from './print.js';
 import { runInteractive } from './interactive.js';
 
 import { runSkillCommand, AGENTS_MD_TEMPLATE, hintLine } from './skill-command.js';
-import { showHelp } from '../help.js';
+import { showHelp, showHelpVerbose } from '../help.js';
 
 function parseArg(args: string[], ...names: string[]): string | undefined {
   for (const name of names) {
@@ -21,8 +21,8 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
   return undefined;
 }
 
-const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature']);
-const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line']);
+const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed']);
+const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params']);
 
 function extractCommands(args: string[]): string[] {
   const cmds: string[] = [];
@@ -37,8 +37,15 @@ function extractCommands(args: string[]): string[] {
 export async function run(): Promise<void> {
   const args = process.argv.slice(2);
 
-  if (args.includes('-h') || args.includes('--help') || args[0] === 'help') {
-    showHelp();
+  const helpIdx = args.indexOf('--help');
+  const hIdx = args.indexOf('-h');
+  const isHelp = helpIdx !== -1 || hIdx !== -1 || args[0] === 'help';
+  if (isHelp) {
+    const verbose = (helpIdx !== -1 && args[helpIdx + 1] === 'v') ||
+      (hIdx !== -1 && args[hIdx + 1] === 'v') ||
+      (args[0] === 'help' && args[1] === 'v');
+    if (verbose) showHelpVerbose();
+    else showHelp();
     return;
   }
 
@@ -68,6 +75,18 @@ export async function run(): Promise<void> {
     const t = parseFloat(raw);
     return isNaN(t) ? undefined : Math.max(0, Math.min(2, t));
   })();
+  const topPOverride = (() => {
+    const raw = parseArg(args, '--top-p');
+    if (raw === undefined) return undefined;
+    const t = parseFloat(raw);
+    return isNaN(t) ? undefined : Math.max(0, Math.min(1, t));
+  })();
+  const seedOverride = (() => {
+    const raw = parseArg(args, '--seed');
+    if (raw === undefined) return undefined;
+    const s = parseInt(raw, 10);
+    return isNaN(s) ? undefined : s;
+  })();
 
   const flagStyled = args.includes('--styled') ? true : args.includes('--no-styled') ? false : undefined;
   const envStyled = process.env.HARNESS_STYLED;
@@ -81,6 +100,7 @@ export async function run(): Promise<void> {
   const envCtxParsed = envContextMgmt === 'true' || envContextMgmt === '1' ? true : envContextMgmt === 'false' || envContextMgmt === '0' ? false : undefined;
 
   const flagStatusLine = args.includes('--status-line') ? true : args.includes('--no-status-line') ? false : undefined;
+  const flagDropParams = args.includes('--drop-params') ? true : args.includes('--no-drop-params') ? false : undefined;
   const envStatusLine = process.env.HARNESS_STATUS_LINE;
   const envStatusLineParsed = envStatusLine === 'true' || envStatusLine === '1' ? true : envStatusLine === 'false' || envStatusLine === '0' ? false : undefined;
   const configCli = new ConfigManager().cli;
@@ -94,7 +114,7 @@ export async function run(): Promise<void> {
       console.error(tPrompt.error(valid.message));
       process.exit(1);
     }
-    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, tPrompt);
+    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt);
     return;
   }
 
@@ -134,7 +154,10 @@ export async function run(): Promise<void> {
     const displayName = model || config.defaultModel;
     const modelIsDefault = !model;
     if (temperatureOverride !== undefined) resolved!.config.temperature = temperatureOverride;
-    const initialTemp = resolved!.config.temperature ?? 0.1;
+    if (topPOverride !== undefined) resolved!.config.top_p = topPOverride;
+    if (seedOverride !== undefined) resolved!.config.seed = seedOverride;
+    if (flagDropParams !== undefined) resolved!.config.drop_params = flagDropParams;
+    const initialTemp = resolved!.config.temperature;
     const search = searchOverride || config.searchProvider || resolveAutoProvider();
     const isInter = process.stdin.isTTY ?? false;
     const permissions = new PermissionEngine(config.permissions, {
@@ -244,6 +267,9 @@ export async function run(): Promise<void> {
       const skillRegistry = new SkillRegistry();
       const tools = createDefaultTools({ searchProvider: search, skillRegistry, formatConfig: config.formatConfig });
     if (temperatureOverride !== undefined) resolved!.config.temperature = temperatureOverride;
+    if (topPOverride !== undefined) resolved!.config.top_p = topPOverride;
+    if (seedOverride !== undefined) resolved!.config.seed = seedOverride;
+    if (flagDropParams !== undefined) resolved!.config.drop_params = flagDropParams;
     const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
     const projectRules = loadProjectRules();
     const systemPrompt = buildSystemPrompt(projectRules);
@@ -322,12 +348,18 @@ model = "qwen3.5:latest"
 base_url = "http://localhost:11434/v1"
 name = "Qwen 3.5 (Ollama)"
 kind = "openai-compatible"
+# Older Ollama versions may not support stream_options — uncomment if you get API errors:
+# drop_params = true
+# drop_params_extra = ["stream_options"]
 
 [model.llamacpp]
 model = "qwen2.5-coder-7b"
 base_url = "http://localhost:8080/v1"
 name = "Qwen Coder (llama.cpp)"
 kind = "openai-compatible"
+# Older llama.cpp builds may not support stream_options or seed — uncomment if needed:
+# drop_params = true
+# drop_params_extra = ["stream_options", "seed"]
 
 [models]
 default = "deepseek"
