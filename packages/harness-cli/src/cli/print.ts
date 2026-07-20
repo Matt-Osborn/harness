@@ -8,7 +8,7 @@ import { MarkdownRenderer } from './markdown.js';
 
 export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme): Promise<void> {
   const config = new ConfigManager();
-  const t = theme ?? new CliTheme(config.themeConfig?.colors);
+  const t = theme ?? new CliTheme(config.themeConfig);
 
   const valid = config.validateModel(modelName);
   if (!valid.valid) {

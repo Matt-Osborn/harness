@@ -76,6 +76,9 @@ export class BashTool implements AgentTool {
 
       child.stderr?.on('data', (data: Buffer) => {
         stderr += data.toString();
+        if (stderr.length > MAX_OUTPUT_LENGTH) {
+          if (!child.killed) child.kill('SIGTERM');
+        }
       });
 
       child.on('error', (err: Error) => {

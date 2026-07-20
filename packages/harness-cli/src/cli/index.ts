@@ -1,5 +1,5 @@
 import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadProjectRules, loadEnvFiles, CliTheme } from '@harness/shared';
-import type { SearchProviderType } from '@harness/shared';
+import type { SearchProviderType, ThemeConfig } from '@harness/shared';
 import { createProvider } from '@harness/core-ai';
 import {
   Agent,
@@ -21,8 +21,8 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
   return undefined;
 }
 
-const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed']);
-const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params']);
+const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme']);
+const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes']);
 
 function extractCommands(args: string[]): string[] {
   const cmds: string[] = [];
@@ -51,17 +51,31 @@ export async function run(): Promise<void> {
 
   loadEnvFiles();
 
+  const themeFlag = parseArg(args, '--theme');
+  const themeOverride: ThemeConfig | undefined = themeFlag ? { file: themeFlag } : undefined;
+
+  if (args.includes('--list-themes')) {
+    const { BUNDLED_THEMES } = await import('@harness/shared');
+    const t = new CliTheme(themeOverride);
+    console.log(t.bold('\nAvailable themes:'));
+    for (const name of Object.keys(BUNDLED_THEMES).sort()) {
+      console.log(`  ${t.green(name)}`);
+    }
+    console.log(`\nUse ${t.warning('harness --theme <name>')} to apply a theme.\n`);
+    return;
+  }
+
   const prompt = parseArg(args, '-p', '--prompt');
   const model = parseArg(args, '-m', '--model');
 
   const searchFlagPresent = args.includes('-s') || args.includes('--search');
   const searchOverride = parseArg(args, '-s', '--search') as SearchProviderType | undefined;
-  const t = new CliTheme();
+  const t = new CliTheme(themeOverride);
   if (searchFlagPresent && !searchOverride) {
     console.log(t.bold('Search providers:'));
-    console.log(`  ${t.accent('tavily')}       (requires TAVILY_API_KEY)`);
-    console.log(`  ${t.accent('duckduckgo')}   (free, no key needed)`);
-    console.log(`  ${t.accent('openrouter')}   (requires OPENROUTER_API_KEY)`);
+    console.log(`  ${t.green('tavily')}       (requires TAVILY_API_KEY)`);
+    console.log(`  ${t.green('duckduckgo')}   (free, no key needed)`);
+    console.log(`  ${t.green('openrouter')}   (requires OPENROUTER_API_KEY)`);
     console.log(`\nUsage: ${t.warning('harness -s <provider>')} or ${t.warning('harness --search <provider>')}`);
     return;
   }
@@ -91,8 +105,9 @@ export async function run(): Promise<void> {
   const flagStyled = args.includes('--styled') ? true : args.includes('--no-styled') ? false : undefined;
   const envStyled = process.env.HARNESS_STYLED;
   const envParsed = envStyled === 'true' || envStyled === '1' ? true : envStyled === 'false' || envStyled === '0' ? false : undefined;
-  const configStyled = new ConfigManager().styled;
-  const tGlobal = new CliTheme();
+  const cm = new ConfigManager();
+  const configStyled = cm.styled;
+  const tGlobal = new CliTheme(themeOverride);
   const styled = flagStyled ?? envParsed ?? configStyled;
 
   const flagContextMgmt = args.includes('--context-management') ? true : args.includes('--no-context-management') ? false : undefined;
@@ -103,13 +118,13 @@ export async function run(): Promise<void> {
   const flagDropParams = args.includes('--drop-params') ? true : args.includes('--no-drop-params') ? false : undefined;
   const envStatusLine = process.env.HARNESS_STATUS_LINE;
   const envStatusLineParsed = envStatusLine === 'true' || envStatusLine === '1' ? true : envStatusLine === 'false' || envStatusLine === '0' ? false : undefined;
-  const configCli = new ConfigManager().cli;
+  const configCli = cm.cli;
   const statusEnabled = flagStatusLine ?? envStatusLineParsed ?? configCli?.status_line ?? true;
 
   if (prompt !== undefined) {
     const config = new ConfigManager();
     const valid = config.validateModel(model);
-    const tPrompt = new CliTheme(config.themeConfig?.colors);
+    const tPrompt = new CliTheme({ ...config.themeConfig, ...themeOverride });
     if (!valid.valid) {
       console.error(tPrompt.error(valid.message));
       process.exit(1);
@@ -121,7 +136,7 @@ export async function run(): Promise<void> {
   if (args.includes('--sessions') || args[0] === 'sessions') {
     const sm = new SessionManager();
     const all = sm.list();
-    const tSessions = new CliTheme();
+    const tSessions = new CliTheme(themeOverride);
     if (all.length === 0) {
       console.log(tSessions.warning('No saved sessions.'));
       return;
@@ -129,7 +144,7 @@ export async function run(): Promise<void> {
     console.log('');
     for (const s of all) {
       const msgCount = s.messages.filter(m => m.role === 'user' || m.role === 'assistant').length;
-      console.log(`  ${tSessions.accent(s.id)}  ${s.label}  ${msgCount} msgs  ${new Date(s.updatedAt).toLocaleString()}`);
+      console.log(`  ${tSessions.highlight(s.id)}  ${s.label}  ${msgCount} msgs  ${new Date(s.updatedAt).toLocaleString()}`);
     }
     console.log('');
     return;
@@ -139,7 +154,7 @@ export async function run(): Promise<void> {
 
   if (commands.length === 0) {
     const config = new ConfigManager();
-    const tInteractive = new CliTheme(config.themeConfig?.colors);
+    const tInteractive = new CliTheme({ ...config.themeConfig, ...themeOverride });
     for (const err of config.parseErrorMessages) {
       console.log(tInteractive.warning(`Warning: config parse error in ${err}`));
     }
@@ -202,7 +217,7 @@ export async function run(): Promise<void> {
     if (!isProviderAvailable(search)) {
       const fallback = resolveAutoProvider();
       console.log(tInteractive.warning(`Warning: search provider "${search}" is unavailable (missing API key).`));
-      console.log(`Falling back to: ${tInteractive.accent(fallback)}\n`);
+      console.log(`Falling back to: ${tInteractive.green(fallback)}\n`);
     }
 
     const searchIsDefault = !searchFlagPresent;
@@ -214,7 +229,7 @@ export async function run(): Promise<void> {
     case 'model':
     case 'models': {
       const config = new ConfigManager();
-      const tModels = new CliTheme(config.themeConfig?.colors);
+      const tModels = new CliTheme({ ...config.themeConfig, ...themeOverride });
       const models = config.allModels;
       if (models.length === 0) {
         console.log(`No models configured. Run ${tModels.warning('harness init')} to create a default config.`);
@@ -226,7 +241,7 @@ export async function run(): Promise<void> {
         const prefix = isDefault ? `${tModels.success('*')} ` : '  ';
         const keyOk = config.validateModel(name).valid;
         const keyStatus = keyOk ? tModels.success('✓ key set') : tModels.warning('⚠ no key');
-        console.log(`${prefix}${tModels.bold(name)}: ${mc.name || mc.model} (${tModels.accent(mc.kind)}) ${keyStatus}`);
+        console.log(`${prefix}${tModels.bold(name)}: ${mc.name || mc.model} (${tModels.green(mc.kind)}) ${keyStatus}`);
         if (mc.base_url) console.log(`     url: ${mc.base_url}`);
       }
       console.log('');
@@ -234,7 +249,7 @@ export async function run(): Promise<void> {
     }
     case 'config': {
       const config = new ConfigManager();
-      const tConfig = new CliTheme(config.themeConfig?.colors);
+      const tConfig = new CliTheme({ ...config.themeConfig, ...themeOverride });
       console.log(tConfig.bold('Config sources:'));
       for (const path of config.configPaths) console.log(`  ${path}`);
       if (config.configPaths.length === 0) console.log('  (none)');
@@ -255,7 +270,7 @@ export async function run(): Promise<void> {
     case 'tui': {
       const { runTui } = await import('@harness/tui');
       const config = new ConfigManager();
-      const tTui = new CliTheme(config.themeConfig?.colors);
+      const tTui = new CliTheme({ ...config.themeConfig, ...themeOverride });
       const valid = config.validateModel();
       if (!valid.valid) {
         console.log(tTui.error(valid.message));
@@ -303,7 +318,7 @@ export async function run(): Promise<void> {
       if (!isProviderAvailable(search)) {
         const fallback = resolveAutoProvider();
         console.log(tTui.warning(`Warning: search provider "${search}" is unavailable (missing API key).`));
-        console.log(`Falling back to: ${tTui.accent(fallback)}`);
+        console.log(`Falling back to: ${tTui.green(fallback)}`);
       }
 
       runTui(agent, {

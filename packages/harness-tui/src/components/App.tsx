@@ -37,7 +37,6 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
   const streamBufRef = useRef('');
   const isRunningRef = useRef(false);
   const permResolveRef = useRef<((value: PermissionDecision) => void) | null>(null);
-  const permEngineRef = useRef<PermissionEngine | null>(null);
 
   const [sessionId] = useState(() => smRef.current.generateId());
   const [messages, setMessages] = useState<Message[]>([]);
@@ -132,7 +131,6 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
       interactive: true,
       promptFn: tuiPromptFn,
     });
-    permEngineRef.current = engine;
 
     agent.setPermissionCheck(async (toolName: string, args?: Record<string, unknown>): Promise<boolean> => {
       return engine.check(toolName, undefined, args);

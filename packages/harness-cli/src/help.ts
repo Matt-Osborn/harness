@@ -21,6 +21,9 @@ ${t.bold('OPTIONS:')}
   --temperature <0-2>    Set temperature for this session
   --top-p <0-1>          Set top_p (nucleus sampling) for this session
   --seed <int>           Set seed for deterministic sampling
+  --theme <name>         Apply a bundled theme (dracula, tokyonight, monokai,
+                           github, carbonfox, catppuccin, and 8 more)
+  --list-themes          List available bundled themes
   -h, --help             Show this help message
 
 ${t.bold('COMMANDS:')}
@@ -84,6 +87,14 @@ ${t.bold('MISCELLANEOUS:')}
   -s, --search <provider>    Set search provider (tavily, duckduckgo, openrouter)
   -h, --help                 Show compact help message
   --help v                   Show this verbose help message
+
+${t.bold('THEMES:')}
+  --theme <name>             Apply a bundled color theme
+                               Available: github, matrix, opencode, dracula,
+                               tokyonight, monokai, nightowl, flexoki,
+                               carbonfox, aura, vesper, vercel, catppuccin,
+                               synthwave84
+  --list-themes              List available bundled themes
 
 ${t.bold('COMMANDS:')}
   model                  List configured models

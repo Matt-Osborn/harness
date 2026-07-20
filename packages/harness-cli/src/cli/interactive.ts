@@ -1,5 +1,5 @@
 import * as readline from 'node:readline';
-import { Agent } from '@harness/core-agent';
+import type { Agent } from '@harness/core-agent';
 import type { WebSearchTool } from '@harness/core-agent';
 import type { Message, SearchProviderType } from '@harness/shared';
 import { TextWrapper, SessionManager, isWSL, CliTheme } from '@harness/shared';
@@ -177,7 +177,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         for (const s of all) {
           const msgCount = s.messages.filter(m => m.role === 'user' || m.role === 'assistant').length;
           const isCurrent = s.id === sessionId ? ` ${t.success('← current')}` : '';
-          process.stdout.write(`  ${t.accent(s.id)}  ${s.label}  ${msgCount} msgs  ${new Date(s.updatedAt).toLocaleString()}${isCurrent}\n`);
+          process.stdout.write(`  ${t.highlight(s.id)}  ${s.label}  ${msgCount} msgs  ${new Date(s.updatedAt).toLocaleString()}${isCurrent}\n`);
         }
         process.stdout.write('\n');
         rl.prompt();
@@ -418,15 +418,15 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
   });
 
   console.log(`${t.bold('AI Harness')} — Interactive mode (Ctrl+C to quit)`);
-  if (modelName) console.log(`Model: ${t.accent(modelName)}${modelIsDefault ? ` ${t.dim('(default)')}` : ''}`);
-  console.log(`Search: ${t.accent(currentSearch)}${searchIsDefault ? ` ${t.dim('(default)')}` : ''}`);
+  if (modelName) console.log(`Model: ${t.highlight(modelName)}${modelIsDefault ? ` ${t.dim('(default)')}` : ''}`);
+  console.log(`Search: ${t.green(currentSearch)}${searchIsDefault ? ` ${t.dim('(default)')}` : ''}`);
 
   if (resumeSessionId || resumeLatest) {
     const msgCount = history.filter(m => m.role === 'user' || m.role === 'assistant').length;
-    console.log(`Session: ${t.accent(sessionId)}  (resumed, ${msgCount} messages)\n`);
+    console.log(`Session: ${t.highlight(sessionId)}  (resumed, ${msgCount} messages)\n`);
     reprintConversation(history);
   } else {
-    console.log(`Session: ${t.accent(sessionId)}  (new)`);
+    console.log(`Session: ${t.highlight(sessionId)}  (new)`);
   }
 
   console.log(`Type ${t.warning('/help')} for available commands`);

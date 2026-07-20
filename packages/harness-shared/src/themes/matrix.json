@@ -1,0 +1,98 @@
+{
+  "$schema": "https://opencode.ai/theme.json",
+  "theme": {
+    "background": {
+      "dark": "#0a0e0a",
+      "light": "#eef3ea"
+    },
+    "text": {
+      "dark": "#62ff94",
+      "light": "#203022"
+    },
+    "primary": {
+      "dark": "#2eff6a",
+      "light": "#1cc24b"
+    },
+    "accent": "#c770ff",
+    "success": {
+      "dark": "#62ff94",
+      "light": "#1cc24b"
+    },
+    "warning": "#e6ff57",
+    "error": "#ff4b4b",
+    "info": "#30b3ff",
+    "border": {
+      "dark": "#0a0e0a",
+      "light": "#eef3ea"
+    },
+    "borderActive": {
+      "dark": "#2eff6a",
+      "light": "#1cc24b"
+    },
+    "diffAdded": {
+      "dark": "#77ffaf",
+      "light": "#5dac7e"
+    },
+    "diffRemoved": {
+      "dark": "#ff7171",
+      "light": "#d53a3a"
+    },
+    "interactive": "#30b3ff",
+    "textMuted": {
+      "dark": "#8ca391",
+      "light": "#748476"
+    },
+    "syntaxComment": {
+      "dark": "#8ca391",
+      "light": "#748476"
+    },
+    "syntaxKeyword": "#c770ff",
+    "syntaxString": "#1cc24b",
+    "syntaxFunction": "#30b3ff",
+    "syntaxVariable": {
+      "dark": "#62ff94",
+      "light": "#203022"
+    },
+    "syntaxProperty": "#24f6d9",
+    "syntaxType": "#e6ff57",
+    "syntaxConstant": "#ffa83d",
+    "syntaxOperator": "#24f6d9",
+    "syntaxPunctuation": {
+      "dark": "#62ff94",
+      "light": "#203022"
+    },
+    "syntaxObject": {
+      "dark": "#62ff94",
+      "light": "#203022"
+    },
+    "markdownHeading": {
+      "dark": "#00efff",
+      "light": "#24f6d9"
+    },
+    "markdownText": {
+      "dark": "#62ff94",
+      "light": "#203022"
+    },
+    "markdownLink": "#30b3ff",
+    "markdownLinkText": "#24f6d9",
+    "markdownCode": "#1cc24b",
+    "markdownBlockQuote": {
+      "dark": "#8ca391",
+      "light": "#748476"
+    },
+    "markdownEmph": "#ffa83d",
+    "markdownStrong": "#e6ff57",
+    "markdownHorizontalRule": {
+      "dark": "#8ca391",
+      "light": "#748476"
+    },
+    "markdownListItem": "#30b3ff",
+    "markdownListEnumeration": "#24f6d9",
+    "markdownImage": "#30b3ff",
+    "markdownImageText": "#24f6d9",
+    "markdownCodeBlock": {
+      "dark": "#62ff94",
+      "light": "#203022"
+    }
+  }
+}

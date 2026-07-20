@@ -24,6 +24,9 @@ export { SkillRegistry } from './skills.js';
 export type { SkillInfo } from './skills.js';
 
 export { CliTheme } from './cli-theme.js';
+export { resolveThemeFile, loadThemeJson, detectColorMode, resolveThemeColors } from './theme-loader.js';
+export type { OpenCodeTheme, ColorValue } from './theme-loader.js';
+export { BUNDLED_THEMES } from './themes/index.js';
 export { loadProjectRules, findProjectRulesPath } from './project-rules.js';
 
 export type {

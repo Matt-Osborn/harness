@@ -139,6 +139,9 @@ export class ConfigManager {
       if (raw.theme && typeof raw.theme === 'object') {
         const t = raw.theme as Record<string, unknown>;
         merged.theme = {
+          ...merged.theme,
+          file: (t.file as string) ?? merged.theme?.file,
+          mode: (t.mode as 'dark' | 'light') ?? merged.theme?.mode,
           colors: { ...merged.theme?.colors, ...(t.colors as Record<string, string> || {}) },
         };
       }

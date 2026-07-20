@@ -1,0 +1,77 @@
+{
+  "$schema": "https://opencode.ai/theme.json",
+  "theme": {
+    "background": {
+      "dark": "#011627",
+      "light": "#f0f0f0"
+    },
+    "text": {
+      "dark": "#d6deeb",
+      "light": "#403f53"
+    },
+    "primary": {
+      "dark": "#82aaff",
+      "light": "#4876d6"
+    },
+    "accent": {
+      "dark": "#f78c6c",
+      "light": "#aa0982"
+    },
+    "success": {
+      "dark": "#c5e478",
+      "light": "#2aa298"
+    },
+    "warning": {
+      "dark": "#ecc48d",
+      "light": "#c96765"
+    },
+    "error": {
+      "dark": "#ef5350",
+      "light": "#de3d3b"
+    },
+    "info": {
+      "dark": "#82aaff",
+      "light": "#4876d6"
+    },
+    "border": {
+      "dark": "#011627",
+      "light": "#f0f0f0"
+    },
+    "borderActive": {
+      "dark": "#82aaff",
+      "light": "#4876d6"
+    },
+    "diffAdded": {
+      "dark": "#c5e478",
+      "light": "#2aa298"
+    },
+    "diffRemoved": {
+      "dark": "#ef5350",
+      "light": "#de3d3b"
+    },
+    "syntaxComment": {
+      "dark": "#637777",
+      "light": "#7a8181"
+    },
+    "syntaxKeyword": {
+      "dark": "#c792ea",
+      "light": "#994cc3"
+    },
+    "syntaxFunction": {
+      "dark": "#82aaff",
+      "light": "#4876d6"
+    },
+    "syntaxConstant": {
+      "dark": "#f78c6c",
+      "light": "#c96765"
+    },
+    "textMuted": {
+      "dark": "#637777",
+      "light": "#7a8181"
+    },
+    "syntaxString": {
+      "dark": "#ecc48d",
+      "light": ""
+    }
+  }
+}

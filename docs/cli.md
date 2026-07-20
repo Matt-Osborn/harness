@@ -57,6 +57,13 @@ harness [OPTIONS] [COMMAND]
 | `--context-management` | Enable automatic context truncation and compaction (default). |
 | `--no-context-management` | Disable context management (no dropping or summarizing). |
 
+### Theming
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--theme <name>` | string | Apply a bundled theme. Available: `github`, `matrix`, `opencode`, `dracula`, `tokyonight`, `monokai`, `nightowl`, `flexoki`, `carbonfox`, `aura`, `vesper`, `vercel`, `catppuccin`, `synthwave84`. |
+| `--list-themes` | flag | List all available bundled theme names. |
+
 ### Miscellaneous
 
 | Flag | Description |

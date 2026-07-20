@@ -86,6 +86,21 @@ Enable or disable automatic context truncation and compaction.
 When enabled, the harness drops older messages and/or summarizes
 them when the conversation exceeds the usable context window.
 Defaults to enabled.
+.SS Theming
+.TP
+.BI \-\-theme " <name>"
+Apply a bundled color theme. Available themes:
+github, matrix, opencode, dracula, tokyonight, monokai,
+nightowl, flexoki, carbonfox, aura, vesper, vercel,
+catppuccin, synthwave84.
+Can also be configured permanently via the
+.B [theme]
+section in config.toml with a
+.B file
+key.
+.TP
+.B \-\-list\-themes
+List all available bundled theme names and exit.
 .SS Miscellaneous
 .TP
 .BI \-p " <text>" , \-\-prompt " <text>"

@@ -114,6 +114,8 @@ export interface FormatConfig {
 }
 
 export interface ThemeConfig {
+  file?: string;
+  mode?: 'dark' | 'light';
   colors?: Record<string, string>;
 }
 
