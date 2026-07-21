@@ -1,9 +1,65 @@
 import * as readline from 'node:readline';
+import { writeFile } from 'node:fs/promises';
 import type { Agent } from '@harness/core-agent';
 import type { WebSearchTool } from '@harness/core-agent';
 import type { Message, SearchProviderType } from '@harness/shared';
 import { TextWrapper, SessionManager, isWSL, CliTheme } from '@harness/shared';
 import { MarkdownRenderer } from './markdown.js';
+
+function formatSessionExport(messages: Message[], ext: string, sid: string, modelName?: string): string {
+  const msgs = messages.filter(m => m.role === 'user' || m.role === 'assistant');
+  if (ext === 'txt') {
+    const lines: string[] = [
+      `Session: ${sid}`,
+      `Model: ${modelName || '(default)'}`,
+      `Messages: ${msgs.length}`,
+      `Exported: ${new Date().toLocaleString()}`,
+      '',
+      ...msgs.flatMap(m => {
+        if (m.role === 'user') {
+          return ['------', `User: ${m.content}`, ''];
+        }
+        const out: string[] = ['------', `Assistant:`];
+        if (m.content) out.push('', m.content, '');
+        if (m.tool_calls) {
+          for (const tc of m.tool_calls) {
+            out.push(`[Tool: ${tc.function.name}]`);
+          }
+        }
+        out.push('');
+        return out;
+      }),
+    ];
+    return lines.join('\n');
+  }
+
+  const lines: string[] = [
+    `# AI Harness Session`,
+    '',
+    `**Session:** \`${sid}\``,
+    `**Model:** ${modelName || '(default)'}`,
+    `**Messages:** ${msgs.length}`,
+    `**Exported:** ${new Date().toLocaleString()}`,
+    '',
+    '---',
+    '',
+    ...msgs.flatMap(m => {
+      if (m.role === 'user') {
+        return [`## ${m.role === 'user' ? 'User' : 'Assistant'}`, '', m.content, ''];
+      }
+      const out: string[] = ['## Assistant', ''];
+      if (m.content) out.push(m.content, '');
+      if (m.tool_calls) {
+        for (const tc of m.tool_calls) {
+          out.push(`> \`⚡ ${tc.function.name}\``);
+        }
+        out.push('');
+      }
+      return out;
+    }),
+  ];
+  return lines.join('\n');
+}
 
 export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false): Promise<void> {
   const t = theme ?? new CliTheme();
@@ -256,6 +312,42 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         return;
       }
 
+      if (trimmed === '/export' || trimmed.startsWith('/export ')) {
+        const arg = trimmed.slice(8).trim();
+        const shortId = sessionId.split('-').at(-1) || sessionId.slice(0, 8);
+        const date = new Date().toISOString().slice(0, 10);
+        let fileName: string;
+        let ext: string;
+
+        if (!arg) {
+          fileName = `harness-session-${shortId}-${date}.md`;
+          ext = 'md';
+        } else if (arg === 'txt') {
+          fileName = `harness-session-${shortId}-${date}.txt`;
+          ext = 'txt';
+        } else if (arg.endsWith('.md')) {
+          fileName = arg;
+          ext = 'md';
+        } else if (arg.endsWith('.txt')) {
+          fileName = arg;
+          ext = 'txt';
+        } else {
+          process.stdout.write(t.error('Unsupported format. Use a .md or .txt extension.\n\n'));
+          rl.prompt();
+          return;
+        }
+
+        try {
+          const content = formatSessionExport(history, ext, sessionId, modelName);
+          await writeFile(fileName, content, 'utf-8');
+          process.stdout.write(`${t.success(`Exported to ${fileName}`)}\n\n`);
+        } catch (err) {
+          process.stdout.write(`${t.error(`Export failed: ${err instanceof Error ? err.message : String(err)}`)}\n\n`);
+        }
+        rl.prompt();
+        return;
+      }
+
       if (trimmed === '/exit' || trimmed === '/quit') {
         saveSession();
         process.stdout.write('Goodbye.\n');
@@ -273,6 +365,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write(`  ${t.warning('/session')}             Show current session info\n`);
         process.stdout.write(`  ${t.warning('/sessions')}            List saved sessions\n`);
         process.stdout.write(`  ${t.warning('/resume [id]')}        Resume most recent or specific session by id\n`);
+        process.stdout.write(`  ${t.warning('/export [txt|file]')}  Export session as .md (default) or .txt\n`);
         process.stdout.write(`  ${t.warning('/hide-thinking')}       Hide thinking output\n`);
         process.stdout.write(`  ${t.warning('/show-thinking')}       Show thinking output\n`);
         process.stdout.write(`  ${t.warning('/hide-tools')}         Hide tool call lines\n`);
