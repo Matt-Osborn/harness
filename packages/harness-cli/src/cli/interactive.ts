@@ -31,6 +31,9 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
   } else if (resumeSessionId) {
     const loaded = sm.load(resumeSessionId);
     if (loaded) {
+      if (loaded.label === 'PROMPT') {
+        process.stdout.write(t.warning('ℹ Resuming a print-mode session in interactive mode. Session will be relabeled.\n'));
+      }
       sessionId = loaded.id;
       sessionCreatedAt = loaded.createdAt;
       history = loaded.messages;
