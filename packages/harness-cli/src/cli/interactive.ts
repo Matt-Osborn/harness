@@ -331,7 +331,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
               let target = '';
               try {
                 const parsed = JSON.parse(args);
-                target = parsed.url || parsed.query || parsed.path || '';
+                target = parsed.url || parsed.query || parsed.path || parsed.pattern || '';
               } catch {}
               const callLine = `${name}${target ? ' ' + target : ''}`;
               if (callLine === lastCallLine && lastErrorMsg) {

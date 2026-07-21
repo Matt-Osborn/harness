@@ -13,6 +13,8 @@ export { BashTool } from './tools/bash.js';
 export { WebFetchTool } from './tools/web-fetch.js';
 export { WebSearchTool, resolveAutoProvider, isProviderAvailable } from './tools/web-search.js';
 export { SkillTool } from './tools/skill.js';
+export { GlobTool } from './tools/glob.js';
+export { GrepTool } from './tools/grep.js';
 
 export { createSearchProvider } from './tools/search/index.js';
 export type { SearchProvider } from './tools/search/index.js';
@@ -25,6 +27,8 @@ import { BashTool } from './tools/bash.js';
 import { WebFetchTool } from './tools/web-fetch.js';
 import { WebSearchTool } from './tools/web-search.js';
 import { SkillTool } from './tools/skill.js';
+import { GlobTool } from './tools/glob.js';
+import { GrepTool } from './tools/grep.js';
 import type { AgentTool } from './tool.js';
 
 export function createDefaultTools(opts?: {
@@ -38,6 +42,8 @@ export function createDefaultTools(opts?: {
     new ReadTool(),
     new WriteTool(opts?.formatConfig),
     new EditTool(opts?.formatConfig),
+    new GlobTool(),
+    new GrepTool(),
     new BashTool(),
     new WebFetchTool(),
     searchTool,

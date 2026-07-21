@@ -27,6 +27,8 @@ export function createCliPromptFn(): PermissionPromptFn {
           lines.push(`  \x1b[36m${ba.query}\x1b[0m`);
         } else if (ba?.url) {
           lines.push(`  \x1b[36m${ba.url}\x1b[0m`);
+        } else if (ba?.pattern) {
+          lines.push(`  \x1b[36m${ba.pattern}\x1b[0m`);
         } else {
           lines.push('  (no preview)');
         }
@@ -41,7 +43,8 @@ export function createCliPromptFn(): PermissionPromptFn {
         ? ` — \x1b[32m\`${truncateCmd(args.command as string)}\`\x1b[0m`
         : (args?.path ? ` — \x1b[36m${args.path}\x1b[0m` : '')
           || (args?.query ? ` — \x1b[36m${args.query}\x1b[0m` : '')
-          || (args?.url ? ` — \x1b[36m${args.url}\x1b[0m` : '');
+          || (args?.url ? ` — \x1b[36m${args.url}\x1b[0m` : '')
+          || (args?.pattern ? ` — \x1b[36m${args.pattern}\x1b[0m` : '');
       label = `\x1b[33mAllow tool:\x1b[0m \x1b[1m${toolName}${cmdLabel}\x1b[0m?  `;
     }
 

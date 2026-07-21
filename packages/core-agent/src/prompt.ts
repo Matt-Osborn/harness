@@ -1,6 +1,6 @@
 export const DEFAULT_SYSTEM_PROMPT = `You are a helpful coding assistant running in an AI Harness.
 You have access to tools for reading, writing, editing files, executing shell commands,
-searching the web (web_search), and fetching web pages (web_fetch).
+searching the web (web_search), fetching web pages (web_fetch), and searching project files (glob, grep).
 
 ## File Writing Guidelines
 When writing files, keep lines under ~80 characters to avoid model-internal line wrapping.
