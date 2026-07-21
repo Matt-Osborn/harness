@@ -46,6 +46,7 @@ export type {
   ThemeConfig,
   PermissionConfig,
   PermissionMode,
+  ReadonlyMode,
   SearchConfig,
   SearchProviderType,
   SearchResult,

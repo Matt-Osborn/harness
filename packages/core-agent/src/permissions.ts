@@ -1,4 +1,4 @@
-import type { PermissionMode, PermissionConfig } from '@harness/shared';
+import type { PermissionMode, PermissionConfig, ReadonlyMode } from '@harness/shared';
 
 export const READ_ONLY_TOOLS = ['read', 'grep', 'glob', 'web_fetch', 'web_search'];
 
@@ -32,8 +32,13 @@ export class PermissionEngine {
   }
 
   private getEffectiveMode(toolName: string): PermissionMode {
+    if (this.permConfig?.tools?.[toolName]) return this.permConfig.tools[toolName]!;
+    if (toolName === 'read') return 'auto';
+    if (READ_ONLY_TOOLS.includes(toolName)) {
+      const roMode = this.permConfig?.readonly ?? 'auto';
+      if (roMode === 'auto') return 'auto';
+    }
     if (!this.permConfig) return 'ask';
-    if (this.permConfig.tools && this.permConfig.tools[toolName]) return this.permConfig.tools[toolName]!;
     return this.permConfig.mode || 'ask';
   }
 

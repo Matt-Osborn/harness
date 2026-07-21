@@ -1,5 +1,5 @@
 import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadProjectRules, loadEnvFiles, CliTheme } from '@harness/shared';
-import type { SearchProviderType, ThemeConfig } from '@harness/shared';
+import type { SearchProviderType, ThemeConfig, PermissionConfig } from '@harness/shared';
 import { createProvider } from '@harness/core-ai';
 import {
   Agent,
@@ -175,7 +175,9 @@ export async function run(): Promise<void> {
     const initialTemp = resolved!.config.temperature;
     const search = searchOverride || config.searchProvider || resolveAutoProvider();
     const isInter = process.stdin.isTTY ?? false;
-    const permissions = new PermissionEngine(config.permissions, {
+    const permConfig: PermissionConfig = { ...config.permissions };
+    if (args.includes('--ask')) permConfig.readonly = 'ask';
+    const permissions = new PermissionEngine(permConfig, {
       interactive: isInter,
       promptFn: isInter ? createCliPromptFn() : undefined,
     });

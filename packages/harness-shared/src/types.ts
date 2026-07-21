@@ -79,9 +79,12 @@ export interface MCPServerConfig {
 
 export type PermissionMode = 'auto' | 'ask' | 'accept-edits' | 'deny';
 
+export type ReadonlyMode = 'auto' | 'ask';
+
 export interface PermissionConfig {
   mode?: PermissionMode;
   tools?: Record<string, PermissionMode>;
+  readonly?: ReadonlyMode;
 }
 
 export type SearchProviderType = 'tavily' | 'duckduckgo' | 'openrouter';
