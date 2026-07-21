@@ -6,7 +6,7 @@ import {
 } from '@harness/core-agent';
 import { MarkdownRenderer } from './markdown.js';
 
-export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme): Promise<void> {
+export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false): Promise<void> {
   const config = new ConfigManager();
   const t = theme ?? new CliTheme(config.themeConfig);
 
@@ -72,6 +72,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
   const md = useStyled ? new MarkdownRenderer(wrapWidth) : null;
   const seenTools = new Set<string>();
   let streamBuf = '';
+  let thinkingBuf = '';
 
   try {
     for await (const event of agent.run(messages)) {
@@ -80,15 +81,26 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
           const chunk = event.data;
           if (useStyled) {
             streamBuf += chunk;
+          } else if (hideThinking) {
+            thinkingBuf += chunk;
           } else {
             const out = (textWrap as TextWrapper).push(chunk);
             if (out) process.stdout.write(out);
           }
           break;
         }
+        case 'thinking': {
+          if (hideThinking) {
+            thinkingBuf = '';
+          } else if (!useStyled) {
+            const remaining = (textWrap as TextWrapper).flush();
+            if (remaining) process.stdout.write(remaining);
+          }
+          break;
+        }
         case 'tool_call': {
           const { name } = event.data;
-          if (!seenTools.has(name)) {
+          if (!hideTools && !seenTools.has(name)) {
             seenTools.add(name);
             process.stdout.write(`\n${t.warning(`⚡ ${name}`)}\n`);
           }
@@ -102,6 +114,10 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
           console.error(t.error(`─────────────`));
           break;
         case 'done': {
+          if (hideThinking && thinkingBuf) {
+            process.stdout.write(thinkingBuf);
+            thinkingBuf = '';
+          }
           if (useStyled) {
             const lastAssistant = [...event.data].reverse().find(m => m.role === 'assistant');
             if (lastAssistant?.content) {

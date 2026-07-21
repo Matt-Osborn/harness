@@ -44,6 +44,7 @@ export type {
   MCPServerConfig,
   FormatConfig,
   ThemeConfig,
+  DisplayConfig,
   PermissionConfig,
   PermissionMode,
   ReadonlyMode,

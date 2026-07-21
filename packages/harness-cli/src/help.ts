@@ -24,6 +24,8 @@ ${t.bold('OPTIONS:')}
   --theme <name>         Apply a bundled theme (dracula, tokyonight, monokai,
                            github, carbonfox, catppuccin, and 8 more)
   --list-themes          List available bundled themes
+  --hide-thinking        Suppress thinking text display
+  --hide-tools           Suppress tool call indicator lines
   -h, --help             Show this help message
 
 ${t.bold('COMMANDS:')}
@@ -72,6 +74,8 @@ ${t.bold('OUTPUT AND DISPLAY:')}
   --no-styled                Disable styled Markdown rendering\n                             (streams tokens as they arrive)
   --status-line              Show progress spinner during model thinking
   --no-status-line           Hide progress spinner
+  --hide-thinking            Suppress thinking text display (show spinner only)
+  --hide-tools               Suppress tool call indicator lines (⚡ lines)
 
 ${t.bold('SESSION MANAGEMENT:')}
   -S, --session <id>         Resume a specific session by ID

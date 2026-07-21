@@ -122,6 +122,11 @@ export interface ThemeConfig {
   colors?: Record<string, string>;
 }
 
+export interface DisplayConfig {
+  hide_thinking?: boolean;
+  hide_tools?: boolean;
+}
+
 export interface Config {
   models: Record<string, ModelConfig>;
   default_model?: string;
@@ -133,6 +138,7 @@ export interface Config {
   compactification?: ModelConfig;
   format?: FormatConfig;
   theme?: ThemeConfig;
+  display?: DisplayConfig;
 }
 
 export type SessionLabel = 'INTERACTIVE' | 'PROMPT';
@@ -149,6 +155,7 @@ export interface SessionData {
 
 export type AgentEvent =
   | { type: 'text'; data: string; timestamp: number }
+  | { type: 'thinking'; data: { content: string }; timestamp: number }
   | { type: 'tool_call'; data: { name: string; args: string }; timestamp: number }
   | { type: 'tool_result'; data: { name: string; result?: string; denied?: boolean; error?: string }; timestamp: number }
   | { type: 'error'; data: string; timestamp: number }

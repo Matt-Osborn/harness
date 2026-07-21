@@ -22,7 +22,7 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
 }
 
 const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme']);
-const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes']);
+const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools']);
 
 function extractCommands(args: string[]): string[] {
   const cmds: string[] = [];
@@ -121,6 +121,18 @@ export async function run(): Promise<void> {
   const configCli = cm.cli;
   const statusEnabled = flagStatusLine ?? envStatusLineParsed ?? configCli?.status_line ?? true;
 
+  const flagHideThinking = args.includes('--hide-thinking');
+  const envHideThinking = process.env.HARNESS_HIDE_THINKING;
+  const envHideThinkingParsed = envHideThinking === 'true' || envHideThinking === '1' ? true : envHideThinking === 'false' || envHideThinking === '0' ? false : undefined;
+  const configHideThinking = cm.displayConfig?.hide_thinking;
+  const hideThinking = flagHideThinking ?? envHideThinkingParsed ?? configHideThinking ?? false;
+
+  const flagHideTools = args.includes('--hide-tools');
+  const envHideTools = process.env.HARNESS_HIDE_TOOLS;
+  const envHideToolsParsed = envHideTools === 'true' || envHideTools === '1' ? true : envHideTools === 'false' || envHideTools === '0' ? false : undefined;
+  const configHideTools = cm.displayConfig?.hide_tools;
+  const hideTools = flagHideTools ?? envHideToolsParsed ?? configHideTools ?? false;
+
   if (prompt !== undefined) {
     const config = new ConfigManager();
     const valid = config.validateModel(model);
@@ -129,7 +141,7 @@ export async function run(): Promise<void> {
       console.error(tPrompt.error(valid.message));
       process.exit(1);
     }
-    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt);
+    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools);
     return;
   }
 
@@ -223,7 +235,7 @@ export async function run(): Promise<void> {
     }
 
     const searchIsDefault = !searchFlagPresent;
-    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, searchIsDefault, initialTemp, statusEnabled, tInteractive);
+    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, searchIsDefault, initialTemp, statusEnabled, tInteractive, hideThinking, hideTools);
     return;
   }
 

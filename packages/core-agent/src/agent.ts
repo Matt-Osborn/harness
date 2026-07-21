@@ -267,6 +267,10 @@ export class Agent {
         continue;
       }
 
+      if (accumulatedText && (toolCallAccumulators.size > 0 || finalFinishReason === 'tool_calls')) {
+        yield { type: 'thinking', data: { content: accumulatedText }, timestamp: Date.now() };
+      }
+
       if (toolCallAccumulators.size > 0 || finalFinishReason === 'tool_calls') {
         const assistantMsg: Message = {
           role: 'assistant',

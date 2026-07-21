@@ -5,7 +5,7 @@ import type { Message, SearchProviderType } from '@harness/shared';
 import { TextWrapper, SessionManager, isWSL, CliTheme } from '@harness/shared';
 import { MarkdownRenderer } from './markdown.js';
 
-export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true, theme?: CliTheme): Promise<void> {
+export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false): Promise<void> {
   const t = theme ?? new CliTheme();
   let currentSearch: SearchProviderType | 'auto' = searchProvider || 'auto';
   const searchProviders: SearchProviderType[] = ['tavily', 'duckduckgo', 'openrouter'];
@@ -81,7 +81,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         if (msg.content) {
           process.stdout.write(md ? md.render(msg.content) + '\n' : `${msg.content}\n`);
         }
-        if (msg.tool_calls) {
+        if (!hideTools && msg.tool_calls) {
           for (const tc of msg.tool_calls) {
             process.stdout.write(`${t.warning(`⚡ ${tc.function.name}`)}\n`);
           }
@@ -228,6 +228,34 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         return;
       }
 
+      if (trimmed === '/hide-thinking') {
+        hideThinking = true;
+        process.stdout.write(`Thinking output ${t.warning('hidden')}\n\n`);
+        rl.prompt();
+        return;
+      }
+
+      if (trimmed === '/show-thinking') {
+        hideThinking = false;
+        process.stdout.write(`Thinking output ${t.success('shown')}\n\n`);
+        rl.prompt();
+        return;
+      }
+
+      if (trimmed === '/hide-tools') {
+        hideTools = true;
+        process.stdout.write(`Tool call lines ${t.warning('hidden')}\n\n`);
+        rl.prompt();
+        return;
+      }
+
+      if (trimmed === '/show-tools') {
+        hideTools = false;
+        process.stdout.write(`Tool call lines ${t.success('shown')}\n\n`);
+        rl.prompt();
+        return;
+      }
+
       if (trimmed === '/exit' || trimmed === '/quit') {
         saveSession();
         process.stdout.write('Goodbye.\n');
@@ -245,6 +273,10 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write(`  ${t.warning('/session')}             Show current session info\n`);
         process.stdout.write(`  ${t.warning('/sessions')}            List saved sessions\n`);
         process.stdout.write(`  ${t.warning('/resume [id]')}        Resume most recent or specific session by id\n`);
+        process.stdout.write(`  ${t.warning('/hide-thinking')}       Hide thinking output\n`);
+        process.stdout.write(`  ${t.warning('/show-thinking')}       Show thinking output\n`);
+        process.stdout.write(`  ${t.warning('/hide-tools')}         Hide tool call lines\n`);
+        process.stdout.write(`  ${t.warning('/show-tools')}         Show tool call lines\n`);
         process.stdout.write(`  ${t.warning('/exit')}                Save session and exit\n`);
         process.stdout.write(`  ${t.warning('/quit')}                Same as /exit\n`);
         process.stdout.write(`  ${t.warning('/help')}                Show this help\n`);
@@ -281,6 +313,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       const textWrap = styled ? null : new TextWrapper(wrapWidth);
       const md = styled ? new MarkdownRenderer(wrapWidth) : null;
       let streamBuf = '';
+      let thinkingBuf = '';
       let lastCallLine = '';
       let lastErrorMsg = '';
       let suppressPair = false;
@@ -316,6 +349,8 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
             const chunk = event.data;
             if (styled) {
               streamBuf += chunk;
+            } else if (hideThinking) {
+              thinkingBuf += chunk;
             } else {
               if (justHadResult) {
                 process.stdout.write('\n');
@@ -326,6 +361,16 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
             }
             break;
           }
+          case 'thinking': {
+            if (hideThinking) {
+              thinkingBuf = '';
+            } else if (!styled) {
+              const remaining = (textWrap as TextWrapper).flush();
+              if (remaining) process.stdout.write(remaining);
+            }
+            justHadResult = false;
+            break;
+          }
             case 'tool_call': {
               const { name, args } = event.data;
               let target = '';
@@ -334,12 +379,14 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
                 target = parsed.url || parsed.query || parsed.path || parsed.pattern || '';
               } catch {}
               const callLine = `${name}${target ? ' ' + target : ''}`;
-              if (callLine === lastCallLine && lastErrorMsg) {
+              if (!hideTools && callLine === lastCallLine && lastErrorMsg) {
                 suppressPair = true;
               } else {
                 suppressPair = false;
                 lastCallLine = callLine;
-                process.stdout.write(`\n${t.warning(`⚡ ${callLine}`)}`);
+                if (!hideTools) {
+                  process.stdout.write(`\n${t.warning(`⚡ ${callLine}`)}`);
+                }
               }
               break;
             }
@@ -349,19 +396,21 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
                 break;
               }
               const d = event.data;
-              if (d.denied) {
-                process.stdout.write(` ${t.warning('⛔ denied')}`);
-                lastErrorMsg = '';
-              } else if (d.error) {
-                if (d.error === lastErrorMsg) {
-                  process.stdout.write(` ${t.error('x')}`);
+              if (!hideTools) {
+                if (d.denied) {
+                  process.stdout.write(` ${t.warning('⛔ denied')}`);
+                  lastErrorMsg = '';
+                } else if (d.error) {
+                  if (d.error === lastErrorMsg) {
+                    process.stdout.write(` ${t.error('x')}`);
+                  } else {
+                    process.stdout.write(` ${t.error(`✗ ${d.error}`)}`);
+                    lastErrorMsg = d.error;
+                  }
                 } else {
-                  process.stdout.write(` ${t.error(`✗ ${d.error}`)}`);
-                  lastErrorMsg = d.error;
+                  process.stdout.write(` ${t.success('✓')}`);
+                  lastErrorMsg = '';
                 }
-              } else {
-                process.stdout.write(` ${t.success('✓')}`);
-                lastErrorMsg = '';
               }
               justHadResult = true;
               isWaiting = true;
@@ -374,6 +423,10 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
               break;
             case 'done':
               history = event.data;
+              if (hideThinking && thinkingBuf) {
+                process.stdout.write(thinkingBuf);
+                thinkingBuf = '';
+              }
               if (styled) {
                 const lastAssistant = [...history].reverse().find(m => m.role === 'assistant');
                 if (lastAssistant?.content) {
@@ -406,6 +459,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
           const remaining = (textWrap as TextWrapper).flush();
           if (remaining) process.stdout.write(remaining + '\n');
         }
+        thinkingBuf = '';
         startReadline();
       }
     });

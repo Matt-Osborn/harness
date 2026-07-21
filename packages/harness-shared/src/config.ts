@@ -2,7 +2,7 @@ import { readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parse } from 'smol-toml';
-import type { CLIConfig, Config, ContextConfig, FormatConfig, ModelConfig, MCPServerConfig, PermissionConfig, PermissionMode, SearchConfig, SearchProviderType, ThemeConfig } from './types.js';
+import type { CLIConfig, Config, ContextConfig, DisplayConfig, FormatConfig, ModelConfig, MCPServerConfig, PermissionConfig, PermissionMode, SearchConfig, SearchProviderType, ThemeConfig } from './types.js';
 import { validateModelApiKey, validateSearchProviderApiKey } from './validation.js';
 import type { ValidationResult } from './validation.js';
 
@@ -152,6 +152,14 @@ export class ConfigManager {
           merged.compactification = comp as unknown as ModelConfig;
         }
       }
+
+      if (raw.display && typeof raw.display === 'object') {
+        const d = raw.display as Record<string, unknown>;
+        merged.display = {
+          hide_thinking: typeof d.hide_thinking === 'boolean' ? d.hide_thinking : merged.display?.hide_thinking,
+          hide_tools: typeof d.hide_tools === 'boolean' ? d.hide_tools : merged.display?.hide_tools,
+        };
+      }
     }
 
     return merged;
@@ -195,6 +203,10 @@ export class ConfigManager {
 
   get themeConfig(): ThemeConfig | undefined {
     return this.config.theme;
+  }
+
+  get displayConfig(): DisplayConfig | undefined {
+    return this.config.display;
   }
 
   get compactificationConfig(): ModelConfig | undefined {
