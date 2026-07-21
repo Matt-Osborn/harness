@@ -87,7 +87,7 @@ export interface PermissionConfig {
   readonly?: ReadonlyMode;
 }
 
-export type SearchProviderType = 'tavily' | 'duckduckgo' | 'openrouter';
+export type SearchProviderType = 'tavily' | 'duckduckgo';
 
 export interface SearchConfig {
   provider?: SearchProviderType;

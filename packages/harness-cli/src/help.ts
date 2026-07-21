@@ -11,7 +11,7 @@ ${t.bold('USAGE:')}
 ${t.bold('OPTIONS:')}
   -p, --prompt <text>    Run a single prompt in print mode
   -m, --model <name>     Specify which model to use
-  -s, --search <provider> Search provider (tavily, duckduckgo, openrouter)
+  -s, --search <provider> Search provider (tavily, duckduckgo)
   -w, --width <cols>     Wrap output at column width (default: 80)
   -S, --session <id>     Resume a specific session
   -r, --resume           Resume the most recent session
@@ -88,7 +88,7 @@ ${t.bold('CONTEXT MANAGEMENT:')}
 
 ${t.bold('MISCELLANEOUS:')}
   -p, --prompt <text>        Run a single prompt in print mode
-  -s, --search <provider>    Set search provider (tavily, duckduckgo, openrouter)
+  -s, --search <provider>    Set search provider (tavily, duckduckgo)
   -h, --help                 Show compact help message
   --help v                   Show this verbose help message
 

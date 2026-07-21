@@ -64,7 +64,7 @@ function formatSessionExport(messages: Message[], ext: string, sid: string, mode
 export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false): Promise<void> {
   const t = theme ?? new CliTheme();
   let currentSearch: SearchProviderType | 'auto' = searchProvider || 'auto';
-  const searchProviders: SearchProviderType[] = ['tavily', 'duckduckgo', 'openrouter'];
+  const searchProviders: SearchProviderType[] = ['tavily', 'duckduckgo'];
   let rl: readline.Interface;
   let currentTemp = initialTemp;
   let treatNextCloseAsExit = true;
@@ -208,7 +208,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
 
       if (trimmed === '/key') {
         process.stdout.write(t.warning('Usage: /key ENV_VAR_NAME') + ' — sets an environment variable for the current session.\n');
-        process.stdout.write('Common: OPENROUTER_API_KEY, TAVILY_API_KEY, OPENAI_API_KEY, DEEPSEEK_API_KEY, OPENROUTER_SEARCH_MODEL\n\n');
+        process.stdout.write('Common: OPENROUTER_API_KEY, TAVILY_API_KEY, OPENAI_API_KEY, DEEPSEEK_API_KEY\n\n');
         rl.prompt();
         return;
       }

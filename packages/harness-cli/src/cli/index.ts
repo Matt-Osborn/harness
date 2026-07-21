@@ -75,7 +75,7 @@ export async function run(): Promise<void> {
     console.log(t.bold('Search providers:'));
     console.log(`  ${t.green('tavily')}       (requires TAVILY_API_KEY)`);
     console.log(`  ${t.green('duckduckgo')}   (free, no key needed)`);
-    console.log(`  ${t.green('openrouter')}   (requires OPENROUTER_API_KEY)`);
+
     console.log(`\nUsage: ${t.warning('harness -s <provider>')} or ${t.warning('harness --search <provider>')}`);
     return;
   }
@@ -463,7 +463,6 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
 # TAVILY_API_KEY=tvly-...
 # OPENAI_API_KEY=sk-...
 # DEEPSEEK_API_KEY=sk-...
-# OPENROUTER_SEARCH_MODEL=deepseek/deepseek-v4-flash
 `;
         writeFileSync(envPath, envTemplate, 'utf-8');
         console.log(`Created .env template at ${envPath}`);

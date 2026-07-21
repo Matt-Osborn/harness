@@ -62,12 +62,6 @@ const SEARCH_PROVIDER_INFO: Record<string, ProviderKeyInfo> = {
     instructions: 'Get a free API key at https://tavily.com',
     keyUrl: 'https://tavily.com',
   },
-  openrouter: {
-    name: 'OpenRouter',
-    envVar: 'OPENROUTER_API_KEY',
-    instructions: 'Use the same OpenRouter key from https://openrouter.ai/keys',
-    keyUrl: 'https://openrouter.ai/keys',
-  },
   duckduckgo: {
     name: 'DuckDuckGo',
     envVar: '',

@@ -26,7 +26,7 @@ interface AppProps {
   };
 }
 
-const searchProviders = ['tavily', 'duckduckgo', 'openrouter'];
+const searchProviders = ['tavily', 'duckduckgo'];
 
 export function App({ agent, modelName, searchProvider, theme: customTheme, onExit, permConfig }: AppProps) {
   const theme = customTheme || darkTheme;
