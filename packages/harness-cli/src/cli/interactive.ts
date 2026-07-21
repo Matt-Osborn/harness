@@ -310,7 +310,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
           clearStatus();
           switch (event.type) {
           case 'text': {
-            const chunk = event.data as string;
+            const chunk = event.data;
             if (styled) {
               streamBuf += chunk;
             } else {
@@ -324,13 +324,13 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
             break;
           }
             case 'tool_call': {
-              const d = event.data as { name: string; args: string };
+              const { name, args } = event.data;
               let target = '';
               try {
-                const parsed = JSON.parse(d.args);
+                const parsed = JSON.parse(args);
                 target = parsed.url || parsed.query || parsed.path || '';
               } catch {}
-              const callLine = `${d.name}${target ? ' ' + target : ''}`;
+              const callLine = `${name}${target ? ' ' + target : ''}`;
               if (callLine === lastCallLine && lastErrorMsg) {
                 suppressPair = true;
               } else {
@@ -345,17 +345,16 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
                 suppressPair = false;
                 break;
               }
-              const r = event.data as { name: string; result: string; denied?: boolean };
-              if (r.denied) {
+              const d = event.data;
+              if (d.denied) {
                 process.stdout.write(` ${t.warning('⛔ denied')}`);
                 lastErrorMsg = '';
-              } else if (r.result.startsWith('Error') || r.result.startsWith('Search failed:')) {
-                const msg = r.result.split('\n')[0].replace(/^Error( fetching URL)?:\s*/, '').trim();
-                if (msg === lastErrorMsg) {
+              } else if (d.error) {
+                if (d.error === lastErrorMsg) {
                   process.stdout.write(` ${t.error('x')}`);
                 } else {
-                  process.stdout.write(` ${t.error(`✗ ${msg}`)}`);
-                  lastErrorMsg = msg;
+                  process.stdout.write(` ${t.error(`✗ ${d.error}`)}`);
+                  lastErrorMsg = d.error;
                 }
               } else {
                 process.stdout.write(` ${t.success('✓')}`);
@@ -371,7 +370,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
               console.error(t.error(`─────────────`));
               break;
             case 'done':
-              history = event.data as Message[];
+              history = event.data;
               if (styled) {
                 const lastAssistant = [...history].reverse().find(m => m.role === 'assistant');
                 if (lastAssistant?.content) {

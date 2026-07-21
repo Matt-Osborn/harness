@@ -77,7 +77,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
     for await (const event of agent.run(messages)) {
       switch (event.type) {
         case 'text': {
-          const chunk = event.data as string;
+          const chunk = event.data;
           if (useStyled) {
             streamBuf += chunk;
           } else {
@@ -87,7 +87,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
           break;
         }
         case 'tool_call': {
-          const { name } = event.data as { name: string };
+          const { name } = event.data;
           if (!seenTools.has(name)) {
             seenTools.add(name);
             process.stdout.write(`\n${t.warning(`⚡ ${name}`)}\n`);
@@ -103,7 +103,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
           break;
         case 'done': {
           if (useStyled) {
-            const lastAssistant = [...(event.data as Message[])].reverse().find(m => m.role === 'assistant');
+            const lastAssistant = [...event.data].reverse().find(m => m.role === 'assistant');
             if (lastAssistant?.content) {
               process.stdout.write(md!.render(lastAssistant.content) + '\n');
             } else if (streamBuf) {
@@ -114,7 +114,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
             const remaining = (textWrap as TextWrapper).flush();
             if (remaining) process.stdout.write(remaining);
           }
-          const fullHistory = event.data as Message[];
+          const fullHistory = event.data;
           sm.save({
             id: sid,
             label: 'PROMPT',

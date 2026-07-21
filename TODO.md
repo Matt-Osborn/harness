@@ -25,11 +25,11 @@
 - **Token counter** — utility to count tokens in messages (Phase A uses chars/4 heuristic; formal tokenizer integration still pending)
 
 ### Testing
-- **Test suite** — vitest installed (v3.2.6) but zero config, zero tests. Plan at `plans/testing_suite_plan.md` (11 test files across 3 phases, ~3.5 hrs).
+- ~~**Test suite** — vitest installed (v3.2.6) but zero config, zero tests. Plan at `plans/testing_suite_plan.md` (11 test files across 3 phases, ~3.5 hrs).~~ **Deferred** — revisit after completing all roadmap phases.
 
 ### Code Quality (follow-ups)
-- **Discriminated union cleanup** — `AgentEvent`/`StreamEvent` are now discriminated unions (WS-D); consumer casts (`event.data as {...}`) can be removed incrementally for compile-time safety
-- **`interactive.ts:324` string-prefix sniffing** — `tool_result` now carries `error?: string` (WS-D); replace `r.result.startsWith('Error')` check with the typed field
+- ~~**Discriminated union cleanup** — `AgentEvent`/`StreamEvent` are now discriminated unions (WS-D); consumer casts (`event.data as {...}`) can be removed incrementally for compile-time safety~~ ✅
+- ~~**`interactive.ts:324` string-prefix sniffing** — `tool_result` now carries `error?: string` (WS-D); replace `r.result.startsWith('Error')` check with the typed field~~ ✅
 - **C3: grep/glob tools** — see Phase 2 of `plans/roadmap.md`. Implement `GlobTool` and `GrepTool` classes.
 - **D11: Init defaults** — review safety posture (`edit=auto` vs `ask` in `harness init` template)
 
@@ -53,12 +53,11 @@
 - **Thinking event + visibility toggles** — see `plans/thinking_event_visibility_toggles.md`. Low priority.
 
 ### Logging
-- **Structured logger** (`@harness/shared` — new `logger.ts`):
-  - Levels: `debug | info | warn | error | off`
-  - Prefix: `[timestamp] [LEVEL] [package] message`
-  - Output: stderr only
-  - Control: `HARNESS_LOG_LEVEL` env var, `[logging]` config section, `--log-level` flag
-  - Precedence: flag > env > config > default(`warn`)
+- **File-based logging for debugging** — if diagnostic tracing is ever needed,
+  implement a Logger that appends to `~/.harness/logs/<session-id>.log` with
+  configurable level. Controlled via `[logging]` config and `HARNESS_LOG_LEVEL`
+  env var. Stderr-only logging was considered and rejected (too noisy for this
+  type of interactive CLI tool).
 
 ### Prompt Caching
 - **Option B: Client-side prefix dedup** — detect stable message prefix across iterations, send only delta from last known-good prefix. Works with any provider, no API support needed.
@@ -66,7 +65,6 @@
 
 ### Infrastructure
 - **Bash tool: improved `resolveShell()`** — when `SHELL` is a Cygwin Unix path, try common bash locations (Git Bash `C:\Program Files\Git\bin\bash.exe`, Cygwin paths) before falling back to `cmd.exe`. Also add error message tips for ENOENT/path-not-found so the model can give actionable advice. See `plans/improved_win_shell.md` and `plans/improved_errors.md` for details.
-- **Logging diagnostic**: run `HARNESS_LOG_LEVEL=debug harness` to confirm text events arrive in interactive mode (see `text_event_diagnostic.md`)
 - **Git/version control config** — configurable git settings (GitHub, GitLab, Gitea, etc.) for autonomous commits
 - **Fork command?** — evaluate if needed
 
