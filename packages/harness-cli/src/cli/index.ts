@@ -22,7 +22,7 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
 }
 
 const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme']);
-const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools']);
+const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256']);
 
 function extractCommands(args: string[]): string[] {
   const cmds: string[] = [];
@@ -132,6 +132,13 @@ export async function run(): Promise<void> {
   const envHideToolsParsed = envHideTools === 'true' || envHideTools === '1' ? true : envHideTools === 'false' || envHideTools === '0' ? false : undefined;
   const configHideTools = cm.displayConfig?.hide_tools;
   const hideTools = flagHideTools ?? envHideToolsParsed ?? configHideTools ?? false;
+
+  const flagAnsi256 = args.includes('--ansi-256');
+  const envAnsi256 = process.env.HARNESS_TRUECOLOR;
+  const envAnsi256Parsed = envAnsi256 === 'false' || envAnsi256 === '0' ? true : envAnsi256 === 'true' || envAnsi256 === '1' ? false : undefined;
+  const configAnsi256 = cm.cli?.truecolor === false ? true : undefined;
+  const forceAnsi256 = flagAnsi256 ?? envAnsi256Parsed ?? configAnsi256 ?? false;
+  CliTheme.defaultForceAnsi256 = forceAnsi256;
 
   if (prompt !== undefined) {
     const config = new ConfigManager();

@@ -26,6 +26,7 @@ ${t.bold('OPTIONS:')}
   --list-themes          List available bundled themes
   --hide-thinking        Suppress thinking text display
   --hide-tools           Suppress tool call indicator lines
+  --ansi-256             Force ANSI 256-color mode (disable truecolor)
   -h, --help             Show this help message
 
 ${t.bold('COMMANDS:')}
@@ -76,6 +77,7 @@ ${t.bold('OUTPUT AND DISPLAY:')}
   --no-status-line           Hide progress spinner
   --hide-thinking            Suppress thinking text display (show spinner only)
   --hide-tools               Suppress tool call indicator lines (⚡ lines)
+  --ansi-256                 Force ANSI 256-color mode (disable truecolor)
 
 ${t.bold('SESSION MANAGEMENT:')}
   -S, --session <id>         Resume a specific session by ID

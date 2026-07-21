@@ -37,9 +37,31 @@ function hexToAnsi8bit(hex: string): number {
   return 16 + ri * 36 + gi * 6 + bi;
 }
 
-function renderCode(value: string): string {
+function supportsTruecolor(): boolean {
+  const colorterm = process.env.COLORTERM?.toLowerCase();
+  if (colorterm === 'truecolor' || colorterm === '24bit') return true;
+  const term = process.env.TERM?.toLowerCase() || '';
+  if (term.includes('truecolor') || term.includes('24bit')) return true;
+  return false;
+}
+
+function shouldStripColors(): boolean {
+  if (process.env.NO_COLOR !== undefined) return true;
+  if (process.env.CLICOLOR_FORCE !== undefined) return false;
+  if (process.env.CLICOLOR === '0') return true;
+  if (!process.stdout.isTTY) return true;
+  return false;
+}
+
+function renderCode(value: string, useTruecolor?: boolean): string {
   if (!value) return '';
   if (value.startsWith('#')) {
+    if (useTruecolor) {
+      const r = parseInt(value.slice(1, 3), 16);
+      const g = parseInt(value.slice(3, 5), 16);
+      const b = parseInt(value.slice(5, 7), 16);
+      return `\x1b[38;2;${r};${g};${b}m`;
+    }
     const code = hexToAnsi8bit(value);
     return `\x1b[38;5;${code}m`;
   }
@@ -50,10 +72,17 @@ function renderCode(value: string): string {
 }
 
 export class CliTheme {
-  private colors: Record<string, string>;
+  static defaultForceAnsi256?: boolean;
 
-  constructor(config?: ThemeConfig | Record<string, string>) {
+  private colors: Record<string, string>;
+  private stripColors: boolean;
+  private useTruecolor: boolean;
+
+  constructor(config?: ThemeConfig | Record<string, string>, forceAnsi256?: boolean) {
     this.colors = { ...DEFAULT_COLORS };
+    const effectiveForceAnsi256 = forceAnsi256 ?? CliTheme.defaultForceAnsi256 ?? false;
+    this.stripColors = shouldStripColors();
+    this.useTruecolor = !this.stripColors && !effectiveForceAnsi256 && supportsTruecolor();
 
     if (!config) return;
 
@@ -98,14 +127,14 @@ export class CliTheme {
 
   color(key: string): string {
     const value = this.colors[key];
-    if (!value) return '';
-    return renderCode(value);
+    if (!value || this.stripColors) return '';
+    return renderCode(value, this.useTruecolor);
   }
 
   wrap(text: string, key: string): string {
     const value = this.colors[key];
-    if (!value) return text;
-    return `${renderCode(value)}${text}${RESET}`;
+    if (!value || this.stripColors) return text;
+    return `${renderCode(value, this.useTruecolor)}${text}${RESET}`;
   }
 
   error(text: string): string {
@@ -133,6 +162,7 @@ export class CliTheme {
   }
 
   dim(text: string): string {
+    if (this.stripColors) return text;
     return `\x1b[2m${text}${RESET}`;
   }
 
@@ -141,10 +171,12 @@ export class CliTheme {
   }
 
   green(text: string): string {
+    if (this.stripColors) return text;
     return `\x1b[32m${text}${RESET}`;
   }
 
   bold(text: string): string {
+    if (this.stripColors) return text;
     return `\x1b[1m${text}${RESET}`;
   }
 
@@ -153,8 +185,9 @@ export class CliTheme {
   }
 
   mutedBg(text: string): string {
+    if (this.stripColors) return text;
     const c = this.colors['muted'] || '90';
-    const code = renderCode(c);
+    const code = renderCode(c, this.useTruecolor);
     if (!code) return text;
     return `${code}${text}${RESET}`;
   }

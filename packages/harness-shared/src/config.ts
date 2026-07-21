@@ -113,6 +113,7 @@ export class ConfigManager {
         const c = raw.cli as Record<string, unknown>;
         merged.cli = {
           styled: typeof c.styled === 'boolean' ? c.styled : (merged.cli?.styled ?? false),
+          truecolor: typeof c.truecolor === 'boolean' ? c.truecolor : (merged.cli?.truecolor ?? true),
         };
         if (typeof c.status_line === 'boolean') {
           merged.cli.status_line = c.status_line;
