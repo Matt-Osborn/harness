@@ -27,6 +27,8 @@ ${t.bold('OPTIONS:')}
   --hide-thinking        Suppress thinking text display
   --hide-tools           Suppress tool call indicator lines
   --ansi-256             Force ANSI 256-color mode (disable truecolor)
+  --plan                 Start in plan mode (read-only, no modifications)
+  --build                Start in build mode (default, modifications allowed)
   -h, --help             Show this help message
 
 ${t.bold('COMMANDS:')}
@@ -38,9 +40,8 @@ ${t.bold('COMMANDS:')}
   tui                    Launch the TUI (terminal UI) mode
 
 ${t.bold('EXAMPLES:')}
-  harness                          Start interactive mode
-  harness -p "refactor this class" Run a single prompt
-  harness -m deepseek -p "hello"   Use a specific model
+  harness                          Start in build mode (default)
+  harness --plan                   Start in plan mode
   harness --search duckduckgo      Use DuckDuckGo search
   harness model list               List configured models
   harness -w 100                          Set wrap width to 100
@@ -78,6 +79,8 @@ ${t.bold('OUTPUT AND DISPLAY:')}
   --hide-thinking            Suppress thinking text display (show spinner only)
   --hide-tools               Suppress tool call indicator lines (⚡ lines)
   --ansi-256                 Force ANSI 256-color mode (disable truecolor)
+  --plan                     Start in plan mode (read-only, no modifications)
+  --build                    Start in build mode (default, modifications allowed)
 
 ${t.bold('SESSION MANAGEMENT:')}
   -S, --session <id>         Resume a specific session by ID
@@ -111,7 +114,8 @@ ${t.bold('COMMANDS:')}
   tui                    Launch the TUI (terminal UI) mode
 
 ${t.bold('EXAMPLES:')}
-  harness                          Start interactive mode
+  harness                          Start in build mode (default)
+  harness --plan                   Start in plan mode
   harness -p "refactor this class" Run a single prompt
   harness -m deepseek -p "hello"   Use a specific model
   harness --search duckduckgo      Use DuckDuckGo search

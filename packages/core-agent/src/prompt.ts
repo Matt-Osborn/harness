@@ -43,8 +43,14 @@ Be decisive: once you have gathered sufficient information or hit a blocker,
 stop calling tools and deliver your answer. Do not keep iterating with new
 tool calls if you already have enough context to respond.`;
 
-export function buildSystemPrompt(projectRules?: string | null): string {
-  return projectRules
+export function buildSystemPrompt(projectRules?: string | null, mode?: 'plan' | 'build'): string {
+  const base = projectRules
     ? `${DEFAULT_SYSTEM_PROMPT}\n\n## Project Instructions\n\n${projectRules}`
     : DEFAULT_SYSTEM_PROMPT;
+
+  if (mode === 'plan') {
+    return `You are in PLAN MODE. You may only read and inspect files, search the web, and fetch URLs. Do NOT write, edit, delete, or create any files. Do NOT execute shell commands. Analyze the codebase, answer questions, and propose implementation plans, but do not make any changes.\n\n${base}`;
+  }
+
+  return base;
 }

@@ -1,6 +1,7 @@
 import * as readline from 'node:readline';
 import { writeFile } from 'node:fs/promises';
 import type { Agent } from '@harness/core-agent';
+import type { PermissionEngine } from '@harness/core-agent';
 import type { WebSearchTool } from '@harness/core-agent';
 import type { Message, SearchProviderType } from '@harness/shared';
 import { TextWrapper, SessionManager, isWSL, CliTheme } from '@harness/shared';
@@ -61,13 +62,16 @@ function formatSessionExport(messages: Message[], ext: string, sid: string, mode
   return lines.join('\n');
 }
 
-export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false): Promise<void> {
+export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, permissions?: PermissionEngine): Promise<void> {
   const t = theme ?? new CliTheme();
   let currentSearch: SearchProviderType | 'auto' = searchProvider || 'auto';
   const searchProviders: SearchProviderType[] = ['tavily', 'duckduckgo'];
   let rl: readline.Interface;
   let currentTemp = initialTemp;
   let treatNextCloseAsExit = true;
+  let currentMode: 'plan' | 'build' = agent.getMode();
+  let modeChangeListener: ((str: string, key: { name: string }) => void) | null = null;
+  let rawDataHandler: ((data: Buffer) => void) | null = null;
 
   const sm = new SessionManager();
   let sessionId: string;
@@ -151,13 +155,82 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
     }
   }
 
+  function toggleMode(): void {
+    currentMode = currentMode === 'plan' ? 'build' : 'plan';
+    agent.setMode(currentMode);
+    permissions?.setMode(currentMode);
+  }
+
+  function handleTabAtPrompt(): void {
+    toggleMode();
+    const prefix = getModePrefix();
+    rl.setPrompt(`${prefix}${t.success('❯')} `);
+    process.stdout.write('\n');
+    process.stdout.write(currentMode === 'plan' ? t.warning('⚡ Switched to plan mode\n') : t.success('⚡ Switched to build mode\n'));
+    rl.prompt();
+  }
+
+  function handleTabDuringExecution(): void {
+    toggleMode();
+    process.stdout.write(`\n${currentMode === 'plan' ? t.warning('⚡ Switched to plan mode') : t.success('⚡ Switched to build mode')}\n`);
+  }
+
+  const tabListener = (_str: string, key: { name: string }) => {
+    if (key.name === 'tab' && rl) {
+      handleTabAtPrompt();
+    }
+  };
+
+  function enableKeypressListener(): void {
+    process.stdin.on('keypress', tabListener);
+  }
+
+  function disableKeypressListener(): void {
+    process.stdin.off('keypress', tabListener);
+  }
+
+  function setupRawModeListener(): void {
+    try {
+      process.stdin.setRawMode?.(true);
+    } catch { /* non-TTY */ }
+    rawDataHandler = (data: Buffer) => {
+      if (data.length === 1 && data[0] === 0x09) {
+        handleTabDuringExecution();
+      }
+      if (data.length === 1 && data[0] === 0x03) {
+        saveSession();
+        process.stdout.write('\n');
+        process.exit(0);
+      }
+    };
+    process.stdin.on('data', rawDataHandler);
+  }
+
+  function teardownRawModeListener(): void {
+    if (rawDataHandler) {
+      process.stdin.off('data', rawDataHandler);
+      rawDataHandler = null;
+    }
+    try {
+      process.stdin.setRawMode?.(false);
+    } catch { /* non-TTY */ }
+  }
+
+  function getModePrefix(): string {
+    return currentMode === 'plan' ? '[plan] ' : '';
+  }
+
   function startReadline(): void {
     rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
       terminal: true,
-      prompt: `${t.success('❯')} `,
+      prompt: `${getModePrefix()}${t.success('❯')} `,
+      completer: (line: string) => [[], line],
     });
+
+    disableKeypressListener?.();
+    enableKeypressListener();
 
     rl.on('close', () => {
       if (treatNextCloseAsExit) {
@@ -222,6 +295,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write(`${t.bold('Label:')}    INTERACTIVE\n`);
         process.stdout.write(`${t.bold('Model:')}    ${modelName || '(default)'}\n`);
         process.stdout.write(`${t.bold('Search:')}   ${currentSearch}\n`);
+        process.stdout.write(`${t.bold('Mode:')}     ${currentMode === 'plan' ? t.warning('plan') : t.success('build')}\n`);
         process.stdout.write(`${t.bold('Temp:')}     ${currentTemp !== undefined ? currentTemp.toFixed(2) : 'default'}\n`);
         process.stdout.write(`${t.bold('Messages:')} ${history.filter(m => m.role === 'user' || m.role === 'assistant').length}\n`);
         process.stdout.write(`${t.bold('Created:')}  ${new Date(sessionCreatedAt).toLocaleString()}\n`);
@@ -374,11 +448,38 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write(`  ${t.warning('/show-thinking')}       Show thinking output\n`);
         process.stdout.write(`  ${t.warning('/hide-tools')}         Hide tool call lines\n`);
         process.stdout.write(`  ${t.warning('/show-tools')}         Show tool call lines\n`);
+        process.stdout.write(`  ${t.warning('/plan')}                Switch to plan mode (Tab also toggles)\n`);
+        process.stdout.write(`  ${t.warning('/build')}               Switch to build mode (Tab also toggles)\n`);
         process.stdout.write(`  ${t.warning('/exit')}                Save session and exit\n`);
         process.stdout.write(`  ${t.warning('/quit')}                Same as /exit\n`);
         process.stdout.write(`  ${t.warning('/help')}                Show this help\n`);
         process.stdout.write(`  ${t.warning('Ctrl+C')}               Quit (saves session)\n`);
+        process.stdout.write(`\n${t.dim('Tab')} toggles between plan and build mode\n`);
         process.stdout.write('\n');
+        rl.prompt();
+        return;
+      }
+
+      if (trimmed === '/plan') {
+        if (currentMode === 'plan') {
+          process.stdout.write(t.warning('Already in plan mode') + '\n\n');
+        } else {
+          toggleMode();
+          process.stdout.write(t.warning('⚡ Switched to plan mode') + '\n\n');
+          rl.setPrompt(`${getModePrefix()}${t.success('❯')} `);
+        }
+        rl.prompt();
+        return;
+      }
+
+      if (trimmed === '/build') {
+        if (currentMode === 'build') {
+          process.stdout.write(t.warning('Already in build mode') + '\n\n');
+        } else {
+          toggleMode();
+          process.stdout.write(t.success('⚡ Switched to build mode') + '\n\n');
+          rl.setPrompt(`${getModePrefix()}${t.success('❯')} `);
+        }
         rl.prompt();
         return;
       }
@@ -438,6 +539,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       }, 200);
 
       try {
+        setupRawModeListener();
         for await (const event of agent.run(history)) {
           isWaiting = false;
           clearStatus();
@@ -552,6 +654,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       } finally {
         clearInterval(statusTimer);
         clearStatus();
+        teardownRawModeListener();
         if (!styled) {
           const remaining = (textWrap as TextWrapper).flush();
           if (remaining) process.stdout.write(remaining + '\n');
@@ -573,6 +676,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
   console.log(`${t.bold('AI Harness')} — Interactive mode (Ctrl+C to quit)`);
   if (modelName) console.log(`Model: ${t.highlight(modelName)}${modelIsDefault ? ` ${t.dim('(default)')}` : ''}`);
   console.log(`Search: ${t.green(currentSearch)}${searchIsDefault ? ` ${t.dim('(default)')}` : ''}`);
+  console.log(`Mode:   ${currentMode === 'plan' ? t.warning('plan') : t.success('build')}`);
 
   if (resumeSessionId || resumeLatest) {
     const msgCount = history.filter(m => m.role === 'user' || m.role === 'assistant').length;

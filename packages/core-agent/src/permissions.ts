@@ -23,6 +23,7 @@ export class PermissionEngine {
   private interactive: boolean;
   private sessionId: string;
   private promptFn?: PermissionPromptFn;
+  private mode: 'plan' | 'build' = 'build';
 
   constructor(permConfig: PermissionConfig | undefined, opts: PermissionEngineOptions) {
     this.permConfig = permConfig;
@@ -30,6 +31,9 @@ export class PermissionEngine {
     this.sessionId = opts.sessionId || `session_${Date.now()}`;
     this.promptFn = opts.promptFn;
   }
+
+  setMode(mode: 'plan' | 'build'): void { this.mode = mode; }
+  getMode(): 'plan' | 'build' { return this.mode; }
 
   private getEffectiveMode(toolName: string): PermissionMode {
     if (this.permConfig?.tools?.[toolName]) return this.permConfig.tools[toolName]!;
@@ -43,6 +47,8 @@ export class PermissionEngine {
   }
 
   async check(toolName: string, _modelName?: string, args?: Record<string, unknown>): Promise<boolean> {
+    if (this.mode === 'plan' && !READ_ONLY_TOOLS.includes(toolName)) return false;
+
     const sid = this.sessionId;
 
     if (this.sessionGrants.get(sid)?.has(toolName)) return true;
@@ -77,6 +83,8 @@ export class PermissionEngine {
   }
 
   async batchCheck(toolName: string, argsList: Record<string, unknown>[]): Promise<boolean> {
+    if (this.mode === 'plan' && !READ_ONLY_TOOLS.includes(toolName)) return false;
+
     const sid = this.sessionId;
 
     if (this.sessionGrants.get(sid)?.has(toolName)) return true;

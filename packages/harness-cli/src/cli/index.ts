@@ -22,7 +22,7 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
 }
 
 const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme']);
-const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256']);
+const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256', '--plan', '--build']);
 
 function extractCommands(args: string[]): string[] {
   const cmds: string[] = [];
@@ -205,7 +205,8 @@ export async function run(): Promise<void> {
     const tools = createDefaultTools({ searchProvider: search, skillRegistry, searchTool, formatConfig: config.formatConfig });
     const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
     const projectRules = loadProjectRules();
-    const systemPrompt = buildSystemPrompt(projectRules);
+    const mode = args.includes('--plan') ? 'plan' : args.includes('--build') ? 'build' : undefined;
+    const systemPrompt = buildSystemPrompt(projectRules, mode);
 
     const ctxConfig = config.contextConfig;
     const contextManagement = flagContextMgmt ?? envCtxParsed ?? ctxConfig?.management ?? true;
@@ -229,11 +230,15 @@ export async function run(): Promise<void> {
       permissionCheck: (tn: string, args?: Record<string, unknown>) => permissions.check(tn, undefined, args),
       permissionBatchCheck: isInter ? (tn: string, argsList: Record<string, unknown>[]) => permissions.batchCheck(tn, argsList) : undefined,
       systemPrompt,
+      projectRules,
+      mode,
       contextManagement,
       contextWindow,
       responseBudget,
       compactificationProvider,
     });
+
+    if (mode === 'plan') permissions.setMode('plan');
 
     if (!isProviderAvailable(search)) {
       const fallback = resolveAutoProvider();
@@ -242,7 +247,7 @@ export async function run(): Promise<void> {
     }
 
     const searchIsDefault = !searchFlagPresent;
-    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, searchIsDefault, initialTemp, statusEnabled, tInteractive, hideThinking, hideTools);
+    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, searchIsDefault, initialTemp, statusEnabled, tInteractive, hideThinking, hideTools, permissions);
     return;
   }
 

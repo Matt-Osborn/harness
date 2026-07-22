@@ -1,7 +1,7 @@
 import type { Provider } from '@harness/core-ai';
 import type { Message, StreamEvent, AgentEvent, ToolCall, ToolCallDelta } from '@harness/shared';
 import type { AgentTool } from './tool.js';
-import { DEFAULT_SYSTEM_PROMPT } from './prompt.js';
+import { buildSystemPrompt } from './prompt.js';
 
 export type PermissionCheck = (toolName: string, args?: Record<string, unknown>) => Promise<boolean>;
 export type PermissionBatchCheck = (toolName: string, argsList: Record<string, unknown>[]) => Promise<boolean>;
@@ -17,6 +17,8 @@ export interface AgentOptions {
   responseBudget?: number;
   contextManagement?: boolean;
   compactificationProvider?: Provider;
+  mode?: 'plan' | 'build';
+  projectRules?: string | null;
 }
 
 export class Agent {
@@ -33,11 +35,15 @@ export class Agent {
   private _cachedTokens: number = 0;
   private _cachedMsgLen: number = 0;
   private lastSentHashes: string[] = [];
+  private mode: 'plan' | 'build';
+  private projectRules: string | null;
 
   constructor(options: AgentOptions) {
     this.provider = options.provider;
     this.tools = options.tools;
-    this.systemPrompt = options.systemPrompt || DEFAULT_SYSTEM_PROMPT;
+    this.projectRules = options.projectRules ?? null;
+    this.mode = options.mode || 'build';
+    this.systemPrompt = options.systemPrompt || buildSystemPrompt(this.projectRules, this.mode);
     this.maxIterations = options.maxIterations || 25;
     this.permissionCheck = options.permissionCheck;
     this.permissionBatchCheck = options.permissionBatchCheck;
@@ -45,7 +51,16 @@ export class Agent {
     this.responseBudget = options.responseBudget ?? 4096;
     this.contextManagement = options.contextManagement ?? true;
     this.compactificationProvider = options.compactificationProvider;
+    this.mode = options.mode || 'build';
+    this.projectRules = options.projectRules ?? null;
   }
+
+  setMode(mode: 'plan' | 'build'): void {
+    this.mode = mode;
+    this.systemPrompt = buildSystemPrompt(this.projectRules, mode);
+  }
+
+  getMode(): 'plan' | 'build' { return this.mode; }
 
   setPermissionCheck(fn: PermissionCheck): void {
     this.permissionCheck = fn;
