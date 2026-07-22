@@ -47,8 +47,10 @@ export const StatusLine = memo(function StatusLine({ pendingPermission, currentT
     return (
       <Box height={1} paddingX={1} marginBottom={1} justifyContent="space-between">
         <Text color={theme.secondary}>{preview}</Text>
-        {mode === 'plan' && (
+        {mode === 'plan' ? (
           <Text color={theme.warning}>[plan]</Text>
+        ) : (
+          <Text color={theme.success}>[build]</Text>
         )}
       </Box>
     );
@@ -58,8 +60,10 @@ export const StatusLine = memo(function StatusLine({ pendingPermission, currentT
     return (
       <Box height={1} paddingX={1} marginBottom={1} justifyContent="space-between">
         <Text color={theme.textMuted}>{SPINNER_FRAMES[spinnerFrame % SPINNER_FRAMES.length]} thinking</Text>
-        {mode === 'plan' && (
+        {mode === 'plan' ? (
           <Text color={theme.warning}>[plan]</Text>
+        ) : (
+          <Text color={theme.success}>[build]</Text>
         )}
       </Box>
     );
@@ -67,8 +71,10 @@ export const StatusLine = memo(function StatusLine({ pendingPermission, currentT
 
   return (
     <Box height={1} marginBottom={1} justifyContent="space-between">
-      {mode === 'plan' && (
+      {mode === 'plan' ? (
         <Text color={theme.warning}>[plan]</Text>
+      ) : (
+        <Text color={theme.success}>[build]</Text>
       )}
     </Box>
   );

@@ -217,7 +217,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
   }
 
   function getModePrefix(): string {
-    return currentMode === 'plan' ? '[plan] ' : '';
+    return currentMode === 'plan' ? t.warning('[plan] ') : t.success('[build] ');
   }
 
   function startReadline(): void {
