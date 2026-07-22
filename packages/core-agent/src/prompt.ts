@@ -49,7 +49,7 @@ export function buildSystemPrompt(projectRules?: string | null, mode?: 'plan' | 
     : DEFAULT_SYSTEM_PROMPT;
 
   if (mode === 'plan') {
-    return `You are in PLAN MODE. You may only read and inspect files, search the web, and fetch URLs. Do NOT write, edit, delete, or create any files. Do NOT execute shell commands. Analyze the codebase, answer questions, and propose implementation plans, but do not make any changes.\n\n${base}`;
+    return `You are in PLAN MODE. You may only read and inspect files, search the web, and fetch URLs. Do NOT write, edit, delete, or create any files. Do NOT execute shell commands. Analyze the codebase, answer questions, and propose implementation plans, but do not make any changes. If you need to make changes, ask the user to switch to build mode (press Tab or type /build).\n\n${base}`;
   }
 
   return base;

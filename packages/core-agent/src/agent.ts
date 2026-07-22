@@ -364,7 +364,9 @@ export class Agent {
             if (!allowed) {
               for (const pc of parsedCalls) {
                 if (pc.args === null) continue;
-                const denyMsg = `Tool "${pc.tc.function.name}" was denied by user. Explain what you were trying to do and give your best answer based on available information. Do NOT call any more tools — just respond to the user directly.`;
+                const denyMsg = this.mode === 'plan'
+                  ? `Tool "${pc.tc.function.name}" is not available in plan mode. Ask the user to switch to build mode (press Tab or type /build).`
+                  : `Tool "${pc.tc.function.name}" was denied by user. Explain what you were trying to do and give your best answer based on available information. Do NOT call any more tools — just respond to the user directly.`;
                 const toolMsg: Message = {
                   role: 'tool',
                   content: denyMsg,
@@ -447,7 +449,9 @@ export class Agent {
               if (this.permissionCheck) {
                 const allowed = await this.permissionCheck(tc.function.name, args);
                 if (!allowed) {
-                  const denyMsg = `Tool "${tc.function.name}" was denied by user. Explain what you were trying to do and give your best answer based on available information. Do NOT call any more tools — just respond to the user directly.`;
+                  const denyMsg = this.mode === 'plan'
+                    ? `Tool "${tc.function.name}" is not available in plan mode. Ask the user to switch to build mode (press Tab or type /build).`
+                    : `Tool "${tc.function.name}" was denied by user. Explain what you were trying to do and give your best answer based on available information. Do NOT call any more tools — just respond to the user directly.`;
                   const toolMsg: Message = {
                     role: 'tool',
                     content: denyMsg,
