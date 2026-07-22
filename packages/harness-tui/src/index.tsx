@@ -8,6 +8,8 @@ export function runTui(agent: Agent, options?: {
   modelName?: string;
   searchProvider?: string;
   theme?: Theme;
+  resumeSessionId?: string;
+  resumeLatest?: boolean;
   permConfig?: {
     mode?: PermissionMode;
     tools?: Record<string, PermissionMode>;
@@ -19,6 +21,8 @@ export function runTui(agent: Agent, options?: {
       modelName={options?.modelName}
       searchProvider={options?.searchProvider}
       theme={options?.theme}
+      resumeSessionId={options?.resumeSessionId}
+      resumeLatest={options?.resumeLatest}
       permConfig={options?.permConfig}
     />,
   );

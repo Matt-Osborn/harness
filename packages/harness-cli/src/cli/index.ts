@@ -350,6 +350,8 @@ export async function run(): Promise<void> {
       runTui(agent, {
         modelName: model,
         searchProvider: search,
+        resumeSessionId: resumeSession || undefined,
+        resumeLatest: resumeLatest || undefined,
         permConfig: {
           mode: config.permissions?.mode,
           tools: config.permissions?.tools,

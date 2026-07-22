@@ -1,10 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { Box, useApp, useInput } from 'ink';
 import { writeFile } from 'node:fs/promises';
 import type { Agent } from '@harness/core-agent';
 import { PermissionEngine } from '@harness/core-agent';
 import type { PermissionPromptFn, PermissionDecision } from '@harness/core-agent';
-import type { Message, PermissionMode } from '@harness/shared';
+import type { Message, PermissionMode, SessionData } from '@harness/shared';
 import { SessionManager } from '@harness/shared';
 import { darkTheme } from '../theme.js';
 import { TitleBar } from './TitleBar.js';
@@ -21,6 +21,8 @@ interface AppProps {
   searchProvider?: string;
   theme?: Theme;
   onExit?: () => void;
+  resumeSessionId?: string;
+  resumeLatest?: boolean;
   permConfig?: {
     mode?: PermissionMode;
     tools?: Record<string, PermissionMode>;
@@ -29,7 +31,7 @@ interface AppProps {
 
 const searchProviders = ['tavily', 'duckduckgo'];
 
-export function App({ agent, modelName, searchProvider, theme: customTheme, onExit, permConfig }: AppProps) {
+export function App({ agent, modelName, searchProvider, theme: customTheme, onExit, resumeSessionId, resumeLatest, permConfig }: AppProps) {
   const theme = customTheme || darkTheme;
   const { exit } = useApp();
   const smRef = useRef(new SessionManager());
@@ -39,13 +41,19 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
   const isRunningRef = useRef(false);
   const permResolveRef = useRef<((value: PermissionDecision) => void) | null>(null);
 
-  const [sessionId] = useState(() => smRef.current.generateId());
-  const [messages, setMessages] = useState<Message[]>([]);
+  const loadedSession = useMemo<SessionData | null>(() => {
+    if (resumeLatest) return smRef.current.getLatest('INTERACTIVE');
+    if (resumeSessionId) return smRef.current.load(resumeSessionId);
+    return null;
+  }, []);
+
+  const [sessionId, setSessionId] = useState(loadedSession?.id || smRef.current.generateId());
+  const [messages, setMessages] = useState<Message[]>(loadedSession?.messages || []);
   const [notification, setNotification] = useState('');
   const [inputValue, setInputValue] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [currentSearch, setCurrentSearch] = useState(searchProvider || 'auto');
-  const [sessionCreatedAt] = useState(() => Date.now());
+  const [sessionCreatedAt, setSessionCreatedAt] = useState(loadedSession?.createdAt || Date.now());
   const [pendingPermission, setPendingPermission] = useState<{ toolName: string; batchCount?: number } | null>(null);
   const [currentTool, setCurrentTool] = useState<{ name: string; args: string } | null>(null);
   const [spinnerFrame, setSpinnerFrame] = useState(0);
@@ -87,6 +95,14 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
   useEffect(() => {
     ensureHighlighter();
   }, []);
+
+  useEffect(() => {
+    if (!loadedSession) return;
+    historyRef.current = loadedSession.messages;
+    agent.setCachedHistory(loadedSession.messages);
+    const msgCount = loadedSession.messages.filter(m => m.role === 'user' || m.role === 'assistant').length;
+    setNotification(`Resumed session ${loadedSession.id} (${msgCount} messages)`);
+  }, [loadedSession]);
 
   useEffect(() => {
     const onSigint = () => {
@@ -301,8 +317,38 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
       return;
     }
 
-    if (trimmed.startsWith('/resume')) {
-      setNotification('Session resume is not yet supported in TUI mode.');
+    if (trimmed.startsWith('/resume ')) {
+      const targetId = trimmed.slice(8).trim();
+      const loaded = smRef.current.load(targetId);
+      if (!loaded) {
+        setNotification(`Session not found: ${targetId}`);
+        return;
+      }
+      saveSession();
+      setSessionId(loaded.id);
+      setSessionCreatedAt(loaded.createdAt);
+      historyRef.current = loaded.messages;
+      setMessages(loaded.messages);
+      agent.setCachedHistory(loaded.messages);
+      const msgCount = loaded.messages.filter(m => m.role === 'user' || m.role === 'assistant').length;
+      setNotification(`Resumed session ${loaded.id} (${msgCount} messages)`);
+      return;
+    }
+
+    if (trimmed === '/resume') {
+      const latest = smRef.current.getLatest('INTERACTIVE');
+      if (!latest) {
+        setNotification('No saved sessions to resume.');
+        return;
+      }
+      saveSession();
+      setSessionId(latest.id);
+      setSessionCreatedAt(latest.createdAt);
+      historyRef.current = latest.messages;
+      setMessages(latest.messages);
+      agent.setCachedHistory(latest.messages);
+      const msgCount = latest.messages.filter(m => m.role === 'user' || m.role === 'assistant').length;
+      setNotification(`Resumed session ${latest.id} (${msgCount} messages)`);
       return;
     }
 
