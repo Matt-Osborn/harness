@@ -102,6 +102,10 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
     sessionCreatedAt = Date.now();
   }
 
+  if (history.length > 0) {
+    agent.setCachedHistory(history);
+  }
+
   function saveSession(): void {
     sm.save({
       id: sessionId,

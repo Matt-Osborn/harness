@@ -32,6 +32,7 @@ export class Agent {
   private compactificationProvider?: Provider;
   private _cachedTokens: number = 0;
   private _cachedMsgLen: number = 0;
+  private lastSentHashes: string[] = [];
 
   constructor(options: AgentOptions) {
     this.provider = options.provider;
@@ -97,15 +98,24 @@ export class Agent {
     return dropCount;
   }
 
+  private hashMessage(m: Message): string {
+    return `${m.role}|${m.content}|${m.tool_calls?.map(tc => `${tc.id}|${tc.function.name}|${tc.function.arguments}`).join('||') || ''}|${m.tool_call_id || ''}|${m.name || ''}`;
+  }
+
+  public setCachedHistory(messages: Message[]): void {
+    const systemMsg: Message = { role: 'system', content: this.systemPrompt };
+    this.lastSentHashes = [systemMsg, ...messages].map(m => this.hashMessage(m));
+  }
+
   private applyCaching(messages: Message[]): Message[] {
+    const currentHashes = messages.map(m => this.hashMessage(m));
+    let prefixLen = 0;
+    for (let i = 0; i < Math.min(currentHashes.length, this.lastSentHashes.length); i++) {
+      if (currentHashes[i] !== this.lastSentHashes[i]) break;
+      prefixLen = i + 1;
+    }
     return messages.map((m, i) => {
-      if (i === 0 && m.role === 'system') {
-        return { ...m, cache_control: { type: 'ephemeral' } };
-      }
-      if (m.content.startsWith('[Summary of earlier conversation:')) {
-        return { ...m, cache_control: { type: 'ephemeral' } };
-      }
-      if ((m.role === 'user' || m.role === 'tool') && i > 0 && i % 4 === 0) {
+      if (i < prefixLen) {
         return { ...m, cache_control: { type: 'ephemeral' } };
       }
       return m;
@@ -449,6 +459,7 @@ export class Agent {
             }
           }
         }
+        this.lastSentHashes = truncatedMessages.map(m => this.hashMessage(m));
         consecutiveToolIterations++;
         consecutiveLengthIterations = 0;
 

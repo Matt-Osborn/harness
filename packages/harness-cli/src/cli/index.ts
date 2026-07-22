@@ -409,8 +409,6 @@ mode = "ask"
 [permissions.tools]
 bash = "ask"
 write = "ask"
-web_search = "ask"
-web_fetch = "ask"
 read = "auto"
 edit = "auto"
 
