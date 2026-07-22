@@ -9,9 +9,10 @@ interface InputBoxProps {
   onSubmit: (value: string) => void;
   disabled: boolean;
   theme: Theme;
+  mode?: 'plan' | 'build';
 }
 
-export const InputBox = memo(function InputBox({ value, onChange, onSubmit, disabled, theme }: InputBoxProps) {
+export const InputBox = memo(function InputBox({ value, onChange, onSubmit, disabled, theme, mode }: InputBoxProps) {
   return (
     <Box
       height={3}
@@ -20,7 +21,11 @@ export const InputBox = memo(function InputBox({ value, onChange, onSubmit, disa
       borderStyle="single"
       borderColor={disabled ? theme.textMuted : theme.border}
     >
-      <Text color={theme.primary}>❯ </Text>
+      {mode === 'plan' ? (
+        <Text color={theme.warning}>[plan] ❯ </Text>
+      ) : (
+        <Text color={theme.primary}>❯ </Text>
+      )}
       <TextInput
         value={value}
         onChange={onChange}

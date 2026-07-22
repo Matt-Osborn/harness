@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Box, useApp, useInput } from 'ink';
+import { writeFile } from 'node:fs/promises';
 import type { Agent } from '@harness/core-agent';
 import { PermissionEngine } from '@harness/core-agent';
 import type { PermissionPromptFn, PermissionDecision } from '@harness/core-agent';
@@ -48,6 +49,11 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
   const [pendingPermission, setPendingPermission] = useState<{ toolName: string; batchCount?: number } | null>(null);
   const [currentTool, setCurrentTool] = useState<{ name: string; args: string } | null>(null);
   const [spinnerFrame, setSpinnerFrame] = useState(0);
+  const [currentMode, setCurrentMode] = useState<'plan' | 'build'>('build');
+  const [hideThinking, setHideThinking] = useState(false);
+  const [hideTools, setHideTools] = useState(false);
+  const [thinkingBuf, setThinkingBuf] = useState('');
+  const permEngineRef = useRef<PermissionEngine | null>(null);
 
   useEffect(() => {
     isRunningRef.current = isRunning;
@@ -115,6 +121,17 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
     }
   });
 
+  useInput((input) => {
+    if (pendingPermission) return;
+    if (input === '\t') {
+      const newMode = currentMode === 'plan' ? 'build' : 'plan';
+      setCurrentMode(newMode);
+      agent.setMode(newMode);
+      permEngineRef.current?.setMode(newMode);
+      setNotification(newMode === 'plan' ? 'Switched to plan mode' : 'Switched to build mode');
+    }
+  });
+
   useEffect(() => {
     const tuiPromptFn: PermissionPromptFn = async (
       toolName: string,
@@ -132,13 +149,16 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
       promptFn: tuiPromptFn,
     });
 
+    engine.setMode(currentMode);
+    permEngineRef.current = engine;
+
     agent.setPermissionCheck(async (toolName: string, args?: Record<string, unknown>): Promise<boolean> => {
       return engine.check(toolName, undefined, args);
     });
     agent.setPermissionBatchCheck(async (toolName: string, argsList: Record<string, unknown>[]): Promise<boolean> => {
       return engine.batchCheck(toolName, argsList);
     });
-  }, [agent, permConfig]);
+  }, [agent, permConfig, currentMode]);
 
   const handleSubmit = useCallback(async (text: string) => {
     const trimmed = text.trim();
@@ -151,7 +171,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
 
     if (trimmed === '/help') {
       setNotification(
-        'Commands: /search, /search <p>, /key, /key <VAR>, /session, /sessions, /resume, /exit, /quit, /help'
+        'Commands: /plan, /build, /hide-thinking, /show-thinking, /hide-tools, /show-tools, /export, /search, /search <p>, /key, /key <VAR>, /session, /sessions, /resume, /exit, /quit, /help'
       );
       return;
     }
@@ -207,6 +227,80 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
       return;
     }
 
+    if (trimmed === '/plan') {
+      setCurrentMode('plan');
+      agent.setMode('plan');
+      permEngineRef.current?.setMode('plan');
+      setNotification('Switched to plan mode');
+      return;
+    }
+
+    if (trimmed === '/build') {
+      setCurrentMode('build');
+      agent.setMode('build');
+      permEngineRef.current?.setMode('build');
+      setNotification('Switched to build mode');
+      return;
+    }
+
+    if (trimmed === '/hide-thinking') {
+      setHideThinking(true);
+      setNotification('Thinking display hidden');
+      return;
+    }
+
+    if (trimmed === '/show-thinking') {
+      setHideThinking(false);
+      setNotification('Thinking display shown');
+      return;
+    }
+
+    if (trimmed === '/hide-tools') {
+      setHideTools(true);
+      setNotification('Tool call indicators hidden');
+      return;
+    }
+
+    if (trimmed === '/show-tools') {
+      setHideTools(false);
+      setNotification('Tool call indicators shown');
+      return;
+    }
+
+    if (trimmed === '/export') {
+      const msgs = historyRef.current.filter(m => m.role === 'user' || m.role === 'assistant');
+      const lines: string[] = [
+        `# AI Harness Session`,
+        '',
+        `**Session:** \`${sessionId}\``,
+        `**Model:** ${modelName || '(default)'}`,
+        `**Messages:** ${msgs.length}`,
+        `**Exported:** ${new Date().toLocaleString()}`,
+        '',
+        '---',
+        '',
+        ...msgs.flatMap(m => {
+          if (m.role === 'user') {
+            return ['## User', '', m.content, ''];
+          }
+          const out: string[] = ['## Assistant', ''];
+          if (m.content) out.push(m.content, '');
+          if (m.tool_calls) {
+            for (const tc of m.tool_calls) {
+              out.push(`> \`⚡ ${tc.function.name}\``);
+            }
+            out.push('');
+          }
+          return out;
+        }),
+      ];
+      const filename = `harness-session-${sessionId.slice(0, 8)}.md`;
+      writeFile(filename, lines.join('\n'), 'utf-8')
+        .then(() => setNotification(`Session exported to ${filename}`))
+        .catch((err: Error) => setNotification(`Export failed: ${err.message}`));
+      return;
+    }
+
     if (trimmed.startsWith('/resume')) {
       setNotification('Session resume is not yet supported in TUI mode.');
       return;
@@ -238,6 +332,13 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
             streamBufRef.current += event.data;
             break;
           }
+          case 'thinking': {
+            const content = (event.data as { content: string }).content;
+            if (!hideThinking) {
+              setThinkingBuf(content);
+            }
+            break;
+          }
           case 'tool_call': {
             const d = event.data as { name: string; args: string };
             setCurrentTool({ name: d.name, args: d.args });
@@ -264,6 +365,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
             break;
           }
           case 'error': {
+            setThinkingBuf('');
             const errContent = streamBufRef.current;
             streamBufRef.current = '';
             const errorHistory = [
@@ -284,6 +386,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
       streamBufRef.current = '';
 
       if (err instanceof Error && err.name === 'AbortError') {
+        setThinkingBuf('');
         if (partialContent) {
           const finalHistory = [
             ...updatedHistory,
@@ -308,7 +411,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
       abortRef.current = null;
       streamBufRef.current = '';
     }
-  }, [agent, isRunning, saveSession, handleExit, sessionId, modelName, currentSearch]);
+  }, [agent, isRunning, saveSession, handleExit, sessionId, modelName, currentSearch, hideThinking, hideTools]);
 
   const msgCount = messages.filter(m => m.role === 'user' || m.role === 'assistant').length;
 
@@ -324,6 +427,8 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
           messages={messages}
           notification={notification}
           theme={theme}
+          hideTools={hideTools}
+          thinkingBuf={thinkingBuf}
         />
         <RightPanel
           theme={theme}
@@ -331,6 +436,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
           messageCount={msgCount}
           model={modelName}
           search={currentSearch}
+          mode={currentMode}
         />
       </Box>
       <StatusLine
@@ -339,6 +445,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
         isRunning={isRunning}
         spinnerFrame={spinnerFrame}
         theme={theme}
+        mode={currentMode}
       />
       <Box height={3} flexShrink={0}>
         {!pendingPermission && (
@@ -348,6 +455,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
             onSubmit={handleSubmit}
             disabled={isRunning}
             theme={theme}
+            mode={currentMode}
           />
         )}
       </Box>

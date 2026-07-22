@@ -8,11 +8,13 @@ interface ChatPanelProps {
   messages: Message[];
   notification: string;
   theme: Theme;
+  hideTools?: boolean;
+  thinkingBuf?: string;
 }
 
-export const ChatPanel = memo(function ChatPanel({ messages, notification, theme }: ChatPanelProps) {
+export const ChatPanel = memo(function ChatPanel({ messages, notification, theme, hideTools, thinkingBuf }: ChatPanelProps) {
   const completedMessages = messages.filter(m => m.role !== 'system');
-  const hasContent = completedMessages.length > 0 || notification;
+  const hasContent = completedMessages.length > 0 || notification || (thinkingBuf && thinkingBuf.length > 0);
 
   if (!hasContent) {
     return (
@@ -32,9 +34,15 @@ export const ChatPanel = memo(function ChatPanel({ messages, notification, theme
           </Box>
         )}
 
+        {thinkingBuf && (
+          <Box marginBottom={1}>
+            <Text color={theme.textMuted} italic>{thinkingBuf}</Text>
+          </Box>
+        )}
+
         {completedMessages.map((msg, i) => (
           <Box key={i} marginBottom={msg.role === 'tool' ? 0 : 1}>
-            <MessageBubble message={msg} theme={theme} />
+            <MessageBubble message={msg} theme={theme} hideTools={hideTools} />
           </Box>
         ))}
       </Box>

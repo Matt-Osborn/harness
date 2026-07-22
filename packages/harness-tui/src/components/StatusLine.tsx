@@ -10,9 +10,10 @@ interface StatusLineProps {
   isRunning: boolean;
   spinnerFrame: number;
   theme: Theme;
+  mode?: 'plan' | 'build';
 }
 
-export const StatusLine = memo(function StatusLine({ pendingPermission, currentTool, isRunning, spinnerFrame, theme }: StatusLineProps) {
+export const StatusLine = memo(function StatusLine({ pendingPermission, currentTool, isRunning, spinnerFrame, theme, mode }: StatusLineProps) {
   if (pendingPermission) {
     const label = pendingPermission.batchCount && pendingPermission.batchCount > 1
       ? `Allow ${pendingPermission.batchCount} ${pendingPermission.toolName} commands`
@@ -44,19 +45,31 @@ export const StatusLine = memo(function StatusLine({ pendingPermission, currentT
       } catch { /* skip */ }
     }
     return (
-      <Box height={1} paddingX={1} marginBottom={1}>
+      <Box height={1} paddingX={1} marginBottom={1} justifyContent="space-between">
         <Text color={theme.secondary}>{preview}</Text>
+        {mode === 'plan' && (
+          <Text color={theme.warning}>[plan]</Text>
+        )}
       </Box>
     );
   }
 
   if (isRunning) {
     return (
-      <Box height={1} paddingX={1} marginBottom={1}>
+      <Box height={1} paddingX={1} marginBottom={1} justifyContent="space-between">
         <Text color={theme.textMuted}>{SPINNER_FRAMES[spinnerFrame % SPINNER_FRAMES.length]} thinking</Text>
+        {mode === 'plan' && (
+          <Text color={theme.warning}>[plan]</Text>
+        )}
       </Box>
     );
   }
 
-  return <Box height={1} marginBottom={1} />;
+  return (
+    <Box height={1} marginBottom={1} justifyContent="space-between">
+      {mode === 'plan' && (
+        <Text color={theme.warning}>[plan]</Text>
+      )}
+    </Box>
+  );
 });

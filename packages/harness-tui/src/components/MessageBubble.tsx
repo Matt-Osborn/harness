@@ -7,10 +7,22 @@ import { renderMarkdown } from '../markdown.js';
 interface MessageBubbleProps {
   message: Message;
   theme: Theme;
+  hideTools?: boolean;
+  thinking?: boolean;
 }
 
-export const MessageBubble = memo(function MessageBubble({ message, theme }: MessageBubbleProps) {
+export const MessageBubble = memo(function MessageBubble({ message, theme, hideTools, thinking }: MessageBubbleProps) {
   if (message.role === 'system') return null;
+
+  if (thinking) {
+    return (
+      <Box flexDirection="column" marginBottom={1} paddingX={1}>
+        <Text color={theme.textMuted} italic>
+          {message.content}
+        </Text>
+      </Box>
+    );
+  }
 
   if (message.role === 'user') {
     return (
@@ -29,7 +41,7 @@ export const MessageBubble = memo(function MessageBubble({ message, theme }: Mes
         <Box backgroundColor={theme.assistantBubble} paddingX={2} paddingY={1} marginLeft={2}>
           {renderMarkdown(message.content, theme)}
         </Box>
-        {message.tool_calls && message.tool_calls.length > 0 && (
+        {!hideTools && message.tool_calls && message.tool_calls.length > 0 && (
           <Box marginLeft={3} marginTop={1}>
             {message.tool_calls.map((tc) => (
               <Text key={tc.id} color={theme.warning}>⚡ {tc.function.name} </Text>
