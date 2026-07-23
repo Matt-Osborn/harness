@@ -238,7 +238,7 @@ export async function run(): Promise<void> {
       compactificationProvider,
     });
 
-    if (mode === 'plan') permissions.setMode('plan');
+    if (mode === 'build') permissions.setMode('build');
 
     if (!isProviderAvailable(search)) {
       const fallback = resolveAutoProvider();

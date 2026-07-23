@@ -57,7 +57,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
   const [pendingPermission, setPendingPermission] = useState<{ toolName: string; batchCount?: number } | null>(null);
   const [currentTool, setCurrentTool] = useState<{ name: string; args: string } | null>(null);
   const [spinnerFrame, setSpinnerFrame] = useState(0);
-  const [currentMode, setCurrentMode] = useState<'plan' | 'build'>('build');
+  const [currentMode, setCurrentMode] = useState<'plan' | 'build'>('plan');
   const [hideThinking, setHideThinking] = useState(false);
   const [hideTools, setHideTools] = useState(false);
   const [thinkingBuf, setThinkingBuf] = useState('');

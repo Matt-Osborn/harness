@@ -42,7 +42,7 @@ export class Agent {
     this.provider = options.provider;
     this.tools = options.tools;
     this.projectRules = options.projectRules ?? null;
-    this.mode = options.mode || 'build';
+    this.mode = options.mode || 'plan';
     this.systemPrompt = options.systemPrompt || buildSystemPrompt(this.projectRules, this.mode);
     this.maxIterations = options.maxIterations || 25;
     this.permissionCheck = options.permissionCheck;
@@ -51,7 +51,7 @@ export class Agent {
     this.responseBudget = options.responseBudget ?? 4096;
     this.contextManagement = options.contextManagement ?? true;
     this.compactificationProvider = options.compactificationProvider;
-    this.mode = options.mode || 'build';
+    this.mode = options.mode || 'plan';
     this.projectRules = options.projectRules ?? null;
   }
 

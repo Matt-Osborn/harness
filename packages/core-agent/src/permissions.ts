@@ -23,7 +23,7 @@ export class PermissionEngine {
   private interactive: boolean;
   private sessionId: string;
   private promptFn?: PermissionPromptFn;
-  private mode: 'plan' | 'build' = 'build';
+  private mode: 'plan' | 'build' = 'plan';
 
   constructor(permConfig: PermissionConfig | undefined, opts: PermissionEngineOptions) {
     this.permConfig = permConfig;

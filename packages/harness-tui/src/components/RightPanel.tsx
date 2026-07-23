@@ -35,7 +35,7 @@ export const RightPanel = memo(function RightPanel({ theme, sessionId, messageCo
         <Box marginY={1} />
         <Text bold color={theme.text}>Mode</Text>
         <Text color={mode === 'plan' ? theme.warning : theme.success}>
-          {mode || 'build'}
+          {mode || 'plan'}
         </Text>
       </Box>
     </Box>

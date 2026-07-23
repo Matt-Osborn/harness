@@ -44,13 +44,14 @@ stop calling tools and deliver your answer. Do not keep iterating with new
 tool calls if you already have enough context to respond.`;
 
 export function buildSystemPrompt(projectRules?: string | null, mode?: 'plan' | 'build'): string {
+  const effectiveMode = mode || 'plan';
   const base = projectRules
     ? `${DEFAULT_SYSTEM_PROMPT}\n\n## Project Instructions\n\n${projectRules}`
     : DEFAULT_SYSTEM_PROMPT;
 
-  if (mode === 'plan') {
+  if (effectiveMode === 'plan') {
     return `You are in PLAN MODE. You may only read and inspect files, search the web, and fetch URLs. Do NOT write, edit, delete, or create any files. Do NOT execute shell commands. Analyze the codebase, answer questions, and propose implementation plans, but do not make any changes. If you need to make changes, ask the user to switch to build mode (press Tab or type /build).\n\n${base}`;
   }
 
-  return base;
+  return `You are in BUILD MODE. You have full access to all tools: read, write, edit, delete, and create files, execute shell commands, search the web, and fetch URLs. Permissions may prompt for certain operations — respond to them as needed.\n\n${base}`;
 }
