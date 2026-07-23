@@ -312,8 +312,9 @@ export async function run(): Promise<void> {
     if (seedOverride !== undefined) resolved!.config.seed = seedOverride;
     if (flagDropParams !== undefined) resolved!.config.drop_params = flagDropParams;
     const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
+    const mode = args.includes('--plan') ? 'plan' : args.includes('--build') ? 'build' : undefined;
     const projectRules = loadProjectRules();
-    const systemPrompt = buildSystemPrompt(projectRules);
+    const systemPrompt = buildSystemPrompt(projectRules, mode);
 
     const ctxConfig = config.contextConfig;
     const contextManagement = flagContextMgmt ?? envCtxParsed ?? ctxConfig?.management ?? true;
@@ -335,6 +336,8 @@ export async function run(): Promise<void> {
         provider,
         tools,
         systemPrompt,
+        projectRules,
+        mode,
         contextManagement,
         contextWindow,
         responseBudget,

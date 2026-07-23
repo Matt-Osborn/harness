@@ -2,6 +2,37 @@ import type { PermissionMode, PermissionConfig, ReadonlyMode } from '@harness/sh
 
 export const READ_ONLY_TOOLS = ['read', 'grep', 'glob', 'web_fetch', 'web_search'];
 
+const READ_ONLY_BASH_COMMANDS = new Set([
+  'ls', 'cat', 'head', 'tail', 'which', 'file', 'stat', 'du', 'df',
+  'find', 'grep', 'rg', 'ag', 'type', 'where', 'echo', 'printf',
+  'pwd', 'env', 'printenv', 'uname', 'whoami', 'date', 'cal', 'tree',
+  'dir', 'readlink', 'basename', 'dirname', 'wc', 'sort', 'uniq',
+  'cut', 'tr', 'fmt', 'nl', 'diff', 'cmp', 'comm', 'man', 'whatis',
+  'apropos', 'help', 'tldr', 'hexdump', 'xxd', 'strings', 'realpath',
+  'which', 'command',
+]);
+
+function isReadOnlyBashCommand(command: string): boolean {
+  const segments = command.split(/\s*[|;&]\s*|\s+&&\s+|\s+\|\|\s+/);
+  return segments.every(seg => {
+    const cmd = seg.trim().split(/\s+/)[0]?.replace(/^[$#]\s*/, '');
+    return cmd ? READ_ONLY_BASH_COMMANDS.has(cmd) : true;
+  });
+}
+
+const DESTRUCTIVE_BASH_COMMANDS = new Set([
+  'rm', 'rmdir', 'del', 'deltree', 'rmtree', 'rd', 'dd',
+  'truncate', 'shred', 'wipe', 'srm',
+]);
+
+function isDestructiveBashCommand(command: string): boolean {
+  const segments = command.split(/\s*[|;&]\s*|\s+&&\s+|\s+\|\|\s+/);
+  return segments.some(seg => {
+    const cmd = seg.trim().split(/\s+/)[0]?.replace(/^[$#]\s*/, '');
+    return cmd ? DESTRUCTIVE_BASH_COMMANDS.has(cmd) : false;
+  });
+}
+
 export type PermissionDecision = 'yes' | 'no' | 'always' | 'deny-session';
 
 export type PermissionPromptFn = (
@@ -42,12 +73,17 @@ export class PermissionEngine {
       const roMode = this.permConfig?.readonly ?? 'auto';
       if (roMode === 'auto') return 'auto';
     }
-    if (!this.permConfig) return 'ask';
-    return this.permConfig.mode || 'ask';
+    if (!this.permConfig) return this.mode === 'build' ? 'auto' : 'ask';
+    return this.permConfig.mode || (this.mode === 'build' ? 'auto' : 'ask');
   }
 
   async check(toolName: string, _modelName?: string, args?: Record<string, unknown>): Promise<boolean> {
-    if (this.mode === 'plan' && !READ_ONLY_TOOLS.includes(toolName)) return false;
+    if (this.mode === 'plan' && !READ_ONLY_TOOLS.includes(toolName)) {
+      if (toolName === 'bash' && args?.command && isReadOnlyBashCommand(String(args.command))) {
+        return true;
+      }
+      return false;
+    }
 
     const sid = this.sessionId;
 
@@ -55,6 +91,12 @@ export class PermissionEngine {
     if (this.sessionDenies.get(sid)?.has(toolName)) return false;
 
     const mode = this.getEffectiveMode(toolName);
+
+    if (this.mode === 'build' && mode === 'auto' && toolName === 'bash' && args?.command) {
+      if (isDestructiveBashCommand(String(args.command))) {
+        return this.askUser(toolName, args);
+      }
+    }
 
     switch (mode) {
       case 'auto':
@@ -83,7 +125,14 @@ export class PermissionEngine {
   }
 
   async batchCheck(toolName: string, argsList: Record<string, unknown>[]): Promise<boolean> {
-    if (this.mode === 'plan' && !READ_ONLY_TOOLS.includes(toolName)) return false;
+    if (this.mode === 'plan' && !READ_ONLY_TOOLS.includes(toolName)) {
+      if (toolName === 'bash' && argsList) {
+        if (argsList.every(a => a.command && isReadOnlyBashCommand(String(a.command)))) {
+          return true;
+        }
+      }
+      return false;
+    }
 
     const sid = this.sessionId;
 
@@ -91,6 +140,12 @@ export class PermissionEngine {
     if (this.sessionDenies.get(sid)?.has(toolName)) return false;
 
     const mode = this.getEffectiveMode(toolName);
+
+    if (this.mode === 'build' && mode === 'auto' && toolName === 'bash' && argsList) {
+      if (argsList.some(a => a.command && isDestructiveBashCommand(String(a.command)))) {
+        return this.askUserBatch(toolName, argsList);
+      }
+    }
 
     switch (mode) {
       case 'auto':
