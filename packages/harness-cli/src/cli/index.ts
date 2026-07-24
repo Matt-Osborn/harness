@@ -149,7 +149,8 @@ export async function run(): Promise<void> {
       console.error(tPrompt.error(valid.message));
       process.exit(1);
     }
-    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools);
+    const printAgentFlag = parseArg(args, '--agent');
+    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools, printAgentFlag);
     return;
   }
 
@@ -297,7 +298,7 @@ export async function run(): Promise<void> {
     }
 
     const searchIsDefault = !searchFlagPresent;
-    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, searchIsDefault, initialTemp, statusEnabled, tInteractive, hideThinking, hideTools, permissions, agentRegistry);
+    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, searchIsDefault, initialTemp, statusEnabled, tInteractive, hideThinking, hideTools, permissions, agentRegistry, tools, projectRules);
     return;
   }
 
@@ -393,19 +394,41 @@ export async function run(): Promise<void> {
       }
     }
 
-      const agent = new Agent({
-        provider,
-        tools,
-        systemPrompt,
-        projectRules,
-        mode,
-        maxIterations: tuiMaxIterations,
-        resumed: tuiResumed,
-        contextManagement,
-        contextWindow,
-        responseBudget,
-        compactificationProvider,
-      });
+      const tuiAgentFlag = parseArg(args, '--agent');
+      let agent: Agent;
+      if (tuiAgentFlag) {
+        const registry = new AgentRegistry();
+        const runnable = registry.resolve(tuiAgentFlag);
+        if (!runnable) {
+          console.log(tTui.error(`Agent/pipeline not found: ${tuiAgentFlag}`));
+          return;
+        }
+        if (runnable.type === 'pipeline') {
+          console.log(tTui.warning('Pipelines not yet supported in TUI mode. Using default agent.'));
+          agent = new Agent({
+            provider, tools, systemPrompt, projectRules, mode,
+            maxIterations: tuiMaxIterations, resumed: tuiResumed,
+            contextManagement, contextWindow, responseBudget, compactificationProvider,
+          });
+        } else {
+          agent = buildAgentFromDefinition({
+            definition: runnable,
+            config,
+            tools,
+            projectRules,
+            providerOverride: model,
+            compactificationProvider,
+            maxIterations: tuiMaxIterations,
+            resumed: tuiResumed,
+          });
+        }
+      } else {
+        agent = new Agent({
+          provider, tools, systemPrompt, projectRules, mode,
+          maxIterations: tuiMaxIterations, resumed: tuiResumed,
+          contextManagement, contextWindow, responseBudget, compactificationProvider,
+        });
+      }
 
       runTui(agent, {
         modelName: model,
@@ -477,7 +500,7 @@ mode = "ask"
 bash = "ask"
 write = "ask"
 read = "auto"
-edit = "auto"
+edit = "ask"
 
 [format]
 # Auto-format files after write/edit. Requires formatters on PATH.

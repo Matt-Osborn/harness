@@ -2,6 +2,7 @@ import * as readline from 'node:readline';
 import { writeFile } from 'node:fs/promises';
 import type { Agent } from '@harness/core-agent';
 import type { PermissionEngine } from '@harness/core-agent';
+import type { AgentTool } from '@harness/core-agent';
 import type { WebSearchTool } from '@harness/core-agent';
 import type { Message, SearchProviderType } from '@harness/shared';
 import { TextWrapper, SessionManager, isWSL, CliTheme, writeSessionSummary } from '@harness/shared';
@@ -62,7 +63,7 @@ function formatSessionExport(messages: Message[], ext: string, sid: string, mode
   return lines.join('\n');
 }
 
-export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, permissions?: PermissionEngine, agentRegistry?: import('@harness/shared').AgentRegistry): Promise<void> {
+export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, permissions?: PermissionEngine, agentRegistry?: import('@harness/shared').AgentRegistry, allTools?: AgentTool[], interactiveProjectRules?: string | null): Promise<void> {
   const t = theme ?? new CliTheme();
   let currentSearch: SearchProviderType | 'auto' = searchProvider || 'auto';
   const searchProviders: SearchProviderType[] = ['tavily', 'duckduckgo'];
@@ -508,15 +509,11 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
           rl.prompt();
           return;
         }
-        // Apply mode override only (tools/provider can't change mid-session)
-        if (resolved.mode && resolved.mode !== currentMode) {
-          toggleMode();
-          currentMode = resolved.mode;
-          rl.setPrompt(`${getModePrefix()}${t.success('❯')} `);
-          process.stdout.write(t.success(`Switched to agent "${agentName}" (${resolved.mode} mode)`) + '\n\n');
-        } else {
-          process.stdout.write(t.info(`Already using agent "${agentName}"`) + '\n\n');
-        }
+        const fullTools = allTools || agent.getTools();
+        agent.applyDefinition(resolved, fullTools, interactiveProjectRules);
+        currentMode = agent.getMode();
+        rl.setPrompt(`${getModePrefix()}${t.success('❯')} `);
+        process.stdout.write(t.success(`Switched to agent "${agentName}"`) + '\n\n');
         rl.prompt();
         return;
       }
@@ -631,6 +628,21 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
             justHadResult = false;
             break;
           }
+          case 'pipeline_start':
+            process.stdout.write(`\n${t.bold(`── Pipeline: ${(event.data as { name: string; step_count?: number }).name} ──`)}\n\n`);
+            break;
+          case 'step_start': {
+            const sd = event.data as { index: number; name: string; agent: string };
+            process.stdout.write(`${t.bold(`[Step ${sd.index + 1}] ${sd.agent}`)}\n`);
+            process.stdout.write(`${t.dim('───────────────────────────────────────')}\n`);
+            break;
+          }
+          case 'step_end':
+            process.stdout.write(`${t.success(`── Step complete ──`)}\n\n`);
+            break;
+          case 'pipeline_done':
+            process.stdout.write(`${t.success(`── Pipeline complete ──`)}\n`);
+            break;
             case 'tool_call': {
               const { name, args } = event.data;
               let target = '';

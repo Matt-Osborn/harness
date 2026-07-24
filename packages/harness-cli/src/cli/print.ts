@@ -1,12 +1,13 @@
-import { ConfigManager, TextWrapper, SessionManager, CliTheme } from '@harness/shared';
+import { ConfigManager, TextWrapper, SessionManager, CliTheme, AgentRegistry, loadRulesStack, loadMemoryBank } from '@harness/shared';
 import type { Message, SearchProviderType } from '@harness/shared';
 import { createProvider } from '@harness/core-ai';
 import {
   Agent, createDefaultTools, resolveAutoProvider, isProviderAvailable, PermissionEngine,
+  buildAgentFromDefinition, runRunnable, buildSystemPrompt,
 } from '@harness/core-agent';
 import { MarkdownRenderer } from './markdown.js';
 
-export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false): Promise<void> {
+export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, agentName?: string): Promise<void> {
   const config = new ConfigManager();
   const t = theme ?? new CliTheme(config.themeConfig);
 
@@ -53,19 +54,63 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
     }
   }
 
-  const agent = new Agent({
-    provider,
-    tools,
-    permissionCheck: (toolName: string, args?: Record<string, unknown>) => permissions.check(toolName, undefined, args),
-    contextManagement,
-    contextWindow,
-    responseBudget,
-    compactificationProvider,
-  });
+  const rulesStack = loadRulesStack();
+  const memBank = loadMemoryBank();
+  const projectRules = memBank
+    ? (rulesStack ? `${rulesStack}\n\n## Memory Bank\n\n${memBank}` : `## Memory Bank\n\n${memBank}`)
+    : rulesStack;
+
+  let agent: Agent;
+  let agentRunnable: import('@harness/shared').Runnable | null = null;
+  let agentRegistry: AgentRegistry | null = null;
+  const mode = undefined;
+
+  if (agentName) {
+    const registry = new AgentRegistry();
+    agentRegistry = registry;
+    const runnable = registry.resolve(agentName);
+    if (!runnable) {
+      console.error(t.error(`Agent/pipeline not found: ${agentName}`));
+      process.exit(1);
+    }
+    if (runnable.type === 'pipeline') {
+      agentRunnable = runnable;
+      agent = new Agent({
+        provider, tools,
+        permissionCheck: (toolName, args) => permissions.check(toolName, undefined, args),
+        contextManagement, contextWindow, responseBudget, compactificationProvider,
+      });
+    } else {
+      const systemPrompt = runnable.system_prompt
+        ? (projectRules
+          ? `${runnable.system_prompt}\n\n## Project Context\n\n${projectRules}`
+          : runnable.system_prompt)
+        : buildSystemPrompt(projectRules);
+      agent = buildAgentFromDefinition({
+        definition: runnable,
+        config,
+        tools,
+        permissionCheck: (toolName, args) => permissions.check(toolName, undefined, args),
+        projectRules,
+        providerOverride: modelName,
+        compactificationProvider,
+      });
+    }
+  } else {
+    const systemPrompt = buildSystemPrompt(projectRules);
+    agent = new Agent({
+      provider,
+      tools,
+      permissionCheck: (toolName: string, args?: Record<string, unknown>) => permissions.check(toolName, undefined, args),
+      contextManagement,
+      contextWindow,
+      responseBudget,
+      compactificationProvider,
+    });
+  }
 
   const sm = new SessionManager();
   const sid = sessionId || sm.generateId();
-
   const messages = [{ role: 'user' as const, content: prompt }];
   const useStyled = styled !== undefined ? styled : (process.stdout.isTTY ?? false);
   const textWrap = useStyled ? null : new TextWrapper(wrapWidth);
@@ -75,7 +120,10 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
   let thinkingBuf = '';
 
   try {
-    for await (const event of agent.run(messages)) {
+    const eventSource = agentRunnable && agentRegistry
+      ? runRunnable(agentRunnable, prompt, { config, tools, permissionCheck: (toolName, args) => permissions.check(toolName, undefined, args), projectRules: projectRules ?? undefined, providerOverride: modelName, compactificationProvider }, agentRegistry)
+      : agent.run(messages);
+    for await (const event of eventSource) {
       switch (event.type) {
         case 'text': {
           const chunk = event.data;
@@ -98,6 +146,21 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
           }
           break;
         }
+        case 'pipeline_start':
+          process.stdout.write(`\n${t.bold(`── Pipeline: ${(event.data as { name: string }).name} ──`)}\n\n`);
+          break;
+        case 'step_start': {
+          const sd = event.data as { index: number; name: string; agent: string };
+          process.stdout.write(`${t.bold(`[Step ${sd.index + 1}] ${sd.agent}`)}\n`);
+          process.stdout.write(`${t.dim('───────────────────────────────────────')}\n`);
+          break;
+        }
+        case 'step_end':
+          process.stdout.write(`${t.success(`── Step complete ──`)}\n\n`);
+          break;
+        case 'pipeline_done':
+          process.stdout.write(`${t.success(`── Pipeline complete ──`)}\n`);
+          break;
         case 'tool_call': {
           const { name } = event.data;
           if (!hideTools && !seenTools.has(name)) {

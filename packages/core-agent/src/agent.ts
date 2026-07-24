@@ -1,5 +1,5 @@
 import type { Provider } from '@harness/core-ai';
-import type { Message, StreamEvent, AgentEvent, ToolCall, ToolCallDelta } from '@harness/shared';
+import type { Message, StreamEvent, AgentEvent, ToolCall, ToolCallDelta, AgentDefinition } from '@harness/shared';
 import type { AgentTool } from './tool.js';
 import { buildSystemPrompt } from './prompt.js';
 
@@ -66,6 +66,8 @@ export class Agent {
 
   getMode(): 'plan' | 'build' { return this.mode; }
 
+  getTools(): AgentTool[] { return this.tools; }
+
   setPermissionCheck(fn: PermissionCheck): void {
     this.permissionCheck = fn;
   }
@@ -76,6 +78,46 @@ export class Agent {
 
   setTemperature(t: number | undefined): void {
     this.provider.setTemperature(t);
+  }
+
+  applyDefinition(def: AgentDefinition, fullTools: AgentTool[], projectRules?: string | null): void {
+    if (def.mode) {
+      this.mode = def.mode;
+    }
+
+    if (def.system_prompt) {
+      this.systemPrompt = projectRules
+        ? `${def.system_prompt}\n\n## Project Context\n\n${projectRules}`
+        : def.system_prompt;
+    } else {
+      this.systemPrompt = buildSystemPrompt(projectRules ?? this.projectRules, this.mode);
+    }
+    if (projectRules !== undefined) this.projectRules = projectRules;
+
+    if (def.tools) {
+      const filter = def.tools;
+      if (filter.include) {
+        const allowed = new Set(filter.include);
+        this.tools = fullTools.filter((t) => allowed.has(t.name));
+      } else if (filter.exclude) {
+        const blocked = new Set(filter.exclude);
+        this.tools = fullTools.filter((t) => !blocked.has(t.name));
+      }
+    }
+
+    if (def.temperature !== undefined) {
+      this.provider.setTemperature(def.temperature);
+    }
+
+    if (def.context_window !== undefined) {
+      this.contextWindow = def.context_window;
+    }
+    if (def.response_budget !== undefined) {
+      this.responseBudget = def.response_budget;
+    }
+    if (def.preferred_model) {
+      console.warn(`Warning: cannot swap model/provider mid-session. Staying with current model. Use \`--agent ${def.name}\` at startup to use ${def.preferred_model}.`);
+    }
   }
 
   private estimateTokens(messages: Message[]): number {

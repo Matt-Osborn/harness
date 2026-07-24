@@ -386,6 +386,20 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
             }
             break;
           }
+          case 'pipeline_start':
+            setNotification(`Running pipeline: ${(event.data as { name: string }).name}`);
+            break;
+          case 'step_start': {
+            const sd = event.data as { index: number; agent: string };
+            setNotification(`Step ${sd.index + 1}: ${sd.agent}`);
+            break;
+          }
+          case 'step_end':
+            setNotification('Step complete');
+            break;
+          case 'pipeline_done':
+            setNotification('Pipeline complete');
+            break;
           case 'tool_call': {
             const d = event.data as { name: string; args: string };
             setCurrentTool({ name: d.name, args: d.args });
