@@ -1,6 +1,6 @@
 import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadRulesStack, loadMemoryBank, loadEnvFiles, CliTheme, AgentRegistry } from '@harness/shared';
-import type { SearchProviderType, ThemeConfig, PermissionConfig, Runnable } from '@harness/shared';
-import { createProvider } from '@harness/core-ai';
+import type { SearchProviderType, ThemeConfig, PermissionConfig, Runnable, AgentEvent } from '@harness/shared';
+import { createProvider, type Provider } from '@harness/core-ai';
 import {
   Agent,
   WebSearchTool, resolveAutoProvider, isProviderAvailable,
@@ -383,7 +383,7 @@ export async function run(): Promise<void> {
       : tuiEnvMaxIter !== undefined ? parseInt(tuiEnvMaxIter, 10)
       : tuiConfigMaxIter;
     const tuiResumed = !!(resumeSession || resumeLatest);
-    let compactificationProvider;
+    let compactificationProvider: Provider | undefined;
     const compConfig = config.compactificationConfig;
     if (compConfig && compConfig.model) {
       const compApiKey = compConfig.api_key || (compConfig.api_key_env ? process.env[compConfig.api_key_env] : undefined);
@@ -396,6 +396,7 @@ export async function run(): Promise<void> {
 
       const tuiAgentFlag = parseArg(args, '--agent');
       let agent: Agent;
+      let pipelineRunner: ((prompt: string, signal?: AbortSignal) => AsyncIterable<AgentEvent>) | undefined;
       if (tuiAgentFlag) {
         const registry = new AgentRegistry();
         const runnable = registry.resolve(tuiAgentFlag);
@@ -404,7 +405,17 @@ export async function run(): Promise<void> {
           return;
         }
         if (runnable.type === 'pipeline') {
-          console.log(tTui.warning('Pipelines not yet supported in TUI mode. Using default agent.'));
+          pipelineRunner = (prompt: string, signal?: AbortSignal) =>
+            runRunnable(runnable, prompt, {
+              config,
+              tools,
+              permissionCheck: async () => true,
+              projectRules,
+              providerOverride: model,
+              compactificationProvider,
+              maxIterations: tuiMaxIterations,
+              resumed: tuiResumed,
+            }, registry, signal);
           agent = new Agent({
             provider, tools, systemPrompt, projectRules, mode,
             maxIterations: tuiMaxIterations, resumed: tuiResumed,
@@ -439,6 +450,7 @@ export async function run(): Promise<void> {
           mode: config.permissions?.mode,
           tools: config.permissions?.tools,
         },
+        pipelineRunner,
       });
       break;
     }

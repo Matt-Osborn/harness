@@ -1,6 +1,6 @@
 import { render } from 'ink';
 import type { Agent } from '@harness/core-agent';
-import type { PermissionMode } from '@harness/shared';
+import type { PermissionMode, AgentEvent } from '@harness/shared';
 import { App } from './components/App.js';
 import type { Theme } from './theme.js';
 
@@ -14,6 +14,7 @@ export function runTui(agent: Agent, options?: {
     mode?: PermissionMode;
     tools?: Record<string, PermissionMode>;
   };
+  pipelineRunner?: (prompt: string, signal?: AbortSignal) => AsyncIterable<AgentEvent>;
 }): void {
   const { waitUntilExit } = render(
     <App
@@ -24,6 +25,7 @@ export function runTui(agent: Agent, options?: {
       resumeSessionId={options?.resumeSessionId}
       resumeLatest={options?.resumeLatest}
       permConfig={options?.permConfig}
+      pipelineRunner={options?.pipelineRunner}
     />,
   );
 

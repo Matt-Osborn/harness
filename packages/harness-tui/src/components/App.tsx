@@ -4,7 +4,7 @@ import { writeFile } from 'node:fs/promises';
 import type { Agent } from '@harness/core-agent';
 import { PermissionEngine } from '@harness/core-agent';
 import type { PermissionPromptFn, PermissionDecision } from '@harness/core-agent';
-import type { Message, PermissionMode, SessionData } from '@harness/shared';
+import type { Message, PermissionMode, SessionData, AgentEvent } from '@harness/shared';
 import { SessionManager, writeSessionSummary } from '@harness/shared';
 import { darkTheme } from '../theme.js';
 import { TitleBar } from './TitleBar.js';
@@ -27,11 +27,12 @@ interface AppProps {
     mode?: PermissionMode;
     tools?: Record<string, PermissionMode>;
   };
+  pipelineRunner?: (prompt: string, signal?: AbortSignal) => AsyncIterable<AgentEvent>;
 }
 
 const searchProviders = ['tavily', 'duckduckgo'];
 
-export function App({ agent, modelName, searchProvider, theme: customTheme, onExit, resumeSessionId, resumeLatest, permConfig }: AppProps) {
+export function App({ agent, modelName, searchProvider, theme: customTheme, onExit, resumeSessionId, resumeLatest, permConfig, pipelineRunner }: AppProps) {
   const theme = customTheme || darkTheme;
   const { exit } = useApp();
   const smRef = useRef(new SessionManager());
@@ -40,6 +41,8 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
   const streamBufRef = useRef('');
   const isRunningRef = useRef(false);
   const permResolveRef = useRef<((value: PermissionDecision) => void) | null>(null);
+  const pipelineRunnerRef = useRef(pipelineRunner);
+  const pipelineActiveRef = useRef(false);
 
   const loadedSession = useMemo<SessionData | null>(() => {
     if (resumeLatest) return smRef.current.getLatest('INTERACTIVE');
@@ -372,8 +375,15 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
 
     streamBufRef.current = '';
 
+    const runner = pipelineRunnerRef.current;
+    const isPipelineRun = !!(runner && !pipelineActiveRef.current);
+    if (isPipelineRun) pipelineActiveRef.current = true;
+    const stream = isPipelineRun
+      ? runner!(trimmed, abortController.signal)
+      : agent.run(updatedHistory, abortController.signal);
+
     try {
-      for await (const event of agent.run(updatedHistory, abortController.signal)) {
+      for await (const event of stream) {
         switch (event.type) {
           case 'text': {
             streamBufRef.current += event.data;
@@ -397,9 +407,21 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
           case 'step_end':
             setNotification('Step complete');
             break;
-          case 'pipeline_done':
+          case 'pipeline_done': {
             setNotification('Pipeline complete');
+            const pendingContent = streamBufRef.current;
+            streamBufRef.current = '';
+            if (pendingContent) {
+              const cleanContent = pendingContent.replace(/\n{3,}/g, '\n\n').trim();
+              if (cleanContent) {
+                const newHistory = [...historyRef.current, { role: 'assistant' as const, content: cleanContent }];
+                historyRef.current = newHistory;
+                setMessages(newHistory);
+              }
+            }
+            saveSession();
             break;
+          }
           case 'tool_call': {
             const d = event.data as { name: string; args: string };
             setCurrentTool({ name: d.name, args: d.args });
@@ -410,6 +432,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
             break;
           }
           case 'done': {
+            if (pipelineActiveRef.current) break;
             const pendingContent = streamBufRef.current;
             streamBufRef.current = '';
             const fullHistory = event.data as Message[];
@@ -443,6 +466,10 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
         }
       }
     } catch (err: unknown) {
+      if (pipelineActiveRef.current) {
+        pipelineActiveRef.current = false;
+        pipelineRunnerRef.current = undefined;
+      }
       const partialContent = streamBufRef.current;
       streamBufRef.current = '';
 
@@ -468,6 +495,10 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
         setMessages(errorHistory);
       }
     } finally {
+      if (pipelineActiveRef.current) {
+        pipelineActiveRef.current = false;
+        pipelineRunnerRef.current = undefined;
+      }
       setIsRunning(false);
       abortRef.current = null;
       streamBufRef.current = '';
