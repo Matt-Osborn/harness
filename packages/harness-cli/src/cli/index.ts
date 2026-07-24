@@ -1,4 +1,4 @@
-import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadProjectRules, loadEnvFiles, CliTheme, AgentRegistry } from '@harness/shared';
+import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadRulesStack, loadMemoryBank, loadEnvFiles, CliTheme, AgentRegistry } from '@harness/shared';
 import type { SearchProviderType, ThemeConfig, PermissionConfig, Runnable } from '@harness/shared';
 import { createProvider } from '@harness/core-ai';
 import {
@@ -205,7 +205,11 @@ export async function run(): Promise<void> {
     const searchTool = new WebSearchTool(search);
     const tools = createDefaultTools({ searchProvider: search, skillRegistry, searchTool, formatConfig: config.formatConfig });
     const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
-    const projectRules = loadProjectRules();
+    const rulesStack = loadRulesStack();
+    const memBank = loadMemoryBank();
+    const projectRules = memBank
+      ? (rulesStack ? `${rulesStack}\n\n## Memory Bank\n\n${memBank}` : `## Memory Bank\n\n${memBank}`)
+      : rulesStack;
     const mode = args.includes('--plan') ? 'plan' : args.includes('--build') ? 'build' : undefined;
     const systemPrompt = buildSystemPrompt(projectRules, mode);
 
@@ -359,7 +363,11 @@ export async function run(): Promise<void> {
     if (flagDropParams !== undefined) resolved!.config.drop_params = flagDropParams;
     const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
     const mode = args.includes('--plan') ? 'plan' : args.includes('--build') ? 'build' : undefined;
-    const projectRules = loadProjectRules();
+    const rulesStack = loadRulesStack();
+    const memBank = loadMemoryBank();
+    const projectRules = memBank
+      ? (rulesStack ? `${rulesStack}\n\n## Memory Bank\n\n${memBank}` : `## Memory Bank\n\n${memBank}`)
+      : rulesStack;
     const systemPrompt = buildSystemPrompt(projectRules, mode);
 
     const ctxConfig = config.contextConfig;

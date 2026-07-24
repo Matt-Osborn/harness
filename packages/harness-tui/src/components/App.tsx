@@ -5,7 +5,7 @@ import type { Agent } from '@harness/core-agent';
 import { PermissionEngine } from '@harness/core-agent';
 import type { PermissionPromptFn, PermissionDecision } from '@harness/core-agent';
 import type { Message, PermissionMode, SessionData } from '@harness/shared';
-import { SessionManager } from '@harness/shared';
+import { SessionManager, writeSessionSummary } from '@harness/shared';
 import { darkTheme } from '../theme.js';
 import { TitleBar } from './TitleBar.js';
 import { ChatPanel } from './ChatPanel.js';
@@ -84,7 +84,8 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
       createdAt: sessionCreatedAt,
       updatedAt: Date.now(),
     });
-  }, [sessionId, modelName, currentSearch, sessionCreatedAt]);
+    writeSessionSummary(historyRef.current, modelName, currentMode);
+  }, [sessionId, modelName, currentSearch, sessionCreatedAt, currentMode]);
 
   const handleExit = useCallback(() => {
     saveSession();

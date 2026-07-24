@@ -100,7 +100,10 @@ export function buildAgentFromDefinition(options: BuildAgentOptions): Agent {
   // Build system prompt
   const mode = definition.mode || 'plan';
   const systemPrompt = definition.system_prompt
-    || buildSystemPrompt(projectRules, mode);
+    ? (projectRules
+      ? `${definition.system_prompt}\n\n## Project Context\n\n${projectRules}`
+      : definition.system_prompt)
+    : buildSystemPrompt(projectRules, mode);
 
   // Determine context window
   const contextWindow = definition.context_window

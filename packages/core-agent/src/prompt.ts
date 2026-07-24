@@ -63,7 +63,7 @@ directory name?" It is always better to ask than to act on an assumption.`;
 export function buildSystemPrompt(projectRules?: string | null, mode?: 'plan' | 'build'): string {
   const effectiveMode = mode || 'plan';
   const base = projectRules
-    ? `${DEFAULT_SYSTEM_PROMPT}\n\n## Project Instructions\n\n${projectRules}`
+    ? `${DEFAULT_SYSTEM_PROMPT}\n\n## Project Context\n\n${projectRules}`
     : DEFAULT_SYSTEM_PROMPT;
 
   if (effectiveMode === 'plan') {

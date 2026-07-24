@@ -29,7 +29,8 @@ export { CliTheme } from './cli-theme.js';
 export { resolveThemeFile, loadThemeJson, detectColorMode, resolveThemeColors } from './theme-loader.js';
 export type { OpenCodeTheme, ColorValue } from './theme-loader.js';
 export { BUNDLED_THEMES } from './themes/index.js';
-export { loadProjectRules, findProjectRulesPath } from './project-rules.js';
+export { loadProjectRules, findProjectRulesPath, loadRulesStack } from './project-rules.js';
+export { loadMemoryBank, findMemoryBankDirPath, writeSessionSummary } from './memory-bank.js';
 
 export type {
   Message,

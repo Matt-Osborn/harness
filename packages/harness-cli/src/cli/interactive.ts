@@ -4,7 +4,7 @@ import type { Agent } from '@harness/core-agent';
 import type { PermissionEngine } from '@harness/core-agent';
 import type { WebSearchTool } from '@harness/core-agent';
 import type { Message, SearchProviderType } from '@harness/shared';
-import { TextWrapper, SessionManager, isWSL, CliTheme } from '@harness/shared';
+import { TextWrapper, SessionManager, isWSL, CliTheme, writeSessionSummary } from '@harness/shared';
 import { MarkdownRenderer } from './markdown.js';
 
 function formatSessionExport(messages: Message[], ext: string, sid: string, modelName?: string): string {
@@ -120,6 +120,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       createdAt: sessionCreatedAt,
       updatedAt: Date.now(),
     });
+    writeSessionSummary(history, modelName, currentMode);
   }
 
   process.on('uncaughtException', (err) => {
@@ -426,6 +427,17 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         return;
       }
 
+      if (trimmed === '/summarize') {
+        const path = writeSessionSummary(history, modelName, currentMode);
+        if (path) {
+          process.stdout.write(`${t.success(`Session summary written to ${path}`)}\n\n`);
+        } else {
+          process.stdout.write(t.warning('No memory-bank found. Create one at <project>/memory-bank/ with at least projectBrief.md.') + '\n\n');
+        }
+        rl.prompt();
+        return;
+      }
+
       if (trimmed === '/exit' || trimmed === '/quit') {
         saveSession();
         process.stdout.write('Goodbye.\n');
@@ -449,6 +461,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write(`  ${t.warning('/hide-tools')}         Hide tool call lines\n`);
         process.stdout.write(`  ${t.warning('/show-tools')}         Show tool call lines\n`);
         process.stdout.write(`  ${t.warning('/agent <name>')}       Switch to a different agent definition\n`);
+        process.stdout.write(`  ${t.warning('/summarize')}           Write session summary to memory-bank\n`);
         process.stdout.write(`  ${t.warning('/plan')}                Switch to plan mode (Tab also toggles)\n`);
         process.stdout.write(`  ${t.warning('/build')}               Switch to build mode (Tab also toggles)\n`);
         process.stdout.write(`  ${t.warning('/exit')}                Save session and exit\n`);
