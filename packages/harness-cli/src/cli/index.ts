@@ -1,10 +1,11 @@
-import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadProjectRules, loadEnvFiles, CliTheme } from '@harness/shared';
-import type { SearchProviderType, ThemeConfig, PermissionConfig } from '@harness/shared';
+import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadProjectRules, loadEnvFiles, CliTheme, AgentRegistry } from '@harness/shared';
+import type { SearchProviderType, ThemeConfig, PermissionConfig, Runnable } from '@harness/shared';
 import { createProvider } from '@harness/core-ai';
 import {
   Agent,
   WebSearchTool, resolveAutoProvider, isProviderAvailable,
   buildSystemPrompt, createDefaultTools, PermissionEngine,
+  buildAgentFromDefinition, runRunnable, PipelineExecutor,
 } from '@harness/core-agent';
 import { createCliPromptFn } from '../permissions/engine.js';
 import { runPrintMode } from './print.js';
@@ -21,7 +22,7 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
   return undefined;
 }
 
-const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme']);
+const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme','--agent','--max-iterations']);
 const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256', '--plan', '--build']);
 
 function extractCommands(args: string[]): string[] {
@@ -213,6 +214,14 @@ export async function run(): Promise<void> {
     const contextWindow = ctxConfig?.window;
     const responseBudget = ctxConfig?.response_budget ?? 4096;
 
+    const flagMaxIter = parseArg(args, '--max-iterations');
+    const envMaxIter = process.env.HARNESS_MAX_ITERATIONS;
+    const configMaxIter = ctxConfig?.max_iterations;
+    const maxIterations = flagMaxIter !== undefined ? parseInt(flagMaxIter, 10)
+      : envMaxIter !== undefined ? parseInt(envMaxIter, 10)
+      : configMaxIter;
+    const resumed = !!(resumeSession || resumeLatest);
+
     let compactificationProvider;
     const compConfig = config.compactificationConfig;
     if (compConfig && compConfig.model) {
@@ -224,21 +233,58 @@ export async function run(): Promise<void> {
       }
     }
 
-    const agent = new Agent({
-      provider,
-      tools,
-      permissionCheck: (tn: string, args?: Record<string, unknown>) => permissions.check(tn, undefined, args),
-      permissionBatchCheck: isInter ? (tn: string, argsList: Record<string, unknown>[]) => permissions.batchCheck(tn, argsList) : undefined,
-      systemPrompt,
-      projectRules,
-      mode,
-      contextManagement,
-      contextWindow,
-      responseBudget,
-      compactificationProvider,
-    });
+    const agentFlag = parseArg(args, '--agent');
+    const agentRegistry = new AgentRegistry();
+    let agent: Agent;
+    let agentDef: Runnable | null = null;
 
-    if (mode === 'build') permissions.setMode('build');
+    if (agentFlag) {
+      const runnable = agentRegistry.resolve(agentFlag);
+      if (!runnable) {
+        console.log(tInteractive.error(`Agent/pipeline not found: ${agentFlag}`));
+        return;
+      }
+      if (runnable.type === 'pipeline') {
+        console.log(tInteractive.warning('Pipelines not yet supported in interactive mode. Using default agent.'));
+        agent = new Agent({
+          provider, tools,
+          permissionCheck: (tn, a) => permissions.check(tn, undefined, a),
+          permissionBatchCheck: isInter ? (tn, al) => permissions.batchCheck(tn, al) : undefined,
+          systemPrompt, projectRules, mode, contextManagement, contextWindow, responseBudget, compactificationProvider,
+          maxIterations, resumed,
+        });
+      } else {
+        agentDef = runnable;
+        agent = buildAgentFromDefinition({
+          definition: runnable,
+          config,
+          tools,
+          permissionCheck: (tn, a) => permissions.check(tn, undefined, a),
+          permissionBatchCheck: isInter ? (tn, al) => permissions.batchCheck(tn, al) : undefined,
+          projectRules,
+          providerOverride: model,
+          compactificationProvider,
+          maxIterations, resumed,
+        });
+      }
+    } else {
+      agent = new Agent({
+        provider,
+        tools,
+        permissionCheck: (tn: string, args?: Record<string, unknown>) => permissions.check(tn, undefined, args),
+        permissionBatchCheck: isInter ? (tn: string, argsList: Record<string, unknown>[]) => permissions.batchCheck(tn, argsList) : undefined,
+        systemPrompt,
+        projectRules,
+        mode,
+        contextManagement,
+        contextWindow,
+        responseBudget,
+        compactificationProvider,
+        maxIterations, resumed,
+      });
+    }
+
+    if (mode === 'build' || agentDef?.type === 'agent' && agentDef.mode === 'build') permissions.setMode('build');
 
     if (!isProviderAvailable(search)) {
       const fallback = resolveAutoProvider();
@@ -247,7 +293,7 @@ export async function run(): Promise<void> {
     }
 
     const searchIsDefault = !searchFlagPresent;
-    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, searchIsDefault, initialTemp, statusEnabled, tInteractive, hideThinking, hideTools, permissions);
+    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, searchIsDefault, initialTemp, statusEnabled, tInteractive, hideThinking, hideTools, permissions, agentRegistry);
     return;
   }
 
@@ -321,6 +367,13 @@ export async function run(): Promise<void> {
     const contextWindow = ctxConfig?.window;
     const responseBudget = ctxConfig?.response_budget ?? 4096;
 
+    const tuiFlagMaxIter = parseArg(args, '--max-iterations');
+    const tuiEnvMaxIter = process.env.HARNESS_MAX_ITERATIONS;
+    const tuiConfigMaxIter = ctxConfig?.max_iterations;
+    const tuiMaxIterations = tuiFlagMaxIter !== undefined ? parseInt(tuiFlagMaxIter, 10)
+      : tuiEnvMaxIter !== undefined ? parseInt(tuiEnvMaxIter, 10)
+      : tuiConfigMaxIter;
+    const tuiResumed = !!(resumeSession || resumeLatest);
     let compactificationProvider;
     const compConfig = config.compactificationConfig;
     if (compConfig && compConfig.model) {
@@ -338,17 +391,13 @@ export async function run(): Promise<void> {
         systemPrompt,
         projectRules,
         mode,
+        maxIterations: tuiMaxIterations,
+        resumed: tuiResumed,
         contextManagement,
         contextWindow,
         responseBudget,
         compactificationProvider,
       });
-
-      if (!isProviderAvailable(search)) {
-        const fallback = resolveAutoProvider();
-        console.log(tTui.warning(`Warning: search provider "${search}" is unavailable (missing API key).`));
-        console.log(`Falling back to: ${tTui.green(fallback)}`);
-      }
 
       runTui(agent, {
         modelName: model,

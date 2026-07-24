@@ -5,6 +5,10 @@ export type { AgentTool, ToolContext } from './tool.js';
 export { DEFAULT_SYSTEM_PROMPT, buildSystemPrompt } from './prompt.js';
 export { PermissionEngine, READ_ONLY_TOOLS } from './permissions.js';
 export type { PermissionPromptFn, PermissionEngineOptions, PermissionDecision } from './permissions.js';
+export { PipelineExecutor } from './pipeline.js';
+export { runRunnable } from './runner.js';
+export { buildAgentFromDefinition } from './agent-definition.js';
+export type { BuildAgentOptions } from './agent-definition.js';
 
 export { ReadTool } from './tools/read.js';
 export { WriteTool } from './tools/write.js';

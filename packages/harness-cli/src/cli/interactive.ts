@@ -62,7 +62,7 @@ function formatSessionExport(messages: Message[], ext: string, sid: string, mode
   return lines.join('\n');
 }
 
-export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, permissions?: PermissionEngine): Promise<void> {
+export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, permissions?: PermissionEngine, agentRegistry?: import('@harness/shared').AgentRegistry): Promise<void> {
   const t = theme ?? new CliTheme();
   let currentSearch: SearchProviderType | 'auto' = searchProvider || 'auto';
   const searchProviders: SearchProviderType[] = ['tavily', 'duckduckgo'];
@@ -448,6 +448,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write(`  ${t.warning('/show-thinking')}       Show thinking output\n`);
         process.stdout.write(`  ${t.warning('/hide-tools')}         Hide tool call lines\n`);
         process.stdout.write(`  ${t.warning('/show-tools')}         Show tool call lines\n`);
+        process.stdout.write(`  ${t.warning('/agent <name>')}       Switch to a different agent definition\n`);
         process.stdout.write(`  ${t.warning('/plan')}                Switch to plan mode (Tab also toggles)\n`);
         process.stdout.write(`  ${t.warning('/build')}               Switch to build mode (Tab also toggles)\n`);
         process.stdout.write(`  ${t.warning('/exit')}                Save session and exit\n`);
@@ -456,6 +457,53 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write(`  ${t.warning('Ctrl+C')}               Quit (saves session)\n`);
         process.stdout.write(`\n${t.dim('Tab')} toggles between plan and build mode\n`);
         process.stdout.write('\n');
+        rl.prompt();
+        return;
+      }
+
+      if (trimmed.startsWith('/agent')) {
+        const agentName = trimmed.slice(6).trim();
+        if (!agentRegistry) {
+          process.stdout.write(t.error('Agent registry not available') + '\n\n');
+          rl.prompt();
+          return;
+        }
+        if (!agentName) {
+          process.stdout.write(t.bold('Available agents:') + '\n');
+          for (const a of agentRegistry.allAgents) {
+            process.stdout.write(`  ${t.highlight(a.name)}${a.description ? t.dim(` — ${a.description}`) : ''}\n`);
+          }
+          const pipelines = agentRegistry.allPipelines;
+          if (pipelines.length > 0) {
+            process.stdout.write(t.bold('Pipelines:') + '\n');
+            for (const p of pipelines) {
+              process.stdout.write(`  ${t.highlight(p.name)}${p.description ? t.dim(` — ${p.description}`) : ''}\n`);
+            }
+          }
+          process.stdout.write(`\nUse ${t.warning('/agent <name>')} to switch agents, or ${t.warning('--agent <name>')} at startup.\n\n`);
+          rl.prompt();
+          return;
+        }
+        const resolved = agentRegistry.resolve(agentName);
+        if (!resolved) {
+          process.stdout.write(t.error(`Agent not found: ${agentName}`) + '\n\n');
+          rl.prompt();
+          return;
+        }
+        if (resolved.type === 'pipeline') {
+          process.stdout.write(t.warning('Pipelines cannot be switched mid-session. Use --agent at startup.') + '\n\n');
+          rl.prompt();
+          return;
+        }
+        // Apply mode override only (tools/provider can't change mid-session)
+        if (resolved.mode && resolved.mode !== currentMode) {
+          toggleMode();
+          currentMode = resolved.mode;
+          rl.setPrompt(`${getModePrefix()}${t.success('❯')} `);
+          process.stdout.write(t.success(`Switched to agent "${agentName}" (${resolved.mode} mode)`) + '\n\n');
+        } else {
+          process.stdout.write(t.info(`Already using agent "${agentName}"`) + '\n\n');
+        }
         rl.prompt();
         return;
       }

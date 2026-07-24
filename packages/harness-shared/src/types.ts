@@ -110,6 +110,7 @@ export interface ContextConfig {
   management?: boolean;
   window?: number;
   response_budget?: number;
+  max_iterations?: number;
 }
 
 export interface FormatConfig {
@@ -154,10 +155,56 @@ export interface SessionData {
   updatedAt: number;
 }
 
+// -------------------------------------------------------------------------
+// Agent & Pipeline Definitions
+// -------------------------------------------------------------------------
+
+export interface AgentToolFilter {
+  include?: string[];
+  exclude?: string[];
+}
+
+export interface AgentDefinition {
+  type: 'agent';
+  name: string;
+  description?: string;
+  system_prompt?: string;
+  tools?: AgentToolFilter;
+  preferred_provider?: string;
+  preferred_model?: string;
+  mode?: 'plan' | 'build';
+  temperature?: number;
+  context_window?: number;
+  response_budget?: number;
+}
+
+export interface PipelineStep {
+  agent: string;
+  mode?: 'plan' | 'build';
+  prompt_prefix?: string;
+  prompt_suffix?: string;
+  input?: string;
+  output?: string;
+}
+
+export interface PipelineDefinition {
+  type: 'pipeline';
+  name: string;
+  description?: string;
+  steps: PipelineStep[];
+}
+
+export type Runnable = AgentDefinition | PipelineDefinition;
+
 export type AgentEvent =
   | { type: 'text'; data: string; timestamp: number }
   | { type: 'thinking'; data: { content: string }; timestamp: number }
   | { type: 'tool_call'; data: { name: string; args: string }; timestamp: number }
   | { type: 'tool_result'; data: { name: string; result?: string; denied?: boolean; error?: string }; timestamp: number }
   | { type: 'error'; data: string; timestamp: number }
-  | { type: 'done'; data: Message[]; timestamp: number };
+  | { type: 'done'; data: Message[]; timestamp: number }
+  // Pipeline events
+  | { type: 'pipeline_start'; data: { name: string; step_count: number }; timestamp: number }
+  | { type: 'step_start'; data: { index: number; name: string; agent: string }; timestamp: number }
+  | { type: 'step_end'; data: { index: number; agent: string; status: 'completed' | 'failed' | 'cancelled' }; timestamp: number }
+  | { type: 'pipeline_done'; data: { name: string }; timestamp: number };

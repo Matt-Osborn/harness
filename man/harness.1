@@ -63,6 +63,16 @@ Auto-detected from config and
 .B HARNESS_STYLED
 env var; defaults to unstyled.
 .TP
+.BR \-\-plan ", " \-\-build
+Start in plan mode (read-only, no modifications) or build mode
+(modifications allowed). Build mode is the default.
+.TP
+.BR \-\-hide\-thinking ", " \-\-hide\-tools
+Suppress thinking text display or tool call indicator lines.
+.TP
+.B \-\-ansi\-256
+Force ANSI 256-color mode, disabling truecolor detection.
+.TP
 .BR \-\-status\-line ", " \-\-no\-status\-line
 Show or hide the progress spinner during model thinking.
 Defaults to enabled.
@@ -79,6 +89,17 @@ Resume the most recent INTERACTIVE session.
 .B \-\-sessions
 List all saved sessions with their IDs, labels, message counts,
 and timestamps.
+.SS Agent & Pipeline
+.TP
+.BI \-\-agent " <name>"
+Load an agent definition or pipeline from
+.BR .harness/agents/<name>.toml
+or
+.BR .harness/pipelines/<name>.toml .
+Agent definitions can set a custom system prompt, tools, mode,
+and temperature. Pipelines execute a sequence of agents.
+If the flag is given without a value, the harness lists available
+agents and pipelines and exits.
 .SS Context Management
 .TP
 .BR \-\-context\-management ", " \-\-no\-context\-management
@@ -114,6 +135,10 @@ Valid providers:
 .BR openrouter .
 If the flag is given without a value, the harness lists available
 providers and exits.
+.TP
+.BI \-\-max\-iterations " <n>"
+Override the maximum number of agent iterations per prompt.
+Use 0 for unlimited iterations. Default is 25.
 .TP
 .BR \-h ", " \-\-help
 Display this help message and exit.
@@ -193,6 +218,13 @@ Show the current temperature setting.
 .TP
 .BI "/temperature " <0\-2>
 Set the temperature for the current session.
+.TP
+.B /agent
+Show the current agent name and description.
+.TP
+.BI "/agent " <name>
+Switch to a named agent or pipeline. Lists available options
+if called without arguments.
 .TP
 .B /session
 Show current session info: ID, model, search provider, temperature,

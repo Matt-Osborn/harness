@@ -29,6 +29,9 @@ ${t.bold('OPTIONS:')}
   --ansi-256             Force ANSI 256-color mode (disable truecolor)
   --plan                 Start in plan mode (read-only, no modifications)
   --build                Start in build mode (default, modifications allowed)
+  --max-iterations <n>   Override max agent iterations (0 = unlimited, default 25)
+  --agent <name>         Use a named agent or pipeline
+                           (from .harness/agents/ or .harness/pipelines/)
   -h, --help             Show this help message
 
 ${t.bold('COMMANDS:')}
@@ -90,6 +93,11 @@ ${t.bold('SESSION MANAGEMENT:')}
 ${t.bold('CONTEXT MANAGEMENT:')}
   --context-management       Enable context truncation and compaction (default)
   --no-context-management    Disable context management
+
+${t.bold('AGENT & PIPELINE:')}
+  --agent <name>             Load an agent definition or pipeline
+                               from .harness/agents/<name>.toml or
+                               .harness/pipelines/<name>.toml
 
 ${t.bold('MISCELLANEOUS:')}
   -p, --prompt <text>        Run a single prompt in print mode

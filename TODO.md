@@ -10,7 +10,18 @@
 - ~~`bash.ts:77-79` — `stderr` buffer is unbounded (stdout is capped at `MAX_OUTPUT_LENGTH`, stderr is not). A command producing massive stderr could consume memory.~~ ✅
 - ~~`App.tsx:40,131` — `permEngineRef` is set but never read (engine kept alive by `setPermissionCheck` closure). Redundant but harmless.~~ ✅
 - ~~`cli/index.ts:72` — `new ConfigManager()` called twice (line 72 for `.styled`, line 105 again). Pre-existing.~~ ✅
-- **Thinking event + visibility toggles** — see `plans/thinking_event_visibility_toggles.md`. Add `thinking` AgentEvent type (finalize signal for clean formatting boundary before tool calls). `--hide-thinking`/`--hide-tools` flags + env vars + config `[display]` + slash commands. Low priority — current behavior is fine, toggles are for power users who want quieter output.
+- ~~**Thinking event + visibility toggles** — see `plans/thinking_event_visibility_toggles.md`. Add `thinking` AgentEvent type (finalize signal for clean formatting boundary before tool calls). `--hide-thinking`/`--hide-tools` flags + env vars + config `[display]` + slash commands. Low priority — current behavior is fine, toggles are for power users who want quieter output.~~ ✅
+- ~~**Session resume (TUI)** — `--resume`/`-r` and `--session`/`-S` flags, `/resume` and `/resume <id>` slash commands, initial session load via `useMemo`~~ ✅
+- ~~**Permission granularity (Items A-C)** — read-only bash in plan mode, build mode auto-approve w/ deletion prompting, TUI project rules preserved on mode toggle~~ ✅
+- ~~**Prompt improvements** — date injection (agent knows current date), plan mode allows read-only shell commands, "Avoid search spirals" section, "Ask clarifying questions" section~~ ✅
+
+## 🟠 High Priority
+
+- **Mid-session agent swap** — `/agent <name>` currently applies mode override only (tools/provider/system prompt unchanged). Should fully swap agent personality: tools, system prompt, mode, temperature. **Recommended approach (Option A):** Add `applyDefinition(def: AgentDefinition)` to `Agent` class that swaps tools + system prompt + mode + temperature in-place, leaving provider unchanged. No instance recreation, no history transfer issues.
+
+- **B: Carry over iteration count on resume** — Save `usedIterations` in session data, restore it on resume so the continuation starts from the right counter rather than resetting to 0.
+
+- **D: Progress-based iteration limit** — Replace the hard 25-iteration cap with a smarter progress detector. Stop only when the agent is spinning (same tool types, no meaningful output change) rather than on a raw count.
 
 ## 📋 WS-E: Deferred Roadmap
 
@@ -30,11 +41,11 @@
 ### Code Quality (follow-ups)
 - ~~**Discriminated union cleanup** — `AgentEvent`/`StreamEvent` are now discriminated unions (WS-D); consumer casts (`event.data as {...}`) can be removed incrementally for compile-time safety~~ ✅
 - ~~**`interactive.ts:324` string-prefix sniffing** — `tool_result` now carries `error?: string` (WS-D); replace `r.result.startsWith('Error')` check with the typed field~~ ✅
-- **C3: grep/glob tools** — see Phase 2 of `plans/roadmap.md`. Implement `GlobTool` and `GrepTool` classes.
+- ~~**C3: grep/glob tools** — see Phase 2 of `plans/roadmap.md`. Implement `GlobTool` and `GrepTool` classes.~~ ✅
 - **D11: Init defaults** — review safety posture (`edit=auto` vs `ask` in `harness init` template)
 
 ### Commands & CLI
-- `/export` — export session as txt or markdown (configurable default + flag override)
+- ~~`/export` — export session as txt or markdown~~ ✅ (both CLI and TUI)
 - `/switch <session-id>` — switch between sessions inside the harness
 - `/status` — show current model, search provider, temperature, session info
 - `!<command>` — raw shell passthrough (like opencode's `!`)
@@ -45,12 +56,12 @@
 - **Model command clarity** — distinguish `harness --model`, `harness model list`, `/model` slash command; user should be able to: list models, view current model, set session model, set default model, add models
 
 ### UI/UX
-- **Plan mode / build mode toggle** — formalized in `plans/theming_and_mode_plan.md`. PermissionEngine mode, CLI flags, Tab key toggle, slash commands, prompt indicator. See `plans/plan_build_mode_retrospective.md` — first attempt had Tab latency issues via `completer`, needs direct keypress approach.
-- **✅ CliTheme system (Phase 1)** — done. `CliTheme` class with ANSI defaults, hex→ANSI-8-bit conversion, config TOML `[theme]` section, all inline ANSI replaced.
+- ~~**Plan mode / build mode toggle** — PermissionEngine mode, CLI flags, Tab key toggle, slash commands, prompt indicator.~~ ✅ (direct keypress approach, no completer issues)
+- ~~**✅ CliTheme system (Phase 1)** — done. `CliTheme` class with ANSI defaults, hex→ANSI-8-bit conversion, config TOML `[theme]` section, all inline ANSI replaced.~~ ✅
 - **Truecolor upgrade** — see `plans/truecolor_upgrade_plan.md`. Full 24-bit color output with `NO_COLOR`/`CLICOLOR` support and ANSI fallback. Deferred — needs COLORTERM detection and hex→truecolor escape generation.
-- **✅ JSON theme file format (Phase 2)** — OpenCode-compatible JSON themes (`defs` + `theme` with dark/light variants). Load from `~/.config/harness/themes/*.json`. 14 bundled themes, `resolveThemeFile()`, `detectColorMode()`, `--theme` flag, CliTheme integration. Done.
-- **Persistent status bar** — pinned at bottom of terminal for tool calls, thinking, status (C2)
-- **Thinking event + visibility toggles** — see `plans/thinking_event_visibility_toggles.md`. Low priority.
+- ~~**✅ JSON theme file format (Phase 2)** — OpenCode-compatible JSON themes (`defs` + `theme` with dark/light variants). Load from `~/.config/harness/themes/*.json`. 14 bundled themes, `resolveThemeFile()`, `detectColorMode()`, `--theme` flag, CliTheme integration. Done.~~ ✅
+- ~~**Persistent status bar** — pinned at bottom of terminal for tool calls, thinking, status (C2)~~ ✅ (TUI StatusLine component)
+- ~~**Thinking event + visibility toggles** — `--hide-thinking`/`--hide-tools` flags, env vars, config `[display]`, slash commands.~~ ✅
 
 ### Logging
 - **File-based logging for debugging** — if diagnostic tracing is ever needed,

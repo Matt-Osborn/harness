@@ -126,6 +126,7 @@ export class ConfigManager {
           management: typeof ctx.management === 'boolean' ? ctx.management : (merged.context?.management ?? true),
           window: typeof ctx.window === 'number' ? ctx.window : merged.context?.window,
           response_budget: typeof ctx.response_budget === 'number' ? ctx.response_budget : merged.context?.response_budget,
+          max_iterations: typeof ctx.max_iterations === 'number' ? ctx.max_iterations : merged.context?.max_iterations,
         };
       }
 

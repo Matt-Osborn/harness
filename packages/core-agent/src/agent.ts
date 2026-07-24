@@ -3,6 +3,8 @@ import type { Message, StreamEvent, AgentEvent, ToolCall, ToolCallDelta } from '
 import type { AgentTool } from './tool.js';
 import { buildSystemPrompt } from './prompt.js';
 
+export type { AgentTool } from './tool.js';
+
 export type PermissionCheck = (toolName: string, args?: Record<string, unknown>) => Promise<boolean>;
 export type PermissionBatchCheck = (toolName: string, argsList: Record<string, unknown>[]) => Promise<boolean>;
 
@@ -11,6 +13,7 @@ export interface AgentOptions {
   tools: AgentTool[];
   systemPrompt?: string;
   maxIterations?: number;
+  resumed?: boolean;
   permissionCheck?: PermissionCheck;
   permissionBatchCheck?: PermissionBatchCheck;
   contextWindow?: number;
@@ -44,7 +47,8 @@ export class Agent {
     this.projectRules = options.projectRules ?? null;
     this.mode = options.mode || 'plan';
     this.systemPrompt = options.systemPrompt || buildSystemPrompt(this.projectRules, this.mode);
-    this.maxIterations = options.maxIterations || 25;
+    this.maxIterations = options.maxIterations ?? 25;
+    if (options.resumed) this.maxIterations *= 2;
     this.permissionCheck = options.permissionCheck;
     this.permissionBatchCheck = options.permissionBatchCheck;
     this.contextWindow = options.contextWindow ?? this.provider.contextWindow ?? 32768;
@@ -226,7 +230,7 @@ export class Agent {
     let consecutiveLengthIterations = 0;
     let consecutiveToolIterations = 0;
 
-    while (iterations < this.maxIterations) {
+    while (this.maxIterations <= 0 || iterations < this.maxIterations) {
       iterations++;
       const toolDefs = this.tools.map(t => t.toToolDefinition());
 
