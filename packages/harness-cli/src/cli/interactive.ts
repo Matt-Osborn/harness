@@ -565,7 +565,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       treatNextCloseAsExit = false;
       rl.close();
 
-      history.push({ role: 'user' as const, content: trimmed });
+      history.push({ role: 'user' as const, content: trimmed, timestamp: Date.now() });
       const textWrap = styled ? null : new TextWrapper(wrapWidth);
       const md = styled ? new MarkdownRenderer(wrapWidth) : null;
       let streamBuf = '';
@@ -574,6 +574,9 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       let lastErrorMsg = '';
       let suppressPair = false;
       let justHadResult = false;
+      let bashErrorCount = 0;
+      let bashLoopSuppressed = false;
+      let lastBashError = '';
 
       const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
       let isWaiting = true;
@@ -645,6 +648,11 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
             break;
             case 'tool_call': {
               const { name, args } = event.data;
+              if (name !== 'bash') {
+                bashErrorCount = 0;
+                bashLoopSuppressed = false;
+              }
+              if (bashLoopSuppressed) break;
               let target = '';
               try {
                 const parsed = JSON.parse(args);
@@ -668,6 +676,22 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
                 break;
               }
               const d = event.data;
+              if (d.name === 'bash') {
+                if (d.error) {
+                  bashErrorCount++;
+                  lastBashError = d.error.split('\n')[0] || d.error;
+                  if (bashErrorCount >= 3) {
+                    bashLoopSuppressed = true;
+                    break;
+                  }
+                } else {
+                  bashErrorCount = 0;
+                  bashLoopSuppressed = false;
+                }
+              } else {
+                bashErrorCount = 0;
+                bashLoopSuppressed = false;
+              }
               if (!hideTools) {
                 if (d.denied) {
                   process.stdout.write(` ${t.warning('⛔ denied')}`);
@@ -711,6 +735,9 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
               saveSession();
               break;
           }
+        }
+        if (bashLoopSuppressed) {
+          process.stdout.write(`\n  (${bashErrorCount} bash commands failed — shell mismatch. Last error: "${lastBashError}")\n`);
         }
       } catch (err) {
         if (styled && streamBuf) {

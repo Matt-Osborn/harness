@@ -13,7 +13,7 @@ export type { BuildAgentOptions } from './agent-definition.js';
 export { ReadTool } from './tools/read.js';
 export { WriteTool } from './tools/write.js';
 export { EditTool } from './tools/edit.js';
-export { BashTool } from './tools/bash.js';
+export { BashTool, getShellInfo } from './tools/bash.js';
 export { WebFetchTool } from './tools/web-fetch.js';
 export { WebSearchTool, resolveAutoProvider, isProviderAvailable } from './tools/web-search.js';
 export { SkillTool } from './tools/skill.js';

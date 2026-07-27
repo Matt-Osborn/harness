@@ -14,6 +14,10 @@
 - ~~**Session resume (TUI)** — `--resume`/`-r` and `--session`/`-S` flags, `/resume` and `/resume <id>` slash commands, initial session load via `useMemo`~~ ✅
 - ~~**Permission granularity (Items A-C)** — read-only bash in plan mode, build mode auto-approve w/ deletion prompting, TUI project rules preserved on mode toggle~~ ✅
 - ~~**Prompt improvements** — date injection (agent knows current date), plan mode allows read-only shell commands, "Avoid search spirals" section, "Ask clarifying questions" section~~ ✅
+- **System prompt: batch-editing rule** — consider adding a rule to the default
+  system prompt instructing agents to batch file edits / rewrite whole files
+  instead of making one edit per tool call to avoid burning iteration budget.
+  (See AGENTS.md for the current project-level version.)
 
 ## 🟠 High Priority
 

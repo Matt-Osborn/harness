@@ -3,7 +3,7 @@ import type { SearchProviderType, ThemeConfig, PermissionConfig, Runnable, Agent
 import { createProvider, type Provider } from '@harness/core-ai';
 import {
   Agent,
-  WebSearchTool, resolveAutoProvider, isProviderAvailable,
+  WebSearchTool, resolveAutoProvider, isProviderAvailable, getShellInfo,
   buildSystemPrompt, createDefaultTools, PermissionEngine,
   buildAgentFromDefinition, runRunnable, PipelineExecutor,
 } from '@harness/core-agent';
@@ -208,9 +208,13 @@ export async function run(): Promise<void> {
     const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
     const rulesStack = loadRulesStack();
     const memBank = loadMemoryBank();
-    const projectRules = memBank
+    const baseProjectRules = memBank
       ? (rulesStack ? `${rulesStack}\n\n## Memory Bank\n\n${memBank}` : `## Memory Bank\n\n${memBank}`)
       : rulesStack;
+    const shellInfo = getShellInfo();
+    const projectRules = shellInfo?.hint
+      ? (baseProjectRules ? `${baseProjectRules}\n\n## Shell\n\n${shellInfo.hint}` : `## Shell\n\n${shellInfo.hint}`)
+      : baseProjectRules;
     const mode = args.includes('--plan') ? 'plan' : args.includes('--build') ? 'build' : undefined;
     const systemPrompt = buildSystemPrompt(projectRules, mode);
 
@@ -364,11 +368,15 @@ export async function run(): Promise<void> {
     if (flagDropParams !== undefined) resolved!.config.drop_params = flagDropParams;
     const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
     const mode = args.includes('--plan') ? 'plan' : args.includes('--build') ? 'build' : undefined;
-    const rulesStack = loadRulesStack();
-    const memBank = loadMemoryBank();
-    const projectRules = memBank
-      ? (rulesStack ? `${rulesStack}\n\n## Memory Bank\n\n${memBank}` : `## Memory Bank\n\n${memBank}`)
-      : rulesStack;
+    const tuiRulesStack = loadRulesStack();
+    const tuiMemBank = loadMemoryBank();
+    const tuiBaseProjectRules = tuiMemBank
+      ? (tuiRulesStack ? `${tuiRulesStack}\n\n## Memory Bank\n\n${tuiMemBank}` : `## Memory Bank\n\n${tuiMemBank}`)
+      : tuiRulesStack;
+    const tuiShellInfo = getShellInfo();
+    const projectRules = tuiShellInfo?.hint
+      ? (tuiBaseProjectRules ? `${tuiBaseProjectRules}\n\n## Shell\n\n${tuiShellInfo.hint}` : `## Shell\n\n${tuiShellInfo.hint}`)
+      : tuiBaseProjectRules;
     const systemPrompt = buildSystemPrompt(projectRules, mode);
 
     const ctxConfig = config.contextConfig;

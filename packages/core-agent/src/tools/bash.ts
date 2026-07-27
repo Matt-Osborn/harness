@@ -1,4 +1,5 @@
-import { spawn } from 'node:child_process';
+import { spawn, execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import type { AgentTool, ToolContext } from '../tool.js';
 
 const MAX_OUTPUT_LENGTH = 1_048_576;
@@ -7,9 +8,61 @@ function resolveShell(): string | undefined {
   if (process.platform !== 'win32') return process.env.SHELL || '/bin/sh';
   const shell = process.env.SHELL;
   if (shell && shell.startsWith('/')) {
+    const bashPaths = [
+      'C:\\Program Files\\Git\\bin\\bash.exe',
+      'C:\\Program Files\\Git\\usr\\bin\\bash.exe',
+      'C:\\cygwin64\\bin\\bash.exe',
+      'C:\\cygwin\\bin\\bash.exe',
+    ];
+    for (const p of bashPaths) {
+      try { if (existsSync(p)) return p; } catch { continue; }
+    }
+    try {
+      const result = execSync('where bash.exe 2>nul', { encoding: 'utf-8', timeout: 3000 });
+      const first = result.trim().split('\n')[0];
+      if (first) return first;
+    } catch { /* not in PATH */ }
     return process.env.COMSPEC || 'cmd.exe';
   }
   return shell || process.env.COMSPEC || 'cmd.exe';
+}
+
+export function getShellInfo(): { shell: string; hint: string | null } {
+  const shellPath = resolveShell();
+  const shellName = shellPath?.toLowerCase() || '';
+
+  if (shellName.includes('bash') || shellName.includes('sh')) {
+    return { shell: shellPath!, hint: null };
+  }
+
+  if (shellName.includes('powershell') || shellName.includes('pwsh')) {
+    return {
+      shell: shellPath!,
+      hint: [
+        'Shell: PowerShell',
+        '- Most Unix commands work via aliases (ls, cat, grep, rm)',
+        '- Variables: $variable (not $VARIABLE)',
+        '- Use `curl.exe` for real curl (curl is alias for Invoke-WebRequest)',
+        '- `&&` and `||` do not work — use `;` or if/else',
+        '- Paths: backslashes `\\`, forward `/` also works',
+        '- Environment variables: $env:VARNAME',
+      ].join('\n'),
+    };
+  }
+
+  return {
+    shell: shellPath!,
+    hint: [
+      'Shell: cmd.exe (Windows command prompt)',
+      '- Use `dir` instead of `ls`',
+      '- Use `findstr` instead of `grep`',
+      '- Use `type` instead of `cat`',
+      '- Use double quotes, not single quotes',
+      '- Use backslashes `\\` for paths',
+      '- `&&` works, `|` works',
+      '- Environment variables: %VARNAME%',
+    ].join('\n'),
+  };
 }
 
 export class BashTool implements AgentTool {

@@ -224,6 +224,7 @@ export class Agent {
         const summaryMsg: Message = {
           role: 'user',
           content: `[Summary of earlier conversation: ${summary.trim()}]`,
+          timestamp: Date.now(),
         };
         return [systemMsg, summaryMsg, ...keeper];
       }
@@ -263,7 +264,7 @@ export class Agent {
   async *run(messages: Message[], signal?: AbortSignal): AsyncIterable<AgentEvent> {
     const userMessages = messages.filter(m => m.role !== 'system');
     const fullMessages: Message[] = [
-      { role: 'system', content: this.systemPrompt },
+      { role: 'system', content: this.systemPrompt, timestamp: Date.now() },
       ...userMessages,
     ];
     const userHistory: Message[] = [...userMessages];
@@ -325,15 +326,15 @@ export class Agent {
         consecutiveToolIterations = 0;
         if (consecutiveLengthIterations >= 3) {
           if (accumulatedText) {
-            fullMessages.push({ role: 'assistant', content: accumulatedText });
-            userHistory.push({ role: 'assistant', content: accumulatedText });
+            fullMessages.push({ role: 'assistant', content: accumulatedText, timestamp: Date.now() });
+            userHistory.push({ role: 'assistant', content: accumulatedText, timestamp: Date.now() });
           }
           yield { type: 'done', data: userHistory, timestamp: Date.now() };
           return;
         }
         if (accumulatedText) {
-          fullMessages.push({ role: 'assistant', content: accumulatedText });
-          userHistory.push({ role: 'assistant', content: accumulatedText });
+          fullMessages.push({ role: 'assistant', content: accumulatedText, timestamp: Date.now() });
+          userHistory.push({ role: 'assistant', content: accumulatedText, timestamp: Date.now() });
         }
         continue;
       }
@@ -346,6 +347,7 @@ export class Agent {
         const assistantMsg: Message = {
           role: 'assistant',
           content: accumulatedText,
+          timestamp: Date.now(),
           tool_calls: Array.from(toolCallAccumulators.entries())
             .sort(([a], [b]) => a - b)
             .map(([_, acc]) => ({
@@ -391,6 +393,7 @@ export class Agent {
                   content: parseErr,
                   tool_call_id: tc.id,
                   name: tc.function.name,
+                  timestamp: Date.now(),
                 };
                 fullMessages.push(toolMsg);
                 userHistory.push(toolMsg);
@@ -418,6 +421,7 @@ export class Agent {
                   content: denyMsg,
                   tool_call_id: pc.tc.id,
                   name: pc.tc.function.name,
+                  timestamp: Date.now(),
                 };
                 fullMessages.push(toolMsg);
                 userHistory.push(toolMsg);
@@ -437,6 +441,7 @@ export class Agent {
                   content: errMsg,
                   tool_call_id: tc.id,
                   name: tc.function.name,
+                  timestamp: Date.now(),
                 };
                 fullMessages.push(toolMsg);
                 userHistory.push(toolMsg);
@@ -450,6 +455,7 @@ export class Agent {
                 content: result,
                 tool_call_id: tc.id,
                 name: tc.function.name,
+                timestamp: Date.now(),
               };
               fullMessages.push(toolMsg);
               userHistory.push(toolMsg);
@@ -468,6 +474,7 @@ export class Agent {
                   content: errMsg,
                   tool_call_id: tc.id,
                   name: tc.function.name,
+                  timestamp: Date.now(),
                 };
                 fullMessages.push(toolMsg);
                 userHistory.push(toolMsg);
@@ -485,6 +492,7 @@ export class Agent {
                   content: parseErr,
                   tool_call_id: tc.id,
                   name: tc.function.name,
+                  timestamp: Date.now(),
                 };
                 fullMessages.push(toolMsg);
                 userHistory.push(toolMsg);
@@ -503,6 +511,7 @@ export class Agent {
                     content: denyMsg,
                     tool_call_id: tc.id,
                     name: tc.function.name,
+                    timestamp: Date.now(),
                   };
                   fullMessages.push(toolMsg);
                   userHistory.push(toolMsg);
@@ -517,6 +526,7 @@ export class Agent {
                 content: result,
                 tool_call_id: tc.id,
                 name: tc.function.name,
+                timestamp: Date.now(),
               };
               fullMessages.push(toolMsg);
               userHistory.push(toolMsg);
@@ -534,6 +544,7 @@ export class Agent {
             content: 'You have been calling tools repeatedly without producing a final answer. STOP calling tools now and give your best answer based on what you have gathered so far.',
             tool_call_id: 'max-iterations-guard',
             name: 'system',
+            timestamp: Date.now(),
           });
           consecutiveToolIterations = 0;
         }
@@ -541,8 +552,8 @@ export class Agent {
         consecutiveToolIterations = 0;
         consecutiveLengthIterations = 0;
         if (accumulatedText) {
-          fullMessages.push({ role: 'assistant', content: accumulatedText });
-          userHistory.push({ role: 'assistant', content: accumulatedText });
+          fullMessages.push({ role: 'assistant', content: accumulatedText, timestamp: Date.now() });
+          userHistory.push({ role: 'assistant', content: accumulatedText, timestamp: Date.now() });
         }
         yield { type: 'done', data: userHistory, timestamp: Date.now() };
         return;

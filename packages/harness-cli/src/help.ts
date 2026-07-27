@@ -96,8 +96,10 @@ ${t.bold('CONTEXT MANAGEMENT:')}
 
 ${t.bold('AGENT & PIPELINE:')}
   --agent <name>             Load an agent definition or pipeline
-                               from .harness/agents/<name>.toml or
-                               .harness/pipelines/<name>.toml
+                                from .harness/agents/<name>.toml or
+                                .harness/pipelines/<name>.toml
+  --max-iterations <n>       Override max agent iterations
+                                (0 = unlimited, default 25)
 
 ${t.bold('MISCELLANEOUS:')}
   -p, --prompt <text>        Run a single prompt in print mode

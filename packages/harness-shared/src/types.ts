@@ -16,6 +16,7 @@ export interface Message {
   tool_call_id?: string;
   name?: string;
   cache_control?: { type: 'ephemeral' };
+  timestamp?: number;
 }
 
 export interface ToolDefinition {

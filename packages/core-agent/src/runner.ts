@@ -30,7 +30,7 @@ export async function* runRunnable(
       ...buildOptions,
       definition: runnable,
     });
-    const messages = [{ role: 'user' as const, content: userPrompt }];
+    const messages = [{ role: 'user' as const, content: userPrompt, timestamp: Date.now() }];
     yield* agent.run(messages, signal);
   } else {
     // Pipeline — run through the executor

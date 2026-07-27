@@ -111,7 +111,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
 
   const sm = new SessionManager();
   const sid = sessionId || sm.generateId();
-  const messages = [{ role: 'user' as const, content: prompt }];
+  const messages = [{ role: 'user' as const, content: prompt, timestamp: Date.now() }];
   const useStyled = styled !== undefined ? styled : (process.stdout.isTTY ?? false);
   const textWrap = useStyled ? null : new TextWrapper(wrapWidth);
   const md = useStyled ? new MarkdownRenderer(wrapWidth) : null;

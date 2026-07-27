@@ -108,7 +108,7 @@ export class PipelineExecutor {
 
       try {
         for await (const event of agent.run(
-          [{ role: 'user', content: stepPrompt }],
+          [{ role: 'user', content: stepPrompt, timestamp: Date.now() }],
           signal,
         )) {
           // Capture text output for context passing
