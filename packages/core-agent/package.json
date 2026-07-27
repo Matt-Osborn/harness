@@ -15,6 +15,7 @@
     "@harness/core-ai": "*",
     "@harness/shared": "*",
     "@mozilla/readability": "^0.6.0",
+    "exa-js": "^2.16.0",
     "jsdom": "^29.1.1",
     "node-html-markdown": "^2.0.0"
   },

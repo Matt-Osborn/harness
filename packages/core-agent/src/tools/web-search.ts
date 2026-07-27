@@ -6,6 +6,7 @@ const MAX_RESULTS = 20;
 const MAX_LINE_LENGTH = 500;
 
 export function resolveAutoProvider(): SearchProviderType {
+  if (process.env.EXA_API_KEY) return 'exa';
   if (process.env.TAVILY_API_KEY) return 'tavily';
   return 'duckduckgo';
 }
@@ -13,6 +14,7 @@ export function resolveAutoProvider(): SearchProviderType {
 export function isProviderAvailable(provider?: SearchProviderType): boolean {
   if (!provider) return true;
   if (provider === 'duckduckgo') return true;
+  if (provider === 'exa') return !!process.env.EXA_API_KEY;
   if (provider === 'tavily') return !!process.env.TAVILY_API_KEY;
   return false;
 }
@@ -34,7 +36,7 @@ export class WebSearchTool implements AgentTool {
       },
       provider: {
         type: 'string',
-        enum: ['tavily', 'duckduckgo'],
+        enum: ['tavily', 'duckduckgo', 'exa'],
         description: 'Search provider override. Default: from config or auto-detected.',
       },
       timeout: {

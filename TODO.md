@@ -35,6 +35,7 @@
 - **SearXNG search provider** — self-hosted meta search engine. Needs per-provider config (`[search.searxng]` with `base_url`). Simple HTTP API.
 - **DuckDuckGo hardening** — improve headers, error handling, timeout, and endpoint resilience. Current implementation is basic HTML scraping.
 - **Cloak Browser / `browser` tool** — full stealth browser tool (navigate, click, extract). Separate from search providers. Uses `cloakbrowser` npm package (Playwright drop-in with 71 C++ stealth patches). See `plans/search/exa_plan.md` for notes on the search-provider/browser distinction.
+- **Per-provider search config** — when adding SearXNG config plumbing (`[search.searxng]`), also add configurable defaults for Exa (search type e.g. `"auto"` vs `"fast"` vs `"deep"`, content mode, result cap) and other providers. Currently hardcoded in each provider class. Also: make `resolveAutoProvider` fallback order configurable (`search.priority = ["exa", "tavily", "duckduckgo"]`).
 - Investigate "Could not parse CSS stylesheet" warnings during `web_fetch`
 
 ### Context Management

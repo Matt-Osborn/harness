@@ -88,7 +88,7 @@ export interface PermissionConfig {
   readonly?: ReadonlyMode;
 }
 
-export type SearchProviderType = 'tavily' | 'duckduckgo';
+export type SearchProviderType = 'tavily' | 'duckduckgo' | 'exa';
 
 export interface SearchConfig {
   provider?: SearchProviderType;

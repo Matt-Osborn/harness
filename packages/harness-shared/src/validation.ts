@@ -68,6 +68,12 @@ const SEARCH_PROVIDER_INFO: Record<string, ProviderKeyInfo> = {
     instructions: 'No API key needed — free to use with rate limits',
     keyUrl: undefined,
   },
+  exa: {
+    name: 'Exa',
+    envVar: 'EXA_API_KEY',
+    instructions: 'Get an API key at https://dashboard.exa.ai/api-keys',
+    keyUrl: 'https://dashboard.exa.ai/api-keys',
+  },
 };
 
 export function identifyModelProvider(baseUrl: string): ProviderKeyInfo | null {
