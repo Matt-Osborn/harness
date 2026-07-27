@@ -23,7 +23,7 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
 }
 
 const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme','--agent','--max-iterations']);
-const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256', '--plan', '--build', '--log']);
+const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '--purge-empty-sessions', '--dry-run', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256', '--plan', '--build', '--log']);
 
 function extractCommands(args: string[]): string[] {
   const cmds: string[] = [];
@@ -153,6 +153,28 @@ export async function run(): Promise<void> {
     }
     const printAgentFlag = parseArg(args, '--agent');
     await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools, printAgentFlag, config.logEnabled || flagLog);
+    return;
+  }
+
+  if (args.includes('--purge-empty-sessions')) {
+    const sm = new SessionManager();
+    const dryRun = args.includes('--dry-run');
+    const result = sm.purgeEmptySessions(dryRun);
+    const tPurge = new CliTheme(themeOverride);
+    if (result.ids.length === 0) {
+      console.log(tPurge.success('No empty sessions found.'));
+      return;
+    }
+    const label = result.dryRun ? 'Would purge' : 'Purged';
+    console.log('');
+    for (const id of result.ids) {
+      console.log(`  ${tPurge.warning(label)}  ${tPurge.highlight(id)}`);
+    }
+    if (result.dryRun) {
+      console.log(tPurge.bold(`\nFound ${result.purged} empty session(s). Use --purge-empty-sessions (without --dry-run) to remove them.\n`));
+    } else {
+      console.log(tPurge.bold(`\nRemoved ${result.purged} empty session(s).\n`));
+    }
     return;
   }
 

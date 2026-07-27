@@ -16,6 +16,8 @@ ${t.bold('OPTIONS:')}
   -S, --session <id>     Resume a specific session
   -r, --resume           Resume the most recent session
   --sessions             List saved sessions
+  --purge-empty-sessions Remove sessions with no messages
+  --dry-run              Preview purge without deleting (use with --purge-empty-sessions)
   --styled               Enable styled markdown output\n                           (buffers response, renders on completion)
   --no-styled            Disable styled markdown output
   --temperature <0-2>    Set temperature for this session
@@ -89,6 +91,8 @@ ${t.bold('SESSION MANAGEMENT:')}
   -S, --session <id>         Resume a specific session by ID
   -r, --resume               Resume the most recent session
   --sessions                 List saved sessions
+  --purge-empty-sessions     Remove sessions with no messages
+  --dry-run                  Preview purge without deleting (use with --purge-empty-sessions)
 
 ${t.bold('CONTEXT MANAGEMENT:')}
   --context-management       Enable context truncation and compaction (default)

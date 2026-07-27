@@ -67,4 +67,28 @@ export class SessionManager {
     const path = join(sessionsDir(), `${id}.json`);
     if (existsSync(path)) unlinkSync(path);
   }
+
+  purgeEmptySessions(dryRun?: boolean): { purged: number; ids: string[]; dryRun: boolean } {
+    const dir = sessionsDir();
+    if (!existsSync(dir)) return { purged: 0, ids: [], dryRun: dryRun ?? false };
+
+    const ids: string[] = [];
+    for (const entry of readdirSync(dir)) {
+      if (!entry.endsWith('.json')) continue;
+      try {
+        const raw = readFileSync(join(dir, entry), 'utf-8');
+        const data = JSON.parse(raw) as SessionData;
+        const msgs = data.messages.filter(m => m.role === 'user' || m.role === 'assistant').length;
+        if (msgs === 0) ids.push(data.id);
+      } catch {
+        continue;
+      }
+    }
+
+    if (!dryRun) {
+      for (const id of ids) this.delete(id);
+    }
+
+    return { purged: ids.length, ids, dryRun: dryRun ?? false };
+  }
 }
