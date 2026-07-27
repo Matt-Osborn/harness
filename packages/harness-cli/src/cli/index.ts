@@ -1,4 +1,4 @@
-import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadRulesStack, loadMemoryBank, loadEnvFiles, CliTheme, AgentRegistry } from '@harness/shared';
+import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadRulesStack, loadMemoryBank, loadEnvFiles, CliTheme, AgentRegistry, Logger } from '@harness/shared';
 import type { SearchProviderType, ThemeConfig, PermissionConfig, Runnable, AgentEvent } from '@harness/shared';
 import { createProvider, type Provider } from '@harness/core-ai';
 import {
@@ -23,7 +23,7 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
 }
 
 const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme','--agent','--max-iterations']);
-const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256', '--plan', '--build']);
+const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256', '--plan', '--build', '--log']);
 
 function extractCommands(args: string[]): string[] {
   const cmds: string[] = [];
@@ -128,6 +128,8 @@ export async function run(): Promise<void> {
   const configHideThinking = cm.displayConfig?.hide_thinking;
   const hideThinking = flagHideThinking ?? envHideThinkingParsed ?? configHideThinking ?? false;
 
+  const flagLog = args.includes('--log');
+
   const flagHideTools = args.includes('--hide-tools');
   const envHideTools = process.env.HARNESS_HIDE_TOOLS;
   const envHideToolsParsed = envHideTools === 'true' || envHideTools === '1' ? true : envHideTools === 'false' || envHideTools === '0' ? false : undefined;
@@ -150,7 +152,7 @@ export async function run(): Promise<void> {
       process.exit(1);
     }
     const printAgentFlag = parseArg(args, '--agent');
-    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools, printAgentFlag);
+    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools, printAgentFlag, config.logEnabled || flagLog);
     return;
   }
 
@@ -302,7 +304,7 @@ export async function run(): Promise<void> {
     }
 
     const searchIsDefault = !searchFlagPresent;
-    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, searchIsDefault, initialTemp, statusEnabled, tInteractive, hideThinking, hideTools, permissions, agentRegistry, tools, projectRules);
+    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, searchIsDefault, initialTemp, statusEnabled, tInteractive, hideThinking, hideTools, permissions, agentRegistry, tools, projectRules, config.logEnabled || flagLog);
     return;
   }
 
@@ -449,6 +451,7 @@ export async function run(): Promise<void> {
         });
       }
 
+      const logEnabled = config.logEnabled || flagLog;
       runTui(agent, {
         modelName: model,
         searchProvider: search,
@@ -459,6 +462,7 @@ export async function run(): Promise<void> {
           tools: config.permissions?.tools,
         },
         pipelineRunner,
+        logEnabled,
       });
       break;
     }

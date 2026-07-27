@@ -5,7 +5,7 @@ import type { Agent } from '@harness/core-agent';
 import { PermissionEngine } from '@harness/core-agent';
 import type { PermissionPromptFn, PermissionDecision } from '@harness/core-agent';
 import type { Message, PermissionMode, SessionData, AgentEvent } from '@harness/shared';
-import { SessionManager, writeSessionSummary } from '@harness/shared';
+import { SessionManager, writeSessionSummary, Logger } from '@harness/shared';
 import { darkTheme } from '../theme.js';
 import { TitleBar } from './TitleBar.js';
 import { ChatPanel } from './ChatPanel.js';
@@ -28,11 +28,12 @@ interface AppProps {
     tools?: Record<string, PermissionMode>;
   };
   pipelineRunner?: (prompt: string, signal?: AbortSignal) => AsyncIterable<AgentEvent>;
+  logEnabled?: boolean;
 }
 
 const searchProviders = ['tavily', 'duckduckgo'];
 
-export function App({ agent, modelName, searchProvider, theme: customTheme, onExit, resumeSessionId, resumeLatest, permConfig, pipelineRunner }: AppProps) {
+export function App({ agent, modelName, searchProvider, theme: customTheme, onExit, resumeSessionId, resumeLatest, permConfig, pipelineRunner, logEnabled }: AppProps) {
   const theme = customTheme || darkTheme;
   const { exit } = useApp();
   const smRef = useRef(new SessionManager());
@@ -57,6 +58,12 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
   const [isRunning, setIsRunning] = useState(false);
   const [currentSearch, setCurrentSearch] = useState(searchProvider || 'auto');
   const [sessionCreatedAt, setSessionCreatedAt] = useState(loadedSession?.createdAt || Date.now());
+
+  const logger = useMemo(() => {
+    if (!logEnabled) return undefined;
+    return new Logger(sessionId);
+  }, [logEnabled, sessionId]);
+
   const [pendingPermission, setPendingPermission] = useState<{ toolName: string; batchCount?: number } | null>(null);
   const [currentTool, setCurrentTool] = useState<{ name: string; args: string } | null>(null);
   const [spinnerFrame, setSpinnerFrame] = useState(0);
@@ -91,16 +98,19 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
   }, [sessionId, modelName, currentSearch, sessionCreatedAt, currentMode]);
 
   const handleExit = useCallback(() => {
+    logger?.log('session_end', { reason: 'exit' });
+    logger?.close();
     saveSession();
     onExit?.();
     exit();
-  }, [saveSession, onExit, exit]);
+  }, [saveSession, onExit, exit, logger]);
 
   useEffect(() => {
     ensureHighlighter();
   }, []);
 
   useEffect(() => {
+    logger?.log('session_start', { mode: 'tui', model: modelName, searchProvider, resumed: !!loadedSession });
     if (!loadedSession) return;
     historyRef.current = loadedSession.messages;
     agent.setCachedHistory(loadedSession.messages);
@@ -365,10 +375,11 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
     setNotification('');
     setIsRunning(true);
 
-    const userMsg: Message = { role: 'user', content: trimmed };
+    const userMsg: Message = { role: 'user', content: trimmed, timestamp: Date.now() };
     const updatedHistory = [...historyRef.current, userMsg];
     historyRef.current = updatedHistory;
     setMessages(updatedHistory);
+    logger?.log('user_input', { content: trimmed });
 
     const abortController = new AbortController();
     abortRef.current = abortController;
@@ -397,17 +408,21 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
             break;
           }
           case 'pipeline_start':
+            logger?.log('pipeline_start', event.data as { name: string; step_count?: number });
             setNotification(`Running pipeline: ${(event.data as { name: string }).name}`);
             break;
           case 'step_start': {
             const sd = event.data as { index: number; agent: string };
+            logger?.log('step_start', sd);
             setNotification(`Step ${sd.index + 1}: ${sd.agent}`);
             break;
           }
           case 'step_end':
+            logger?.log('step_end', event.data);
             setNotification('Step complete');
             break;
           case 'pipeline_done': {
+            logger?.log('pipeline_done', event.data);
             setNotification('Pipeline complete');
             const pendingContent = streamBufRef.current;
             streamBufRef.current = '';
@@ -424,10 +439,19 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
           }
           case 'tool_call': {
             const d = event.data as { name: string; args: string };
+            logger?.log('tool_call', { name: d.name, args: d.args });
             setCurrentTool({ name: d.name, args: d.args });
             break;
           }
           case 'tool_result': {
+            const rd = event.data as { name: string; error?: string; denied?: boolean };
+            if (rd.error) {
+              logger?.log('tool_error', { name: rd.name, error: rd.error });
+            } else if (rd.denied) {
+              logger?.log('tool_denied', { name: rd.name });
+            } else {
+              logger?.log('tool_result', { name: rd.name, status: 'success' });
+            }
             setCurrentTool(null);
             break;
           }
@@ -449,6 +473,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
             break;
           }
           case 'error': {
+            logger?.log('agent_error', { error: String(event.data) });
             setThinkingBuf('');
             const errContent = streamBufRef.current;
             streamBufRef.current = '';
@@ -472,6 +497,8 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
       }
       const partialContent = streamBufRef.current;
       streamBufRef.current = '';
+
+      logger?.log('agent_error', { error: err instanceof Error ? err.message : String(err), fatal: true });
 
       if (err instanceof Error && err.name === 'AbortError') {
         setThinkingBuf('');

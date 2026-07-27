@@ -1,5 +1,5 @@
 import type { Provider } from '@harness/core-ai';
-import type { Message, StreamEvent, AgentEvent, ToolCall, ToolCallDelta, AgentDefinition } from '@harness/shared';
+import type { Message, StreamEvent, AgentEvent, ToolCall, ToolCallDelta, AgentDefinition, Logger } from '@harness/shared';
 import type { AgentTool } from './tool.js';
 import { buildSystemPrompt } from './prompt.js';
 
@@ -22,6 +22,7 @@ export interface AgentOptions {
   compactificationProvider?: Provider;
   mode?: 'plan' | 'build';
   projectRules?: string | null;
+  logger?: Logger;
 }
 
 export class Agent {
@@ -40,6 +41,7 @@ export class Agent {
   private lastSentHashes: string[] = [];
   private mode: 'plan' | 'build';
   private projectRules: string | null;
+  private logger?: Logger;
 
   constructor(options: AgentOptions) {
     this.provider = options.provider;
@@ -55,6 +57,7 @@ export class Agent {
     this.responseBudget = options.responseBudget ?? 4096;
     this.contextManagement = options.contextManagement ?? true;
     this.compactificationProvider = options.compactificationProvider;
+    this.logger = options.logger;
     this.mode = options.mode || 'plan';
     this.projectRules = options.projectRules ?? null;
   }
@@ -221,6 +224,7 @@ export class Agent {
       }
 
       if (summary.trim()) {
+        this.logger?.log('compactification', { droppedCount: dropCount });
         const summaryMsg: Message = {
           role: 'user',
           content: `[Summary of earlier conversation: ${summary.trim()}]`,
@@ -248,6 +252,7 @@ export class Agent {
 
     const result = compacted || [...messages];
     let currentTokens = this.estimateTokens(result);
+    let droppedTotal = 0;
     while (result.length > 1 && currentTokens > usableWindow) {
       const dropIdx = result.findIndex((m, i) => i > 0 && m.role !== 'system');
       if (dropIdx === -1) break;
@@ -255,6 +260,10 @@ export class Agent {
       const droppedTokens = Math.ceil((dropped.content.length + (dropped.tool_calls?.reduce((s, tc) => s + tc.function.arguments.length + tc.function.name.length, 0) || 0)) / 4);
       currentTokens -= droppedTokens;
       result.splice(dropIdx, 1);
+      droppedTotal++;
+    }
+    if (droppedTotal > 0) {
+      this.logger?.log('context_truncation', { droppedCount: droppedTotal });
     }
     this._cachedTokens = currentTokens;
     this._cachedMsgLen = result.length;
@@ -539,6 +548,7 @@ export class Agent {
         consecutiveLengthIterations = 0;
 
         if (consecutiveToolIterations >= 6) {
+          this.logger?.log('iteration_guard', { consecutiveToolIterations });
           fullMessages.push({
             role: 'tool',
             content: 'You have been calling tools repeatedly without producing a final answer. STOP calling tools now and give your best answer based on what you have gathered so far.',
@@ -560,6 +570,7 @@ export class Agent {
       }
     }
 
+    this.logger?.log('max_iterations', { iterations });
     yield { type: 'error', data: 'Max iterations reached', timestamp: Date.now() };
   }
 }

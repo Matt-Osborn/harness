@@ -1,4 +1,4 @@
-import { ConfigManager, TextWrapper, SessionManager, CliTheme, AgentRegistry, loadRulesStack, loadMemoryBank } from '@harness/shared';
+import { ConfigManager, TextWrapper, SessionManager, CliTheme, AgentRegistry, loadRulesStack, loadMemoryBank, Logger } from '@harness/shared';
 import type { Message, SearchProviderType } from '@harness/shared';
 import { createProvider } from '@harness/core-ai';
 import {
@@ -7,7 +7,7 @@ import {
 } from '@harness/core-agent';
 import { MarkdownRenderer } from './markdown.js';
 
-export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, agentName?: string): Promise<void> {
+export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, agentName?: string, logEnabled?: boolean): Promise<void> {
   const config = new ConfigManager();
   const t = theme ?? new CliTheme(config.themeConfig);
 
@@ -111,6 +111,8 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
 
   const sm = new SessionManager();
   const sid = sessionId || sm.generateId();
+  const logger = logEnabled ? new Logger(sid) : undefined;
+  logger?.log('session_start', { mode: 'print', model: modelName, searchProvider: search });
   const messages = [{ role: 'user' as const, content: prompt, timestamp: Date.now() }];
   const useStyled = styled !== undefined ? styled : (process.stdout.isTTY ?? false);
   const textWrap = useStyled ? null : new TextWrapper(wrapWidth);
@@ -162,16 +164,27 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
           process.stdout.write(`${t.success(`── Pipeline complete ──`)}\n`);
           break;
         case 'tool_call': {
-          const { name } = event.data;
+          const { name, args } = event.data;
+          logger?.log('tool_call', { name, args });
           if (!hideTools && !seenTools.has(name)) {
             seenTools.add(name);
             process.stdout.write(`\n${t.warning(`⚡ ${name}`)}\n`);
           }
           break;
         }
-        case 'tool_result':
+        case 'tool_result': {
+          const rd = event.data;
+          if (rd.error) {
+            logger?.log('tool_error', { name: rd.name, error: rd.error });
+          } else if (rd.denied) {
+            logger?.log('tool_denied', { name: rd.name });
+          } else {
+            logger?.log('tool_result', { name: rd.name, status: 'success' });
+          }
           break;
+        }
         case 'error':
+          logger?.log('agent_error', { error: String(event.data) });
           console.error(t.error(`\n─── Error ───`));
           console.error(t.error(`  ${String(event.data)}`));
           console.error(t.error(`─────────────`));
@@ -215,7 +228,12 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
       const remaining = (textWrap as TextWrapper).flush();
       if (remaining) process.stdout.write(remaining);
     }
+    logger?.log('session_end', { reason: 'fatal_error', error: err instanceof Error ? err.message : String(err) });
+    logger?.close();
     console.error('\nFatal error:', err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
+
+  logger?.log('session_end', { reason: 'completed' });
+  logger?.close();
 }

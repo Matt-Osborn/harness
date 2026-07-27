@@ -15,6 +15,7 @@ export function runTui(agent: Agent, options?: {
     tools?: Record<string, PermissionMode>;
   };
   pipelineRunner?: (prompt: string, signal?: AbortSignal) => AsyncIterable<AgentEvent>;
+  logEnabled?: boolean;
 }): void {
   const { waitUntilExit } = render(
     <App
@@ -26,6 +27,7 @@ export function runTui(agent: Agent, options?: {
       resumeLatest={options?.resumeLatest}
       permConfig={options?.permConfig}
       pipelineRunner={options?.pipelineRunner}
+      logEnabled={options?.logEnabled}
     />,
   );
 

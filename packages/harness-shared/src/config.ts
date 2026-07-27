@@ -80,6 +80,10 @@ export class ConfigManager {
         if (modelsTable.default) merged.default_model = String(modelsTable.default);
       }
 
+      if (typeof raw.log === 'boolean') {
+        merged.log = raw.log;
+      }
+
       if (raw.mcp_servers && typeof raw.mcp_servers === 'object') {
         merged.mcp_servers = {
           ...merged.mcp_servers,
@@ -213,6 +217,10 @@ export class ConfigManager {
 
   get compactificationConfig(): ModelConfig | undefined {
     return this.config.compactification;
+  }
+
+  get logEnabled(): boolean {
+    return this.config.log ?? false;
   }
 
   getResolvedModel(modelName?: string): { config: ModelConfig; apiKey: string | undefined } | null {

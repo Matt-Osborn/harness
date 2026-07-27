@@ -32,8 +32,9 @@
 > See `plans/roadmap.md` for the prioritized build order. Items below are listed by category for reference only — consult the roadmap for sequencing.
 
 ### Search & Providers
-- **S2: Replace hallucinated OpenRouter search** — `openrouter.ts` asks an LLM to return "realistic" results (can fabricate URLs). Options: drop it (DDG+Tavily cover all cases), add a real free API (Brave/Serper), or harden DDG as default. Product decision.
-- Add Exa as a search option
+- **SearXNG search provider** — self-hosted meta search engine. Needs per-provider config (`[search.searxng]` with `base_url`). Simple HTTP API.
+- **DuckDuckGo hardening** — improve headers, error handling, timeout, and endpoint resilience. Current implementation is basic HTML scraping.
+- **Cloak Browser / `browser` tool** — full stealth browser tool (navigate, click, extract). Separate from search providers. Uses `cloakbrowser` npm package (Playwright drop-in with 71 C++ stealth patches). See `plans/search/exa_plan.md` for notes on the search-provider/browser distinction.
 - Investigate "Could not parse CSS stylesheet" warnings during `web_fetch`
 
 ### Context Management
@@ -60,6 +61,7 @@
 - **Model command clarity** — distinguish `harness --model`, `harness model list`, `/model` slash command; user should be able to: list models, view current model, set session model, set default model, add models
 
 ### UI/UX
+- **TUI collapse mechanisms** — evaluate whether to implement `suppressPair` (repeated error pairs) and `bash_collapse` (3+ consecutive bash error suppression) in the TUI, similar to interactive.ts. Currently the TUI shows every tool event directly without collapsing.
 - ~~**Plan mode / build mode toggle** — PermissionEngine mode, CLI flags, Tab key toggle, slash commands, prompt indicator.~~ ✅ (direct keypress approach, no completer issues)
 - ~~**✅ CliTheme system (Phase 1)** — done. `CliTheme` class with ANSI defaults, hex→ANSI-8-bit conversion, config TOML `[theme]` section, all inline ANSI replaced.~~ ✅
 - **Truecolor upgrade** — see `plans/truecolor_upgrade_plan.md`. Full 24-bit color output with `NO_COLOR`/`CLICOLOR` support and ANSI fallback. Deferred — needs COLORTERM detection and hex→truecolor escape generation.

@@ -133,6 +133,7 @@ export interface DisplayConfig {
 export interface Config {
   models: Record<string, ModelConfig>;
   default_model?: string;
+  log?: boolean;
   mcp_servers?: Record<string, MCPServerConfig>;
   permissions?: PermissionConfig;
   search?: SearchConfig;

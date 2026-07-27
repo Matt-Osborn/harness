@@ -18,6 +18,7 @@ export type { ProviderKeyInfo, ValidationResult } from './validation.js';
 export { TextWrapper } from './wrap-text.js';
 
 export { SessionManager } from './session.js';
+export { Logger } from './logger.js';
 export type { SessionData, SessionLabel } from './types.js';
 
 export { SkillRegistry } from './skills.js';

@@ -5,7 +5,7 @@ import type { PermissionEngine } from '@harness/core-agent';
 import type { AgentTool } from '@harness/core-agent';
 import type { WebSearchTool } from '@harness/core-agent';
 import type { Message, SearchProviderType } from '@harness/shared';
-import { TextWrapper, SessionManager, isWSL, CliTheme, writeSessionSummary } from '@harness/shared';
+import { TextWrapper, SessionManager, isWSL, CliTheme, writeSessionSummary, Logger } from '@harness/shared';
 import { MarkdownRenderer } from './markdown.js';
 
 function formatSessionExport(messages: Message[], ext: string, sid: string, modelName?: string): string {
@@ -63,7 +63,7 @@ function formatSessionExport(messages: Message[], ext: string, sid: string, mode
   return lines.join('\n');
 }
 
-export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, permissions?: PermissionEngine, agentRegistry?: import('@harness/shared').AgentRegistry, allTools?: AgentTool[], interactiveProjectRules?: string | null): Promise<void> {
+export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, permissions?: PermissionEngine, agentRegistry?: import('@harness/shared').AgentRegistry, allTools?: AgentTool[], interactiveProjectRules?: string | null, logEnabled?: boolean): Promise<void> {
   const t = theme ?? new CliTheme();
   let currentSearch: SearchProviderType | 'auto' = searchProvider || 'auto';
   const searchProviders: SearchProviderType[] = ['tavily', 'duckduckgo'];
@@ -107,6 +107,9 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
     sessionCreatedAt = Date.now();
   }
 
+  const logger = logEnabled ? new Logger(sessionId) : undefined;
+  logger?.log('session_start', { mode: 'interactive', model: modelName, searchProvider, resumed: !!resumeSessionId || !!resumeLatest });
+
   if (history.length > 0) {
     agent.setCachedHistory(history);
   }
@@ -124,15 +127,22 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
     writeSessionSummary(history, modelName, currentMode);
   }
 
+  function endLog(reason: string, extra?: Record<string, unknown>): void {
+    logger?.log('session_end', { reason, ...extra });
+    logger?.close();
+  }
+
   process.on('uncaughtException', (err) => {
     console.error(t.error(`\nUncaught exception: ${err.message}`));
     saveSession();
+    endLog('uncaught_exception', { error: err.message });
     process.exit(1);
   });
 
   process.on('unhandledRejection', (reason) => {
     console.error(t.error(`\nUnhandled rejection: ${String(reason)}`));
     saveSession();
+    endLog('unhandled_rejection', { error: String(reason) });
     process.exit(1);
   });
 
@@ -201,6 +211,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       }
       if (data.length === 1 && data[0] === 0x03) {
         saveSession();
+        endLog('sigint');
         process.stdout.write('\n');
         process.exit(0);
       }
@@ -237,6 +248,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
     rl.on('close', () => {
       if (treatNextCloseAsExit) {
         saveSession();
+        endLog('close');
         process.stdout.write('\n');
         process.exit(0);
       }
@@ -441,6 +453,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
 
       if (trimmed === '/exit' || trimmed === '/quit') {
         saveSession();
+        endLog('exit');
         process.stdout.write('Goodbye.\n');
         process.exit(0);
       }
@@ -648,6 +661,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
             break;
             case 'tool_call': {
               const { name, args } = event.data;
+              logger?.log('tool_call', { name, args });
               if (name !== 'bash') {
                 bashErrorCount = 0;
                 bashLoopSuppressed = false;
@@ -661,6 +675,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
               const callLine = `${name}${target ? ' ' + target : ''}`;
               if (!hideTools && callLine === lastCallLine && lastErrorMsg) {
                 suppressPair = true;
+                logger?.log('suppressed_pair', { toolCall: callLine, lastError: lastErrorMsg });
               } else {
                 suppressPair = false;
                 lastCallLine = callLine;
@@ -682,8 +697,10 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
                   lastBashError = d.error.split('\n')[0] || d.error;
                   if (bashErrorCount >= 3) {
                     bashLoopSuppressed = true;
+                    logger?.log('bash_collapse', { count: bashErrorCount, lastError: lastBashError });
                     break;
                   }
+                  logger?.log('tool_error', { name: d.name, error: d.error });
                 } else {
                   bashErrorCount = 0;
                   bashLoopSuppressed = false;
@@ -699,20 +716,27 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
                 } else if (d.error) {
                   if (d.error === lastErrorMsg) {
                     process.stdout.write(` ${t.error('x')}`);
+                    logger?.log('tool_error', { name: d.name, error: d.error, repeated: true });
                   } else {
                     process.stdout.write(` ${t.error(`✗ ${d.error}`)}`);
                     lastErrorMsg = d.error;
+                    logger?.log('tool_error', { name: d.name, error: d.error });
                   }
                 } else {
                   process.stdout.write(` ${t.success('✓')}`);
                   lastErrorMsg = '';
+                  logger?.log('tool_result', { name: d.name, status: 'success' });
                 }
+              }
+              if (d.denied) {
+                logger?.log('tool_denied', { name: d.name });
               }
               justHadResult = true;
               isWaiting = true;
               break;
             }
             case 'error':
+              logger?.log('agent_error', { error: String(event.data) });
               console.error(t.error(`\n─── Error ───`));
               console.error(t.error(`  ${String(event.data)}`));
               console.error(t.error(`─────────────`));
@@ -769,6 +793,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
 
   process.on('SIGINT', () => {
     saveSession();
+    endLog('sigint');
     process.stdout.write('\n');
     process.exit(0);
   });
