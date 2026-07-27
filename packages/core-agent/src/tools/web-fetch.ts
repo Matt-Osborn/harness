@@ -117,7 +117,10 @@ export class WebFetchTool implements AgentTool {
 
   private extractWithReadability(html: string, url: string): string | null {
     try {
+      const origWarn = console.warn;
+      console.warn = () => {};
       const dom = new JSDOM(html, { url });
+      console.warn = origWarn;
       const reader = new Readability(dom.window.document);
       const article = reader.parse();
       if (article?.textContent && article.textContent.trim().length > 50) {
@@ -135,7 +138,10 @@ export class WebFetchTool implements AgentTool {
 
   private extractPlainText(html: string): string {
     try {
+      const origWarn = console.warn;
+      console.warn = () => {};
       const dom = new JSDOM(html);
+      console.warn = origWarn;
       return dom.window.document.body?.textContent?.trim()
         || html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     } catch {
