@@ -25,7 +25,7 @@
 
 - **B: Carry over iteration count on resume** — Save `usedIterations` in session data, restore it on resume so the continuation starts from the right counter rather than resetting to 0.
 
-- **D: Progress-based iteration limit** — Replace the hard 25-iteration cap with a smarter progress detector. Stop only when the agent is spinning (same tool types, no meaningful output change) rather than on a raw count.
+- ~~**D: Progress-based iteration limit** — Replace the hard 25-iteration cap with a smarter progress detector. Stop only when the agent is spinning (same tool types, no meaningful output change) rather than on a raw count.~~ ✅ **Deferred** — existing guards (3x length-limit, 6x tool-loop nudge, hard 25-cap) work well enough. See `plans/progress-based-iteration-limit-plan.md`.
 
 ## 📋 WS-E: Deferred Roadmap
 
@@ -39,7 +39,7 @@
 - Investigate "Could not parse CSS stylesheet" warnings during `web_fetch`
 
 ### Context Management
-- **Token counter** — utility to count tokens in messages (Phase A uses chars/4 heuristic; formal tokenizer integration still pending)
+- ~~**Token counter** — utility to count tokens in messages (Phase A uses chars/4 heuristic; formal tokenizer integration still pending)~~ ✅ **Deferred** — chars/4 is conservative, works well enough. Research other approaches (custom lightweight tokenizer, WASM-based, etc.) before adding `tiktoken` dependency. Only reconsider if users report context window issues.
 
 ### Testing
 - ~~**Test suite** — vitest installed (v3.2.6) but zero config, zero tests. Plan at `plans/testing_suite_plan.md` (11 test files across 3 phases, ~3.5 hrs).~~ **Deferred** — revisit after completing all roadmap phases.
@@ -78,8 +78,8 @@
   type of interactive CLI tool).
 
 ### Prompt Caching
-- **Option B: Client-side prefix dedup** — detect stable message prefix across iterations, send only delta from last known-good prefix. Works with any provider, no API support needed.
-- **Option C: Session-level caching** — on session resume, re-send only messages appended since the previous cached prefix. Reduces resume token cost significantly.
+- ~~**Option B: Client-side prefix dedup** — detect stable message prefix across iterations, send only delta from last known-good prefix. Works with any provider, no API support needed.~~ ✅ **Done** — `applyCaching()` in `agent.ts`.
+- **Option C: Session-level caching** — on session resume, re-send only messages appended since the previous cached prefix. Persist `lastSentHashes` to session data. Reduces resume token cost significantly.
 
 ### Infrastructure
 - **Bash tool: improved `resolveShell()`** — when `SHELL` is a Cygwin Unix path, try common bash locations (Git Bash `C:\Program Files\Git\bin\bash.exe`, Cygwin paths) before falling back to `cmd.exe`. Also add error message tips for ENOENT/path-not-found so the model can give actionable advice. See `plans/improved_win_shell.md` and `plans/improved_errors.md` for details.
@@ -113,7 +113,7 @@
 - Session summary auto-write to `memory-bank/sessions/`
 
 #### P2 — Cross-Compatibility
-- Mirror bridge: `.clinerules` ↔ `.opencode/instructions.md`
+- ~~**Mirror bridge:** `.clinerules` ↔ `.opencode/instructions.md`~~ ✅ **Deferred** — need to decide: implement as AGENTS.md rule (simple, user-manageable) or code-level mirroring in the write tool (automatic, more complex).
 
 #### P3 — Advanced Memory
 - Typed memory taxonomy (user/feedback/project/reference, llmcode-style)

@@ -1,9 +1,11 @@
 import * as readline from 'node:readline';
 import { writeFile } from 'node:fs/promises';
+import { execSync } from 'node:child_process';
 import type { Agent } from '@harness/core-agent';
 import type { PermissionEngine } from '@harness/core-agent';
 import type { AgentTool } from '@harness/core-agent';
 import type { WebSearchTool } from '@harness/core-agent';
+import { getShellInfo } from '@harness/core-agent';
 import type { Message, SearchProviderType } from '@harness/shared';
 import { TextWrapper, SessionManager, isWSL, CliTheme, writeSessionSummary, Logger } from '@harness/shared';
 import { MarkdownRenderer } from './markdown.js';
@@ -261,6 +263,21 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         return;
       }
 
+      if (trimmed.startsWith('!')) {
+        const cmd = trimmed.slice(1).trim();
+        if (!cmd) { rl.prompt(); return; }
+        try {
+          const shellInfo = getShellInfo();
+          const result = execSync(cmd, { encoding: 'utf-8', shell: shellInfo.shell, timeout: 30000 });
+          process.stdout.write(result + '\n');
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          process.stdout.write(t.error(msg) + '\n');
+        }
+        rl.prompt();
+        return;
+      }
+
       if (trimmed.startsWith('/search ')) {
         const provider = trimmed.slice(8).trim().toLowerCase();
         if (searchProviders.includes(provider as SearchProviderType)) {
@@ -478,6 +495,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write(`  ${t.warning('/summarize')}           Write session summary to memory-bank\n`);
         process.stdout.write(`  ${t.warning('/plan')}                Switch to plan mode (Tab also toggles)\n`);
         process.stdout.write(`  ${t.warning('/build')}               Switch to build mode (Tab also toggles)\n`);
+        process.stdout.write(`  ${t.warning('!<command>')}            Run a shell command directly\n`);
         process.stdout.write(`  ${t.warning('/exit')}                Save session and exit\n`);
         process.stdout.write(`  ${t.warning('/quit')}                Same as /exit\n`);
         process.stdout.write(`  ${t.warning('/help')}                Show this help\n`);
