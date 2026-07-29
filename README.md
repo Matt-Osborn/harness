@@ -1,62 +1,67 @@
-# AI Harness
+# harness-cli
 
-A minimal, extensible AI agentic coding harness — CLI/TUI for interacting with LLMs locally (llama.cpp, Ollama) or remotely (OpenAI, etc.).
-
+A minimal, extensible AI agentic coding CLI — works with local LLMs (llama.cpp,
+Ollama) or remote APIs (OpenRouter, OpenAI, etc.).
 
 ## Quick Start
 
 ### Install
 
 ```bash
-# Install dependencies (may need to approve esbuild's native binary download)
 npm install
 npm approve-scripts
-```
-
-> **Why `npm approve-scripts`?** The `esbuild` dependency uses a postinstall script to download the correct native binary for your platform. Newer npm versions block install scripts by default as a security measure. `npm approve-scripts` explicitly approves them — safe, esbuild is a widely used build tool.
-
-```bash
-# Compile TypeScript
 npm run build
-
-# Make the `harness` command available globally
-npm link
+npm link @harness/cli
 ```
 
-> **Why `npm link`?** The `@harness/cli` package registers a global `bin` entry (`harness`). `npm link` symlinks it so you can run `harness` from any directory. Alternatives: `npx harness` or `node packages/harness-cli/dist/index.js`.
+> **Why `npm link @harness/cli`?** Makes the `harness` command available
+> globally. Alternatives: `npx harness` or `node packages/harness-cli/dist/index.js`.
 
-### Usage
+### First Run
 
 ```bash
-# Create default config and optionally enable file-backup skill
-harness init
-
-# Edit config to point to your model
-# ~/.harness/config.toml
-
-# Start interactive session
-harness
-
-# Run a single prompt
-harness -p "explain this codebase"
-
-# Use a specific model
-harness -m gpt-4 -p "refactor this function"
+harness init        # create default config at ~/.harness/config.toml
+harness             # start interactive session
 ```
 
-## Recommended Tools
+### Choosing a Model
 
-The harness can auto-format files after writing (enabled by default). Install
-the formatters for languages you work with:
+For a **local model** (Ollama, llama.cpp), add to `~/.harness/config.toml`:
 
-| Formatter | Install command | For |
-|-----------|----------------|-----|
-| ruff | `pip install ruff` | Python |
-| prettier | `npm install -g prettier` | JavaScript, TypeScript, JSX, TSX |
-| rustfmt | `rustup component add rustfmt` | Rust, TOML |
+```toml
+[model.local]
+model = "qwen2.5-coder-7b"
+base_url = "http://localhost:11434/v1"
+name = "Local Qwen"
+kind = "openai-compatible"
+```
 
-Run `harness init` after installing to verify they're detected. Formatters are
-skipped gracefully if not available — the harness continues to work normally.
+For a **remote provider** (OpenRouter, OpenAI), set the API key and add:
+
+```toml
+[model.remote]
+model = "deepseek/deepseek-v4-flash"
+api_key_env = "OPENROUTER_API_KEY"
+name = "DeepSeek V4 Flash"
+kind = "openai-compatible"
+
+[models]
+default = "remote"
+```
+
+Any OpenAI-compatible API works — set `base_url` to:
+- `http://localhost:11434/v1` — Ollama
+- `http://localhost:8080/v1` — llama.cpp server
+- `https://api.openai.com/v1` — OpenAI
+- `https://api.x.ai/v1` — xAI
+- `https://openrouter.ai/api/v1` — OpenRouter
+
+### Important: `-p` Must Be Last
+
+```
+harness -p "refactor this" -m deepseek     # ❌ fails — -m after -p
+harness -m deepseek -p "refactor this"     # ✅ correct
+```
 
 ## Configuration
 
@@ -88,75 +93,47 @@ Any OpenAI-compatible API works — set `base_url` to:
 - `https://api.openai.com/v1` — OpenAI
 - `https://api.x.ai/v1` — xAI
 
-### Environment Variables
+## Environment & API Keys
+
+Set API keys with `/key VAR_NAME` in an interactive session, or export them
+in your shell profile (`export KEY=value` in `~/.bashrc`, etc.).
+
+```
+harness > /key OPENROUTER_API_KEY
+Enter value for OPENROUTER_API_KEY: █
+```
+
+The harness also loads `.env` files automatically, which is useful for
+pre-loading keys without exporting them manually:
+
+- `~/.harness/.env` — global (loaded first)
+- `<project>/.env` — project-level (overrides global)
+- Shell env vars take precedence over both
+
+Common API key environment variables:
 
 | Variable | Purpose |
 |----------|---------|
-| `OPENROUTER_API_KEY` | API key for OpenRouter provider |
-| `TAVILY_API_KEY` | API key for Tavily search provider |
-| `OPENAI_API_KEY` | API key for OpenAI-compatible providers |
-| `DEEPSEEK_API_KEY` | API key for DeepSeek provider |
-| `OPENROUTER_SEARCH_MODEL` | Model slug for OpenRouter search (default: `deepseek/deepseek-v4-flash`) |
-| `OLLAMA_KEEP_ALIVE` | Set to `0` to unload Ollama models from VRAM immediately |
-| `HARNESS_STYLED` | Set to `true`/`false` to force styled output on/off |
-
-Set any of these with `/key VAR_NAME` in an interactive session, or `export VAR_NAME=value` in your shell.
-
-## Ollama VRAM Management
-
-Ollama keeps models loaded in GPU VRAM between requests (controlled by `keep_alive`, default 5m). Set `OLLAMA_KEEP_ALIVE=0` to unload immediately after each request — this minimizes VRAM usage at the cost of slightly slower subsequent requests.
-
-```bash
-export OLLAMA_KEEP_ALIVE=0
-```
-
-Check VRAM usage with `nvidia-smi` (cross-platform, included with NVIDIA drivers):
-
-```
-nvidia-smi
-# Look for Memory-Usage column — if high with no active requests, a stale process is likely
-```
-
-**Windows:** Ollama runs as a background system service (`llama-server.exe`). Stale processes can hold VRAM after crashes or unclean shutdowns. To free VRAM:
-- Task Manager → Details tab → find `llama-server.exe` → End task
-- Or admin PowerShell: `Stop-Process -Id <pid> -Force`
-- Or disable the service and run `ollama serve` manually in a terminal for clean Ctrl+C shutdown
-
-**Linux:** Run `ollama serve` in a dedicated terminal. Ctrl+C cleanly frees VRAM. No background service issues if run this way.
-
-## Packages
-
-| Package | Description |
-|---|---|
-| `@harness/shared` | Core types, config schema, config loading |
-| `@harness/core-ai` | Provider interface, OpenAI-compatible provider |
-| `@harness/core-agent` | Agent loop, built-in tools (read/write/edit/bash) |
-| `@harness/cli` | CLI app — arg parsing, print/interactive modes, subcommands |
-| `@harness/tui` | *(Phase 8)* Full terminal UI framework |
-
-## Architecture
-
-```
-harness-cli → core-agent → core-ai → harness-shared
-                                    └→ harness-tui (future)
-```
-
-The agent loop:
-1. Build message list (system prompt + conversation + tool results)
-2. Stream response from LLM provider
-3. Accumulate text + tool call deltas
-4. If tool calls requested → execute tools → append results → loop
-5. If text response → yield to user → done
+| `OPENROUTER_API_KEY` | OpenRouter |
+| `OPENAI_API_KEY` | OpenAI-compatible providers |
+| `TAVILY_API_KEY` | Tavily search |
+| `EXA_API_KEY` | Exa search |
 
 ## Development
 
 ```bash
-npm run build     # Compile TypeScript (runs npx tsc -b from root)
+npm run build     # Compile TypeScript (run from workspace root)
 npm run dev ...   # Run directly via tsx
 ```
 
-**Important notes:**
+- Always build from the **workspace root** — sub-package builds will fail.
+- After pulling changes or editing `.ts` files, rebuild with `npm run build`.
 
-- Always run `npm run build` from the **workspace root** — never from a sub-package directory. The root `tsconfig.json` uses project references; compiling from a sub-package will fail.
-- After pulling changes from remote (or editing `.ts` files), rebuild with `npm run build` — the harness runs compiled JavaScript, so changes don't take effect until you compile.
+```text
+harness-cli → core-agent → core-ai → harness-shared
+```
 
+## Full Documentation
+
+- `man harness` — complete reference for all flags, commands, config, and env vars
+- How-to guides in `docs/` — setting up local models, pipelines, custom agents, etc.

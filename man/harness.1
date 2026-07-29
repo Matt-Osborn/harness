@@ -89,6 +89,13 @@ Resume the most recent INTERACTIVE session.
 .B \-\-sessions
 List all saved sessions with their IDs, labels, message counts,
 and timestamps.
+.TP
+.B \-\-purge\-empty\-sessions
+Remove session files that contain no messages (empty sessions).
+.TP
+.B \-\-dry\-run
+Preview what \-\-purge\-empty\-sessions would delete without
+actually deleting.
 .SS Agent & Pipeline
 .TP
 .BI \-\-agent " <name>"
@@ -132,13 +139,17 @@ Set the search provider.
 Valid providers:
 .BR tavily ,
 .BR duckduckgo ,
-.BR openrouter .
+.BR exa .
 If the flag is given without a value, the harness lists available
 providers and exits.
 .TP
 .BI \-\-max\-iterations " <n>"
 Override the maximum number of agent iterations per prompt.
 Use 0 for unlimited iterations. Default is 25.
+.TP
+.B \-\-log
+Enable file-based logging to
+.BR ~/.harness/logs/<session\-id>.jsonl .
 .TP
 .BR \-h ", " \-\-help
 Display this help message and exit.
@@ -204,7 +215,7 @@ Show the current search provider.
 .TP
 .BI "/search " <provider>
 Switch search provider
-.RB ( tavily ", " duckduckgo ", " openrouter ).
+.RB ( tavily ", " duckduckgo ", " exa ).
 .TP
 .B /key
 Show usage for setting temporary API keys.
@@ -242,6 +253,34 @@ Save the current session and exit.
 .TP
 .B "Ctrl+C, Ctrl+D"
 Save the current session and exit.
+.TP
+.B !<command>
+Run a shell command directly without going through the agent.
+Uses the same shell as the agent (bash, PowerShell, cmd.exe).
+.TP
+.B /plan
+Switch to plan mode (read-only, no modifications).
+.TP
+.B /build
+Switch to build mode (modifications allowed, default).
+.TP
+.B /hide-thinking
+Suppress thinking text display.
+.TP
+.B /show-thinking
+Show thinking text (re-enable after /hide-thinking).
+.TP
+.B /hide-tools
+Hide tool call indicator lines.
+.TP
+.B /show-tools
+Show tool call indicator lines (re-enable after /hide-tools).
+.TP
+.BI "/export " [txt|file]
+Export the current session as .md (default) or .txt.
+.TP
+.B /summarize
+Write a session summary to the project's memory-bank/.
 .SH CONFIGURATION
 Configuration is written in TOML format. Files are loaded in order:
 global first, then project files walking up from the working directory.
@@ -296,7 +335,7 @@ web_fetch  = "ask"
 .RS
 .nf
 [search]
-provider = "tavily"  # tavily | duckduckgo | openrouter
+provider = "tavily"  # tavily | duckduckgo | exa
 .RE
 .SS CLI
 .RS
@@ -412,6 +451,57 @@ or
 .B 0
 to hide. Overridden by
 .BR \-\-status-line "/" \-\-no-status-line .
+.TP
+.B HARNESS_HIDE_THINKING
+Set to
+.B true
+or
+.B 1
+to hide thinking text by default.
+.TP
+.B HARNESS_HIDE_TOOLS
+Set to
+.B true
+or
+.B 1
+to hide tool call indicator lines by default.
+.TP
+.B HARNESS_FORCE_256_COLOR
+Set to
+.B 1
+to force ANSI 256-color mode (disables truecolor).
+Unset or
+.B 0
+means auto-detect. Overridden by
+.BR \-\-ansi\-256 .
+.TP
+.B HARNESS_MAX_ITERATIONS
+Override the maximum number of agent iterations per prompt.
+Default is 25. Overridden by
+.BR \-\-max\-iterations .
+.TP
+.B NO_COLOR
+Set to any value to disable all color output. Overrides
+.B CLICOLOR
+and color capability detection.
+.TP
+.B CLICOLOR
+Set to
+.B 0
+to disable color output.
+.TP
+.B CLICOLOR_FORCE
+Set to any value to force color output (bypasses
+.BR NO_COLOR ).
+.TP
+.B COLORTERM
+Color capability hint (e.g.
+.BR truecolor ,
+.BR 256color ).
+Auto-detected from terminal.
+.TP
+.B TERM
+Terminal type identifier. Used for color capability detection.
 .SS Model API Keys
 .TP
 .B OPENROUTER_API_KEY
@@ -446,6 +536,9 @@ Defaults to
 .BR deepseek/deepseek-v4-flash .
 .PP
 DuckDuckGo search is free and requires no API key.
+.TP
+.B EXA_API_KEY
+API key for Exa search provider.
 .SS Shell
 .TP
 .B SHELL

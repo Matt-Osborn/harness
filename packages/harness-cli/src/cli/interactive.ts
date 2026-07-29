@@ -491,7 +491,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write(`  ${t.warning('/show-thinking')}       Show thinking output\n`);
         process.stdout.write(`  ${t.warning('/hide-tools')}         Hide tool call lines\n`);
         process.stdout.write(`  ${t.warning('/show-tools')}         Show tool call lines\n`);
-        process.stdout.write(`  ${t.warning('/agent <name>')}       Switch to a different agent definition\n`);
+        process.stdout.write(`  ${t.warning('/agent [name]')}      Switch agent (no arg lists available agents)\n`);
         process.stdout.write(`  ${t.warning('/summarize')}           Write session summary to memory-bank\n`);
         process.stdout.write(`  ${t.warning('/plan')}                Switch to plan mode (Tab also toggles)\n`);
         process.stdout.write(`  ${t.warning('/build')}               Switch to build mode (Tab also toggles)\n`);

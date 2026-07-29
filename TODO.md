@@ -66,6 +66,7 @@
 - ~~**Plan mode / build mode toggle** — PermissionEngine mode, CLI flags, Tab key toggle, slash commands, prompt indicator.~~ ✅ (direct keypress approach, no completer issues)
 - ~~**✅ CliTheme system (Phase 1)** — done. `CliTheme` class with ANSI defaults, hex→ANSI-8-bit conversion, config TOML `[theme]` section, all inline ANSI replaced.~~ ✅
 - **Truecolor upgrade** — see `plans/truecolor_upgrade_plan.md`. Full 24-bit color output with `NO_COLOR`/`CLICOLOR` support and ANSI fallback. Deferred — needs COLORTERM detection and hex→truecolor escape generation.
+- **Color mode env var** — consider replacing `HARNESS_FORCE_256_COLOR` with a future `HARNESS_COLOR_MODE` env var taking values `truecolor` / `256` / `ansi` for future extensibility.
 - ~~**✅ JSON theme file format (Phase 2)** — OpenCode-compatible JSON themes (`defs` + `theme` with dark/light variants). Load from `~/.config/harness/themes/*.json`. 14 bundled themes, `resolveThemeFile()`, `detectColorMode()`, `--theme` flag, CliTheme integration. Done.~~ ✅
 - ~~**Persistent status bar** — pinned at bottom of terminal for tool calls, thinking, status (C2)~~ ✅ (TUI StatusLine component)
 - ~~**Thinking event + visibility toggles** — `--hide-thinking`/`--hide-tools` flags, env vars, config `[display]`, slash commands.~~ ✅

@@ -11,7 +11,7 @@ ${t.bold('USAGE:')}
 ${t.bold('OPTIONS:')}
   -p, --prompt <text>    Run a single prompt in print mode (must be last argument)
   -m, --model <name>     Specify which model to use
-  -s, --search <provider> Search provider (tavily, duckduckgo)
+  -s, --search <provider> Search provider (tavily, duckduckgo, exa)
   -w, --width <cols>     Wrap output at column width (default: 80)
   -S, --session <id>     Resume a specific session
   -r, --resume           Resume the most recent session
@@ -41,6 +41,7 @@ ${t.bold('COMMANDS:')}
   sessions               List saved sessions
   config                 Show effective configuration
   init                   Create default config at ~/.harness/config.toml
+  help                   Show this help message
   skill <sub> [name]    Manage skills (list|enable|disable)
   tui                    Launch the TUI (terminal UI) mode
 
@@ -107,7 +108,7 @@ ${t.bold('AGENT & PIPELINE:')}
 
 ${t.bold('MISCELLANEOUS:')}
   -p, --prompt <text>        Run a single prompt in print mode (must be last argument)
-  -s, --search <provider>    Set search provider (tavily, duckduckgo)
+  -s, --search <provider>    Set search provider (tavily, duckduckgo, exa)
   -h, --help                 Show compact help message
   --help v                   Show this verbose help message
 
@@ -124,6 +125,7 @@ ${t.bold('COMMANDS:')}
   sessions               List saved sessions
   config                 Show effective configuration
   init                   Create default config at ~/.harness/config.toml
+  help                   Show this help message
   skill <sub> [name]    Manage skills (list|enable|disable)
   tui                    Launch the TUI (terminal UI) mode
 

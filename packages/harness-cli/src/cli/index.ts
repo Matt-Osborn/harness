@@ -137,7 +137,7 @@ export async function run(): Promise<void> {
   const hideTools = flagHideTools ?? envHideToolsParsed ?? configHideTools ?? false;
 
   const flagAnsi256 = args.includes('--ansi-256');
-  const envAnsi256 = process.env.HARNESS_TRUECOLOR;
+  const envAnsi256 = process.env.HARNESS_FORCE_256_COLOR;
   const envAnsi256Parsed = envAnsi256 === 'false' || envAnsi256 === '0' ? true : envAnsi256 === 'true' || envAnsi256 === '1' ? false : undefined;
   const configAnsi256 = cm.cli?.truecolor === false ? true : undefined;
   const forceAnsi256 = flagAnsi256 ?? envAnsi256Parsed ?? configAnsi256 ?? false;
