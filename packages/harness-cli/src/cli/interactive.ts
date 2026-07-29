@@ -247,6 +247,14 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
     disableKeypressListener?.();
     enableKeypressListener();
 
+    rl.on('SIGINT', () => {
+      saveSession();
+      endLog('sigint');
+      rl.close();
+      process.stdout.write('\n');
+      process.exit(0);
+    });
+
     rl.on('close', () => {
       if (treatNextCloseAsExit) {
         saveSession();
