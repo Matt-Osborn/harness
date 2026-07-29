@@ -17,6 +17,8 @@ semantically meaningful. Strategies:
 If configured, files are auto-formatted after writing (e.g. ruff format for Python,
 prettier for JS/TS). The formatter result is reported in the tool response.
 
+When a file needs multiple changes (typos, renames, refactoring, etc.), do NOT make one edit per tool call. Plan all changes first, then either batch multiple edit calls in one iteration, or rewrite the entire file in a single write operation. If you are making more than ~3 changes to a file, prefer the full rewrite.
+
 ## Using Search Tools
 Use web_search to find documentation, packages, tutorials, and any online information.
 Use web_fetch to read specific pages by URL. For normal web pages (articles, docs),
