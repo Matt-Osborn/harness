@@ -343,17 +343,23 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         return;
       }
 
-      if (trimmed === '/sessions') {
+      if (trimmed === '/sessions' || trimmed === '/sessions --all' || trimmed === '/sessions all') {
+        const SESSION_CAP = 25;
+        const showAll = trimmed === '/sessions --all' || trimmed === '/sessions all';
         const all = sm.list();
         if (all.length === 0) {
           process.stdout.write(t.warning('No saved sessions.') + '\n\n');
           rl.prompt();
           return;
         }
-        for (const s of all) {
+        const sessions = showAll ? all : all.slice(0, SESSION_CAP);
+        for (const s of sessions) {
           const msgCount = s.messages.filter(m => m.role === 'user' || m.role === 'assistant').length;
           const isCurrent = s.id === sessionId ? ` ${t.success('← current')}` : '';
           process.stdout.write(`  ${t.highlight(s.id)}  ${s.label}  ${msgCount} msgs  ${new Date(s.updatedAt).toLocaleString()}${isCurrent}\n`);
+        }
+        if (!showAll && all.length > SESSION_CAP) {
+          process.stdout.write(`  ${t.dim(`Showing ${SESSION_CAP} of ${all.length} sessions. Use --all to see all.`)}\n`);
         }
         process.stdout.write('\n');
         rl.prompt();

@@ -23,7 +23,7 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
 }
 
 const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme','--agent','--max-iterations']);
-const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '--purge-empty-sessions', '--dry-run', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256', '--plan', '--build', '--log']);
+const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '--purge-empty-sessions', '--dry-run', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256', '--plan', '--build', '--log', '--all']);
 
 function extractCommands(args: string[]): string[] {
   const cmds: string[] = [];
@@ -179,17 +179,23 @@ export async function run(): Promise<void> {
   }
 
   if (args.includes('--sessions') || args[0] === 'sessions') {
+    const SESSION_CAP = 25;
     const sm = new SessionManager();
     const all = sm.list();
+    const showAll = args.includes('--all');
     const tSessions = new CliTheme(themeOverride);
     if (all.length === 0) {
       console.log(tSessions.warning('No saved sessions.'));
       return;
     }
+    const sessions = showAll ? all : all.slice(0, SESSION_CAP);
     console.log('');
-    for (const s of all) {
+    for (const s of sessions) {
       const msgCount = s.messages.filter(m => m.role === 'user' || m.role === 'assistant').length;
       console.log(`  ${tSessions.highlight(s.id)}  ${s.label}  ${msgCount} msgs  ${new Date(s.updatedAt).toLocaleString()}`);
+    }
+    if (!showAll && all.length > SESSION_CAP) {
+      console.log(`  ${tSessions.dim(`Showing ${SESSION_CAP} of ${all.length} sessions. Use --all to see all.`)}`);
     }
     console.log('');
     return;
