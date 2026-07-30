@@ -83,6 +83,10 @@ export class Agent {
     this.permissionBatchCheck = fn;
   }
 
+  setAskUserHandler(fn: AskUserHandler | undefined): void {
+    this.askUserHandler = fn;
+  }
+
   setTemperature(t: number | undefined): void {
     this.provider.setTemperature(t);
   }

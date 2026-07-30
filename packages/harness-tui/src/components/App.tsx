@@ -12,6 +12,8 @@ import { ChatPanel } from './ChatPanel.js';
 import { RightPanel } from './RightPanel.js';
 import { InputBox } from './InputBox.js';
 import { StatusLine } from './StatusLine.js';
+import { FormPrompt } from './FormPrompt.js';
+import type { FormQuestion } from './FormPrompt.js';
 import { ensureHighlighter } from '../markdown.js';
 import type { Theme } from '../theme.js';
 
@@ -42,6 +44,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
   const streamBufRef = useRef('');
   const isRunningRef = useRef(false);
   const permResolveRef = useRef<((value: PermissionDecision) => void) | null>(null);
+  const askUserResolveRef = useRef<((value: string) => void) | null>(null);
   const pipelineRunnerRef = useRef(pipelineRunner);
   const pipelineActiveRef = useRef(false);
 
@@ -70,6 +73,12 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
   const [currentMode, setCurrentMode] = useState<'plan' | 'build'>('plan');
   const [hideThinking, setHideThinking] = useState(false);
   const [hideTools, setHideTools] = useState(false);
+  const [pendingForm, setPendingForm] = useState<{
+    prompt: string;
+    questions: FormQuestion[];
+    answers: Record<string, string | boolean>;
+    currentIndex: number;
+  } | null>(null);
   const [thinkingBuf, setThinkingBuf] = useState('');
   const permEngineRef = useRef<PermissionEngine | null>(null);
 
@@ -96,6 +105,20 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
     });
     writeSessionSummary(historyRef.current, modelName, currentMode);
   }, [sessionId, modelName, currentSearch, sessionCreatedAt, currentMode]);
+
+  const handleFormAnswer = useCallback((id: string, answer: string | boolean) => {
+    setPendingForm(prev => {
+      if (!prev) return prev;
+      const newAnswers = { ...prev.answers, [id]: answer };
+      const nextIndex = prev.currentIndex + 1;
+      if (nextIndex >= prev.questions.length) {
+        askUserResolveRef.current?.(JSON.stringify(newAnswers));
+        askUserResolveRef.current = null;
+        return null;
+      }
+      return { ...prev, answers: newAnswers, currentIndex: nextIndex };
+    });
+  }, []);
 
   const handleExit = useCallback(() => {
     logger?.log('session_end', { reason: 'exit' });
@@ -131,6 +154,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
   }, [handleExit]);
 
   useInput((input) => {
+    if (pendingForm) return;
     if (!pendingPermission || !permResolveRef.current) return;
     if (input === 'y') {
       permResolveRef.current('yes');
@@ -152,7 +176,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
   });
 
   useInput((input) => {
-    if (pendingPermission) return;
+    if (pendingForm || pendingPermission) return;
     if (input === '\t') {
       const newMode = currentMode === 'plan' ? 'build' : 'plan';
       setCurrentMode(newMode);
@@ -189,6 +213,17 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
       return engine.batchCheck(toolName, argsList);
     });
   }, [agent, permConfig, currentMode]);
+
+  useEffect(() => {
+    agent.setAskUserHandler(async (args) => {
+      const { prompt, questions } = args as { prompt: string; questions: FormQuestion[] };
+      return new Promise(resolve => {
+        askUserResolveRef.current = resolve;
+        setPendingForm({ prompt, questions, answers: {}, currentIndex: 0 });
+      });
+    });
+    return () => { agent.setAskUserHandler(undefined); };
+  }, [agent]);
 
   const handleSubmit = useCallback(async (text: string) => {
     const trimmed = text.trim();
@@ -566,8 +601,16 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
         theme={theme}
         mode={currentMode}
       />
-      <Box height={3} flexShrink={0}>
-        {!pendingPermission && (
+      <Box height={pendingForm ? 5 : 3} flexShrink={0}>
+        {pendingForm ? (
+          <FormPrompt
+            prompt={pendingForm.prompt}
+            questions={pendingForm.questions}
+            questionIndex={pendingForm.currentIndex}
+            onAnswer={handleFormAnswer}
+            theme={theme}
+          />
+        ) : !pendingPermission && (
           <InputBox
             value={inputValue}
             onChange={setInputValue}

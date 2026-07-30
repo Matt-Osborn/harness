@@ -463,14 +463,12 @@ export async function run(): Promise<void> {
             provider, tools, systemPrompt, projectRules, mode,
             maxIterations: tuiMaxIterations, resumed: tuiResumed,
             contextManagement, contextWindow, responseBudget, compactificationProvider,
-            askUserHandler: async (a) => { const r = await renderForm((a as any).prompt, (a as any).questions as FormQuestion[]); return JSON.stringify(r); },
           });
         } else {
           agent = buildAgentFromDefinition({
             definition: runnable,
             config,
             tools,
-            askUserHandler: async (a) => { const r = await renderForm((a as any).prompt, (a as any).questions as FormQuestion[]); return JSON.stringify(r); },
             projectRules,
             providerOverride: model,
             compactificationProvider,
@@ -483,7 +481,6 @@ export async function run(): Promise<void> {
           provider, tools, systemPrompt, projectRules, mode,
           maxIterations: tuiMaxIterations, resumed: tuiResumed,
           contextManagement, contextWindow, responseBudget, compactificationProvider,
-          askUserHandler: async (a) => { const r = await renderForm((a as any).prompt, (a as any).questions as FormQuestion[]); return JSON.stringify(r); },
         });
       }
 
