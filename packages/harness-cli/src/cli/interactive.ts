@@ -75,6 +75,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
   let currentMode: 'plan' | 'build' = agent.getMode();
   let modeChangeListener: ((str: string, key: { name: string }) => void) | null = null;
   let rawDataHandler: ((data: Buffer) => void) | null = null;
+  let escapeTimer: ReturnType<typeof setTimeout> | null = null;
 
   const sm = new SessionManager();
   let sessionId: string;
@@ -203,25 +204,41 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
     process.stdin.off('keypress', tabListener);
   }
 
-  function setupRawModeListener(): void {
+  function setupRawModeListener(controller: AbortController): void {
     try {
       process.stdin.setRawMode?.(true);
     } catch { /* non-TTY */ }
     rawDataHandler = (data: Buffer) => {
       if (data.length === 1 && data[0] === 0x09) {
         handleTabDuringExecution();
+        return;
       }
       if (data.length === 1 && data[0] === 0x03) {
-        saveSession();
-        endLog('sigint');
+        controller.abort();
         process.stdout.write('\n');
-        process.exit(0);
+        return;
+      }
+      if (data.length === 1 && data[0] === 0x1b) {
+        if (escapeTimer) {
+          clearTimeout(escapeTimer);
+          escapeTimer = null;
+          controller.abort();
+        } else {
+          escapeTimer = setTimeout(() => {
+            escapeTimer = null;
+          }, 300);
+        }
+        return;
       }
     };
     process.stdin.on('data', rawDataHandler);
   }
 
   function teardownRawModeListener(): void {
+    if (escapeTimer) {
+      clearTimeout(escapeTimer);
+      escapeTimer = null;
+    }
     if (rawDataHandler) {
       process.stdin.off('data', rawDataHandler);
       rawDataHandler = null;
@@ -513,7 +530,8 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write(`  ${t.warning('/exit')}                Save session and exit\n`);
         process.stdout.write(`  ${t.warning('/quit')}                Same as /exit\n`);
         process.stdout.write(`  ${t.warning('/help')}                Show this help\n`);
-        process.stdout.write(`  ${t.warning('Ctrl+C')}               Quit (saves session)\n`);
+        process.stdout.write(`  ${t.warning('Ctrl+C')}               Cancel current request / Quit (saves session)\n`);
+        process.stdout.write(`  ${t.warning('Esc Esc')}             Cancel current request\n`);
         process.stdout.write(`\n${t.dim('Tab')} toggles between plan and build mode\n`);
         process.stdout.write('\n');
         rl.prompt();
@@ -644,9 +662,10 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         }
       }, 200);
 
+      const controller = new AbortController();
       try {
-        setupRawModeListener();
-        for await (const event of agent.run(history)) {
+        setupRawModeListener(controller);
+        for await (const event of agent.run(history, controller.signal)) {
           isWaiting = false;
           clearStatus();
           switch (event.type) {
@@ -796,17 +815,21 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
           process.stdout.write(`\n  (${bashErrorCount} bash commands failed — shell mismatch. Last error: "${lastBashError}")\n`);
         }
       } catch (err) {
-        if (styled && streamBuf) {
-          process.stdout.write(md!.render(streamBuf) + '\n');
-          streamBuf = '';
+        if (err instanceof Error && err.name === 'AbortError') {
+          process.stdout.write(t.warning('\nCancelled.\n'));
+        } else {
+          if (styled && streamBuf) {
+            process.stdout.write(md!.render(streamBuf) + '\n');
+            streamBuf = '';
+          }
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(t.error(`\n─── Error ───`));
+          console.error(t.error(`  ${msg.replace(/\n/g, '\n  ')}`));
+          if (isWSL() && (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network') || msg.toLowerCase().includes('econn') || msg.toLowerCase().includes('enotfound') || msg.toLowerCase().includes('dns'))) {
+            console.error(t.warning('  ℹ WSL tip: If a local model is running on Windows, use http://host.docker.internal:PORT instead of localhost'));
+          }
+          console.error(t.error(`─────────────`));
         }
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(t.error(`\n─── Error ───`));
-        console.error(t.error(`  ${msg.replace(/\n/g, '\n  ')}`));
-        if (isWSL() && (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network') || msg.toLowerCase().includes('econn') || msg.toLowerCase().includes('enotfound') || msg.toLowerCase().includes('dns'))) {
-          console.error(t.warning('  ℹ WSL tip: If a local model is running on Windows, use http://host.docker.internal:PORT instead of localhost'));
-        }
-        console.error(t.error(`─────────────`));
       } finally {
         clearInterval(statusTimer);
         clearStatus();

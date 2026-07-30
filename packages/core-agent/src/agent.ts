@@ -287,6 +287,7 @@ export class Agent {
     let consecutiveToolIterations = 0;
 
     while (this.maxIterations <= 0 || iterations < this.maxIterations) {
+      if (signal?.aborted) return;
       iterations++;
       const toolDefs = this.tools.map(t => t.toToolDefinition());
 
