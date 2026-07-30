@@ -83,7 +83,9 @@ export async function run(): Promise<void> {
     return;
   }
 
-  const wrapWidth = Math.max(20, parseInt(parseArg(args, '-w', '--width') || '80', 10) || 80);
+  const terminalCols = process.stdout.columns || 80;
+  const rawWidth = parseInt(parseArg(args, '-w', '--width') || String(terminalCols), 10);
+  const wrapWidth = rawWidth > 0 ? Math.max(20, rawWidth) : rawWidth;
   const resumeSession = parseArg(args, '-S', '--session');
   const resumeLatest = args.includes('-r') || args.includes('--resume');
   const temperatureOverride = (() => {

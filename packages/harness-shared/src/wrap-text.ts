@@ -6,6 +6,7 @@ export class TextWrapper {
   constructor(private width: number) {}
 
   push(chunk: string): string {
+    if (this.width <= 0) return chunk;
     this.buffer += chunk;
     let output = '';
 
@@ -31,6 +32,7 @@ export class TextWrapper {
   }
 
   flush(): string {
+    if (this.width <= 0) return '';
     if (!this.buffer) return '';
     let result = '';
     while (this.buffer.length > this.width) {

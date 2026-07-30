@@ -19,11 +19,27 @@
   instead of making one edit per tool call to avoid burning iteration budget.
   (See AGENTS.md for the current project-level version.)~~ ✅
 
+## 🟤 Deferred Indefinitely
+
+- **Re-add batch-edits prompt** — Re-add the batch-editing paragraph to
+  `## File Writing Guidelines` in `packages/core-agent/src/prompt.ts`.
+  Confirmed not the cause of write errors.
+
+- **`tryParseArgs()` — lenient JSON parse** — Defensive fix for write-heavy
+  tasks (large `content` strings with unescaped newlines). See
+  `plans/lenient-json-parse-plan.md`.
+
+- **MessageBubble thinking styling** — Render thinking text in italic with
+  `theme.textMuted` color instead of normal message bubble styling.
+
+- **MessageBubble tool call gating** — When `hideTools` is true, don't render
+  the `⚡` tool call indicators in MessageBubble.
+
 ## 🟠 High Priority
 
-- **Cancel agent mid-request** — Ctrl+C or double-Escape during streaming
+- ~~**Cancel agent mid-request** — Ctrl+C or double-Escape during streaming
   should abort the current request and return to the prompt instead of
-  exiting. See `plans/cancel-agent-request.md`.
+  exiting. See `plans/cancel-agent-request.md`.~~ ✅
 
 - **`harness key` CLI command** — currently no way to set API keys without
   entering the interactive app. Add `harness key <ENV_VAR> [value]` with

@@ -12,7 +12,7 @@ ${t.bold('OPTIONS:')}
   -p, --prompt <text>    Run a single prompt in print mode (must be last argument)
   -m, --model <name>     Specify which model to use
   -s, --search <provider> Search provider (tavily, duckduckgo, exa)
-  -w, --width <cols>     Wrap output at column width (default: 80)
+  -w, --width <cols>     Wrap output at column width (default: auto, fallback 80)
   -S, --session <id>     Resume a specific session
   -r, --resume           Resume the most recent session
   --sessions             List saved sessions
@@ -77,7 +77,7 @@ ${t.bold('MODEL SETTINGS:')}
   --no-drop-params           Disable automatic parameter stripping
 
 ${t.bold('OUTPUT AND DISPLAY:')}
-  -w, --width <cols>         Set output wrap width in columns (default: 80)
+  -w, --width <cols>         Set output wrap width in columns (default: auto, fallback 80)
   --styled                   Enable styled Markdown rendering\n                             (buffers response, renders on completion)
   --no-styled                Disable styled Markdown rendering\n                             (streams tokens as they arrive)
   --status-line              Show progress spinner during model thinking
