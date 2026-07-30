@@ -6,7 +6,7 @@ import type {
   ModelConfig,
 } from '@harness/shared';
 import { Agent } from './agent.js';
-import type { PermissionCheck, PermissionBatchCheck } from './agent.js';
+import type { PermissionCheck, PermissionBatchCheck, AskUserHandler } from './agent.js';
 import type { AgentTool } from './tool.js';
 import { buildSystemPrompt } from './prompt.js';
 
@@ -16,6 +16,7 @@ export interface BuildAgentOptions {
   tools: AgentTool[];
   permissionCheck?: PermissionCheck;
   permissionBatchCheck?: PermissionBatchCheck;
+  askUserHandler?: AskUserHandler;
   projectRules?: string | null;
   providerOverride?: string;  // --model flag override
   compactificationProvider?: Provider;
@@ -81,7 +82,7 @@ function resolveModelConfig(
  * mode, temperature, and context window settings.
  */
 export function buildAgentFromDefinition(options: BuildAgentOptions): Agent {
-  const { definition, config, tools, permissionCheck, permissionBatchCheck, projectRules, providerOverride, compactificationProvider, maxIterations, resumed } = options;
+  const { definition, config, tools, permissionCheck, permissionBatchCheck, askUserHandler, projectRules, providerOverride, compactificationProvider, maxIterations, resumed } = options;
 
   // Resolve model
   const { modelConfig, apiKey } = resolveModelConfig(definition, config, providerOverride);
@@ -122,6 +123,7 @@ export function buildAgentFromDefinition(options: BuildAgentOptions): Agent {
     resumed,
     permissionCheck,
     permissionBatchCheck,
+    askUserHandler,
     projectRules,
     contextWindow,
     responseBudget,

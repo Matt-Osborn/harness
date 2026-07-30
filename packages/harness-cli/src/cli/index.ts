@@ -8,6 +8,8 @@ import {
   buildAgentFromDefinition, runRunnable, PipelineExecutor,
 } from '@harness/core-agent';
 import { createCliPromptFn } from '../permissions/engine.js';
+import { renderForm } from '../prompts/render-form.js';
+import type { FormQuestion } from '../prompts/render-form.js';
 import { runPrintMode } from './print.js';
 import { runInteractive } from './interactive.js';
 
@@ -289,6 +291,7 @@ export async function run(): Promise<void> {
           provider, tools,
           permissionCheck: (tn, a) => permissions.check(tn, undefined, a),
           permissionBatchCheck: isInter ? (tn, al) => permissions.batchCheck(tn, al) : undefined,
+          askUserHandler: async (a) => { const r = await renderForm((a as any).prompt, (a as any).questions as FormQuestion[]); return JSON.stringify(r); },
           systemPrompt, projectRules, mode, contextManagement, contextWindow, responseBudget, compactificationProvider,
           maxIterations, resumed,
         });
@@ -300,6 +303,7 @@ export async function run(): Promise<void> {
           tools,
           permissionCheck: (tn, a) => permissions.check(tn, undefined, a),
           permissionBatchCheck: isInter ? (tn, al) => permissions.batchCheck(tn, al) : undefined,
+          askUserHandler: async (a) => { const r = await renderForm((a as any).prompt, (a as any).questions as FormQuestion[]); return JSON.stringify(r); },
           projectRules,
           providerOverride: model,
           compactificationProvider,
@@ -312,6 +316,7 @@ export async function run(): Promise<void> {
         tools,
         permissionCheck: (tn: string, args?: Record<string, unknown>) => permissions.check(tn, undefined, args),
         permissionBatchCheck: isInter ? (tn: string, argsList: Record<string, unknown>[]) => permissions.batchCheck(tn, argsList) : undefined,
+        askUserHandler: async (a) => { const r = await renderForm((a as any).prompt, (a as any).questions as FormQuestion[]); return JSON.stringify(r); },
         systemPrompt,
         projectRules,
         mode,
@@ -458,12 +463,14 @@ export async function run(): Promise<void> {
             provider, tools, systemPrompt, projectRules, mode,
             maxIterations: tuiMaxIterations, resumed: tuiResumed,
             contextManagement, contextWindow, responseBudget, compactificationProvider,
+            askUserHandler: async (a) => { const r = await renderForm((a as any).prompt, (a as any).questions as FormQuestion[]); return JSON.stringify(r); },
           });
         } else {
           agent = buildAgentFromDefinition({
             definition: runnable,
             config,
             tools,
+            askUserHandler: async (a) => { const r = await renderForm((a as any).prompt, (a as any).questions as FormQuestion[]); return JSON.stringify(r); },
             projectRules,
             providerOverride: model,
             compactificationProvider,
@@ -476,6 +483,7 @@ export async function run(): Promise<void> {
           provider, tools, systemPrompt, projectRules, mode,
           maxIterations: tuiMaxIterations, resumed: tuiResumed,
           contextManagement, contextWindow, responseBudget, compactificationProvider,
+          askUserHandler: async (a) => { const r = await renderForm((a as any).prompt, (a as any).questions as FormQuestion[]); return JSON.stringify(r); },
         });
       }
 

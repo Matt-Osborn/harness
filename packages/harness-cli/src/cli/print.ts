@@ -6,6 +6,8 @@ import {
   buildAgentFromDefinition, runRunnable, buildSystemPrompt,
 } from '@harness/core-agent';
 import { MarkdownRenderer } from './markdown.js';
+import { renderForm } from '../prompts/render-form.js';
+import type { FormQuestion } from '../prompts/render-form.js';
 
 export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, agentName?: string, logEnabled?: boolean): Promise<void> {
   const config = new ConfigManager();
@@ -78,6 +80,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
       agent = new Agent({
         provider, tools,
         permissionCheck: (toolName, args) => permissions.check(toolName, undefined, args),
+        askUserHandler: async (a) => { const r = await renderForm((a as any).prompt, (a as any).questions as FormQuestion[]); return JSON.stringify(r); },
         contextManagement, contextWindow, responseBudget, compactificationProvider,
       });
     } else {
@@ -91,6 +94,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
         config,
         tools,
         permissionCheck: (toolName, args) => permissions.check(toolName, undefined, args),
+        askUserHandler: async (a) => { const r = await renderForm((a as any).prompt, (a as any).questions as FormQuestion[]); return JSON.stringify(r); },
         projectRules,
         providerOverride: modelName,
         compactificationProvider,
@@ -102,6 +106,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
       provider,
       tools,
       permissionCheck: (toolName: string, args?: Record<string, unknown>) => permissions.check(toolName, undefined, args),
+      askUserHandler: async (a) => { const r = await renderForm((a as any).prompt, (a as any).questions as FormQuestion[]); return JSON.stringify(r); },
       contextManagement,
       contextWindow,
       responseBudget,

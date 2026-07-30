@@ -7,6 +7,7 @@ export type { AgentTool } from './tool.js';
 
 export type PermissionCheck = (toolName: string, args?: Record<string, unknown>) => Promise<boolean>;
 export type PermissionBatchCheck = (toolName: string, argsList: Record<string, unknown>[]) => Promise<boolean>;
+export type AskUserHandler = (args: Record<string, unknown>) => Promise<string>;
 
 export interface AgentOptions {
   provider: Provider;
@@ -16,6 +17,7 @@ export interface AgentOptions {
   resumed?: boolean;
   permissionCheck?: PermissionCheck;
   permissionBatchCheck?: PermissionBatchCheck;
+  askUserHandler?: AskUserHandler;
   contextWindow?: number;
   responseBudget?: number;
   contextManagement?: boolean;
@@ -32,6 +34,7 @@ export class Agent {
   private maxIterations: number;
   private permissionCheck?: PermissionCheck;
   private permissionBatchCheck?: PermissionBatchCheck;
+  private askUserHandler?: AskUserHandler;
   private contextWindow: number;
   private responseBudget: number;
   private contextManagement: boolean;
@@ -53,6 +56,7 @@ export class Agent {
     if (options.resumed) this.maxIterations *= 2;
     this.permissionCheck = options.permissionCheck;
     this.permissionBatchCheck = options.permissionBatchCheck;
+    this.askUserHandler = options.askUserHandler;
     this.contextWindow = options.contextWindow ?? this.provider.contextWindow ?? 32768;
     this.responseBudget = options.responseBudget ?? 4096;
     this.contextManagement = options.contextManagement ?? true;
@@ -458,6 +462,21 @@ export class Agent {
                 continue;
               }
 
+              if (tc.function.name === 'ask_user' && this.askUserHandler) {
+                const result = await this.askUserHandler(pc.args);
+                const toolMsg: Message = {
+                  role: 'tool',
+                  content: result,
+                  tool_call_id: tc.id,
+                  name: tc.function.name,
+                  timestamp: Date.now(),
+                };
+                fullMessages.push(toolMsg);
+                userHistory.push(toolMsg);
+                yield { type: 'tool_result', data: { name: tc.function.name, result }, timestamp: Date.now() };
+                continue;
+              }
+
               const result = await tool.execute(pc.args, { workingDir: process.cwd(), signal });
               const toolMsg: Message = {
                 role: 'tool',
@@ -527,6 +546,21 @@ export class Agent {
                   yield { type: 'tool_result', data: { name: tc.function.name, denied: true }, timestamp: Date.now() };
                   continue;
                 }
+              }
+
+              if (tc.function.name === 'ask_user' && this.askUserHandler) {
+              const result = await this.askUserHandler(args);
+                const toolMsg: Message = {
+                  role: 'tool',
+                  content: result,
+                  tool_call_id: tc.id,
+                  name: tc.function.name,
+                  timestamp: Date.now(),
+                };
+                fullMessages.push(toolMsg);
+                userHistory.push(toolMsg);
+                yield { type: 'tool_result', data: { name: tc.function.name, result }, timestamp: Date.now() };
+                continue;
               }
 
               const result = await tool.execute(args, { workingDir: process.cwd(), signal });

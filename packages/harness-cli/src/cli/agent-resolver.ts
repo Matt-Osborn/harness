@@ -1,7 +1,7 @@
 import { AgentRegistry, loadRulesStack, loadMemoryBank } from '@harness/shared';
 import type { ConfigManager, Runnable } from '@harness/shared';
 import { buildAgentFromDefinition } from '@harness/core-agent';
-import type { Agent, AgentTool, PermissionCheck, PermissionBatchCheck } from '@harness/core-agent';
+import type { Agent, AgentTool, PermissionCheck, PermissionBatchCheck, AskUserHandler } from '@harness/core-agent';
 import type { Provider } from '@harness/core-ai';
 
 export interface AgentResolverOptions {
@@ -11,6 +11,7 @@ export interface AgentResolverOptions {
   tools: AgentTool[];
   permissionCheck?: PermissionCheck;
   permissionBatchCheck?: PermissionBatchCheck;
+  askUserHandler?: AskUserHandler;
   compactificationProvider?: Provider;
   modelOverride?: string;
   maxIterations?: number;
@@ -25,7 +26,7 @@ export interface AgentResolverResult {
 }
 
 export function resolveAgentFromFlags(options: AgentResolverOptions): AgentResolverResult | null {
-  const { agentFlag, config, provider, tools, permissionCheck, permissionBatchCheck, compactificationProvider, modelOverride, maxIterations, resumed, warn } = options;
+  const { agentFlag, config, provider, tools, permissionCheck, permissionBatchCheck, askUserHandler, compactificationProvider, modelOverride, maxIterations, resumed, warn } = options;
 
   if (!agentFlag) return null;
 
@@ -52,6 +53,7 @@ export function resolveAgentFromFlags(options: AgentResolverOptions): AgentResol
     tools,
     permissionCheck,
     permissionBatchCheck,
+    askUserHandler,
     projectRules,
     providerOverride: modelOverride,
     compactificationProvider,

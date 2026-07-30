@@ -1,6 +1,6 @@
 export { Agent } from './agent.js';
 export type { AgentOptions } from './agent.js';
-export type { PermissionCheck, PermissionBatchCheck } from './agent.js';
+export type { PermissionCheck, PermissionBatchCheck, AskUserHandler } from './agent.js';
 export type { AgentTool, ToolContext } from './tool.js';
 export { DEFAULT_SYSTEM_PROMPT, buildSystemPrompt } from './prompt.js';
 export { PermissionEngine, READ_ONLY_TOOLS } from './permissions.js';
@@ -19,6 +19,7 @@ export { WebSearchTool, resolveAutoProvider, isProviderAvailable } from './tools
 export { SkillTool } from './tools/skill.js';
 export { GlobTool } from './tools/glob.js';
 export { GrepTool } from './tools/grep.js';
+export { AskUserTool } from './tools/ask-user.js';
 
 export { createSearchProvider } from './tools/search/index.js';
 export type { SearchProvider } from './tools/search/index.js';
@@ -33,6 +34,7 @@ import { WebSearchTool } from './tools/web-search.js';
 import { SkillTool } from './tools/skill.js';
 import { GlobTool } from './tools/glob.js';
 import { GrepTool } from './tools/grep.js';
+import { AskUserTool } from './tools/ask-user.js';
 import type { AgentTool } from './tool.js';
 
 export function createDefaultTools(opts?: {
@@ -50,6 +52,7 @@ export function createDefaultTools(opts?: {
     new GrepTool(),
     new BashTool(),
     new WebFetchTool(),
+    new AskUserTool(),
     searchTool,
   ];
   if (opts?.skillRegistry) {

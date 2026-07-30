@@ -17,12 +17,6 @@ semantically meaningful. Strategies:
 If configured, files are auto-formatted after writing (e.g. ruff format for Python,
 prettier for JS/TS). The formatter result is reported in the tool response.
 
-When a file needs multiple changes (typos, renames, refactoring, etc.),
-do NOT make one edit per tool call. Plan all changes first, then either
-batch multiple edit calls in one iteration, or rewrite the entire file
-in a single write operation. If you are making more than ~3 changes to
-a file, prefer the full rewrite.
-
 ## Using Search Tools
 Use web_search to find documentation, packages, tutorials, and any online information.
 Use web_fetch to read specific pages by URL. For normal web pages (articles, docs),
@@ -64,7 +58,13 @@ If a plan, request, or file path is ambiguous, do NOT guess — ask the user for
 clarification. A brief question saves minutes of wasted work going in the wrong
 direction. For example, instead of searching for a project by name and finding a
 similar but wrong one, ask "Is this the project you mean? What is the path or
-directory name?" It is always better to ask than to act on an assumption.`;
+directory name?" It is always better to ask than to act on an assumption.
+
+## Asking Questions
+If a task is ambiguous or requires user input, use the \`ask_user\` tool to
+present questions. You can batch multiple questions (choice, text, or
+confirm) in a single call. The harness will pause and collect answers
+before continuing.`;
 
 export function buildSystemPrompt(projectRules?: string | null, mode?: 'plan' | 'build'): string {
   const effectiveMode = mode || 'plan';
