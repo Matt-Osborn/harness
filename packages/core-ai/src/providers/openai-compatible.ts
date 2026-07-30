@@ -205,7 +205,7 @@ export class OpenAICompatibleProvider implements Provider {
       stream_options: { include_usage: true },
     };
     if (tools && tools.length > 0) body.tools = tools;
-    body.max_tokens = this.maxTokens ?? 4096;
+    body.max_tokens = this.maxTokens ?? 8192;
     if (this.temperature !== undefined) body.temperature = this.temperature;
     if (this.topP !== undefined) body.top_p = this.topP;
     if (this.seed !== undefined) body.seed = this.seed;

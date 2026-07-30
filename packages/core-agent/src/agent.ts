@@ -285,6 +285,7 @@ export class Agent {
     let iterations = 0;
     let consecutiveLengthIterations = 0;
     let consecutiveToolIterations = 0;
+    let emptyResponseCount = 0;
 
     while (this.maxIterations <= 0 || iterations < this.maxIterations) {
       if (signal?.aborted) return;
@@ -338,19 +339,18 @@ export class Agent {
       if (finalFinishReason === 'length') {
         consecutiveLengthIterations++;
         consecutiveToolIterations = 0;
-        if (consecutiveLengthIterations >= 3) {
-          if (accumulatedText) {
-            fullMessages.push({ role: 'assistant', content: accumulatedText, timestamp: Date.now() });
-            userHistory.push({ role: 'assistant', content: accumulatedText, timestamp: Date.now() });
-          }
-          yield { type: 'done', data: userHistory, timestamp: Date.now() };
-          return;
-        }
         if (accumulatedText) {
           fullMessages.push({ role: 'assistant', content: accumulatedText, timestamp: Date.now() });
           userHistory.push({ role: 'assistant', content: accumulatedText, timestamp: Date.now() });
+          if (consecutiveLengthIterations >= 3) {
+            yield { type: 'done', data: userHistory, timestamp: Date.now() };
+            return;
+          }
+          continue;
         }
-        continue;
+        yield { type: 'text', data: '\n*[Response truncated — model used all available tokens. Consider raising max_tokens in your provider config.]*\n', timestamp: Date.now() };
+        yield { type: 'done', data: userHistory, timestamp: Date.now() };
+        return;
       }
 
       if (accumulatedText && (toolCallAccumulators.size > 0 || finalFinishReason === 'tool_calls')) {
@@ -599,9 +599,20 @@ export class Agent {
         if (accumulatedText) {
           fullMessages.push({ role: 'assistant', content: accumulatedText, timestamp: Date.now() });
           userHistory.push({ role: 'assistant', content: accumulatedText, timestamp: Date.now() });
+          yield { type: 'done', data: userHistory, timestamp: Date.now() };
+          return;
         }
-        yield { type: 'done', data: userHistory, timestamp: Date.now() };
-        return;
+        emptyResponseCount++;
+        if (emptyResponseCount >= 2) {
+          yield { type: 'done', data: userHistory, timestamp: Date.now() };
+          return;
+        }
+        fullMessages.push({
+          role: 'user',
+          content: 'Your response was empty. Please provide your answer based on the information you have gathered so far.',
+          timestamp: Date.now(),
+        });
+        continue;
       }
     }
 
