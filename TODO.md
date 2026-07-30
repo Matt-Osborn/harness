@@ -41,10 +41,10 @@
   should abort the current request and return to the prompt instead of
   exiting. See `plans/cancel-agent-request.md`.~~ ✅
 
-- **`harness key` CLI command** — currently no way to set API keys without
+- ~~**`harness key` CLI command** — currently no way to set API keys without
   entering the interactive app. Add `harness key <ENV_VAR> [value]` with
   secure prompt (hidden input) and optional direct arg. Persists to
-  `~/.harness/.env` on confirmation. See `plans/harness-key-command.md`.
+  `~/.harness/.env` on confirmation. See `plans/harness-key-command.md`.~~ ✅
 
 - **Mid-session agent swap** — `/agent <name>` currently applies mode override only (tools/provider/system prompt unchanged). Should fully swap agent personality: tools, system prompt, mode, temperature. **Recommended approach (Option A):** Add `applyDefinition(def: AgentDefinition)` to `Agent` class that swaps tools + system prompt + mode + temperature in-place, leaving provider unchanged. No instance recreation, no history transfer issues.
 

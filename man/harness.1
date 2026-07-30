@@ -195,6 +195,12 @@ Enable a skill by adding a hint to AGENTS.md.
 Disable a skill by removing its hint from AGENTS.md.
 .RE
 .TP
+.B key
+Set an API key for the current session and optionally persist it to
+.BR ~/.harness/.env .
+With one argument, prompts for the value; with two, sets it directly.
+Common variables: OPENROUTER_API_KEY, TAVILY_API_KEY, OPENAI_API_KEY.
+.TP
 .B tui
 Launch the blessed-contrib Terminal UI for multi-session management.
 Applies the same flag overrides as interactive mode

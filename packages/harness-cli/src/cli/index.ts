@@ -646,6 +646,57 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
       }
       break;
     }
+
+    case 'key': {
+      const envVar = commands[1];
+      const envValue = commands[2];
+      const keyTheme = new CliTheme();
+
+      if (!envVar) {
+        console.log(`Usage: ${keyTheme.warning('harness key <ENV_VAR> [value]')}`);
+        console.log('Common: OPENROUTER_API_KEY, TAVILY_API_KEY, OPENAI_API_KEY, DEEPSEEK_API_KEY');
+        console.log('\nIf no value is given, you will be prompted to enter one.');
+        break;
+      }
+
+      if (envValue) {
+        process.env[envVar] = envValue;
+      } else {
+        const { createInterface } = await import('node:readline/promises');
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        try {
+          const value = await rl.question(`Enter value for ${envVar}: `);
+          process.env[envVar] = value;
+        } finally {
+          rl.close();
+        }
+      }
+
+      const { existsSync, readFileSync, appendFileSync, mkdirSync } = await import('node:fs');
+      const { join } = await import('node:path');
+      const os = await import('node:os');
+      const envDir = join(os.homedir(), '.harness');
+      const envFile = join(envDir, '.env');
+
+      if (existsSync(envFile) && readFileSync(envFile, 'utf-8').includes(`${envVar}=`)) {
+        console.log(keyTheme.warning(`⚠ ${envVar} already in ~/.harness/.env — set for this session only`));
+      } else {
+        const { createInterface } = await import('node:readline/promises');
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        try {
+          const answer = await rl.question('Save to ~/.harness/.env? [Y/n] ');
+          if (answer.toLowerCase() !== 'n') {
+            if (!existsSync(envDir)) mkdirSync(envDir, { recursive: true });
+            appendFileSync(envFile, `\n${envVar}=${process.env[envVar]}`);
+            console.log(keyTheme.success(`Saved ${envVar} to ~/.harness/.env`));
+          }
+        } finally {
+          rl.close();
+        }
+      }
+      break;
+    }
+
     default:
       console.error(tGlobal.error(`Unknown command: ${args[0]}`));
       showHelp();
