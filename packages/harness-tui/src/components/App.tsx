@@ -175,9 +175,9 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
     }
   });
 
-  useInput((input) => {
+  useInput((input, key) => {
     if (pendingForm || pendingPermission) return;
-    if (input === '\t') {
+    if (input === '\t' || key.tab) {
       const newMode = currentMode === 'plan' ? 'build' : 'plan';
       setCurrentMode(newMode);
       agent.setMode(newMode);
@@ -296,6 +296,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
       setCurrentMode('plan');
       agent.setMode('plan');
       permEngineRef.current?.setMode('plan');
+      setInputValue('');
       setNotification('Switched to plan mode');
       return;
     }
@@ -304,6 +305,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
       setCurrentMode('build');
       agent.setMode('build');
       permEngineRef.current?.setMode('build');
+      setInputValue('');
       setNotification('Switched to build mode');
       return;
     }
