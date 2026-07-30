@@ -8,6 +8,7 @@ const GLOBAL_PATHS = [
   join(homedir(), '.clinerules'),
   join(homedir(), '.config', 'opencode', 'AGENTS.md'),
   join(homedir(), '.claude', 'CLAUDE.md'),
+  join(homedir(), '.harness', 'AGENTS.md'),
 ];
 
 function findFirst(names: string[], dir: string): string | null {

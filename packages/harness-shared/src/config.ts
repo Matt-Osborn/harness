@@ -1,4 +1,4 @@
-import { readFileSync, existsSync, mkdirSync } from 'node:fs';
+import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parse } from 'smol-toml';
@@ -257,6 +257,10 @@ export function ensureConfigDir(): string {
   const dir = join(homedir(), '.harness');
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
+  }
+  const rulesPath = join(dir, 'AGENTS.md');
+  if (!existsSync(rulesPath)) {
+    writeFileSync(rulesPath, '# Harness Global Rules\n\n# Add project-wide instructions here. These apply to all projects.\n# Override per-project with AGENTS.md in your project root.\n', 'utf-8');
   }
   return dir;
 }
