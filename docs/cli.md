@@ -69,7 +69,7 @@ harness [OPTIONS] [COMMAND]
 | Flag | Description |
 |------|-------------|
 | `-p <text>`, `--prompt <text>` | Run a single prompt in print mode. |
-| `-s <provider>`, `--search <provider>` | Set search provider (`tavily`, `duckduckgo`, `openrouter`). Without a value, lists providers. |
+| `-s <provider>`, `--search <provider>` | Set search provider (`tavily`, `duckduckgo`, `exa`). Without a value, lists providers. |
 | `-h`, `--help` | Show help message. |
 
 ## Commands
@@ -77,6 +77,13 @@ harness [OPTIONS] [COMMAND]
 | Command | Description |
 |---------|-------------|
 | `model` / `models` | List configured models with key status, kind, and base URL. |
+| `model add` | Interactively add a new model (choose a provider or custom, enter model ID and alias, optionally set as default). |
+| `providers` | List known model providers with API key status and key-setup URLs. |
+| `provider add [name]` | Set up a provider: prompts for an API key and optionally creates a default model entry. Without a name, shows an interactive picker. |
+| `key <ENV_VAR>` | Set an API key for this session and optionally persist it to `~/.harness/.env`. |
+| `default` | View current default model and search provider. |
+| `default model <name>` | Set the default model (must match a configured model key). |
+| `default search <provider>` | Set the default search provider (`tavily`, `duckduckgo`, `exa`). |
 | `sessions` | List saved sessions. |
 | `config` | Show effective configuration: file paths, default model, permission mode, search provider. |
 | `init` | Create default `~/.harness/config.toml`, `.env` template, and optionally `AGENTS.md`. |
@@ -126,7 +133,7 @@ Files are loaded in order (later overrides earlier):
 
 | Variable | Provider |
 |----------|----------|
-| `OPENROUTER_API_KEY` | OpenRouter (also used for OpenRouter search) |
+| `OPENROUTER_API_KEY` | OpenRouter |
 | `OPENAI_API_KEY` | OpenAI |
 | `DEEPSEEK_API_KEY` | DeepSeek |
 | `XAI_API_KEY` | xAI |
@@ -141,13 +148,12 @@ Any model can use a custom env var via `api_key_env` in its config section.
 |----------|----------|----------|
 | `TAVILY_API_KEY` | Tavily | Yes |
 | *(none)* | DuckDuckGo | No (free) |
-| `OPENROUTER_API_KEY` | OpenRouter | Yes (reuses model key) |
+| `EXA_API_KEY` | Exa | Yes |
 
 ### Other
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OPENROUTER_SEARCH_MODEL` | `deepseek/deepseek-v4-flash` | Model for OpenRouter-powered search. |
 | `SHELL` | `/bin/sh` | Shell for the bash tool (non-Windows). |
 | `COMSPEC` | `cmd.exe` | Shell for the bash tool (Windows). |
 

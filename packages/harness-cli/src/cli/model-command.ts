@@ -11,7 +11,11 @@ export async function runModelAdd(knownProviders: Record<string, ProviderKeyInfo
 
   const pickProvider = await renderForm('Add a model', [
     { id: 'provider', type: 'choice', label: 'Provider', options: providerOptions },
-  ]);
+  ], { cancelable: true });
+  if (pickProvider === null) {
+    console.log(t.info('Cancelled.'));
+    return;
+  }
 
   let baseUrl = '';
   let apiKeyEnv = '';
@@ -22,7 +26,11 @@ export async function runModelAdd(knownProviders: Record<string, ProviderKeyInfo
       { id: 'displayName', type: 'text', label: 'Display name', placeholder: 'My Model' },
       { id: 'baseUrl', type: 'text', label: 'Base URL', placeholder: 'https://api.example.com/v1' },
       { id: 'apiKeyEnv', type: 'text', label: 'API key env var', placeholder: 'MY_API_KEY' },
-    ]);
+    ], { cancelable: true });
+    if (custom === null) {
+      console.log(t.info('Cancelled.'));
+      return;
+    }
     displayName = String(custom.displayName);
     baseUrl = String(custom.baseUrl);
     apiKeyEnv = String(custom.apiKeyEnv).toUpperCase();
@@ -41,14 +49,22 @@ export async function runModelAdd(knownProviders: Record<string, ProviderKeyInfo
   const modelDetails = await renderForm('Model details', [
     { id: 'modelId', type: 'text', label: 'Model ID', placeholder: 'e.g. gpt-4o, deepseek/deepseek-v4-flash' },
     { id: 'alias', type: 'text', label: 'Alias (config key)', placeholder: displayName.toLowerCase().replace(/\s+/g, '-') },
-  ]);
+  ], { cancelable: true });
+  if (modelDetails === null) {
+    console.log(t.info('Cancelled.'));
+    return;
+  }
 
   const alias = String(modelDetails.alias || displayName.toLowerCase().replace(/\s+/g, '-'));
   const modelId = String(modelDetails.modelId);
 
   const confirmDefault = await renderForm('Default?', [
     { id: 'setDefault', type: 'confirm', label: 'Set as default model?' },
-  ]);
+  ], { cancelable: true });
+  if (confirmDefault === null) {
+    console.log(t.info('Cancelled.'));
+    return;
+  }
 
   addModelToConfig(alias, {
     model: modelId,

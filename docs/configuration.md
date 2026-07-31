@@ -170,9 +170,9 @@ These are always treated as read-only regardless of the permission mode:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `provider` | string | `"auto-detect"` | Search provider. One of: `"tavily"`, `"duckduckgo"`, `"openrouter"`. |
+| `provider` | string | `"auto-detect"` | Search provider. One of: `"tavily"`, `"duckduckgo"`, `"exa"`. |
 
-Auto-detection priority: `TAVILY_API_KEY` → `OPENROUTER_API_KEY` → DuckDuckGo (free).
+Auto-detection priority: `EXA_API_KEY` → `TAVILY_API_KEY` → DuckDuckGo (free).
 
 ```toml
 [search]
@@ -185,7 +185,7 @@ provider = "tavily"
 |----------|-----------------|---------|-------|
 | **Tavily** | Yes | `TAVILY_API_KEY` | High-quality web search API |
 | **DuckDuckGo** | No | *(none)* | Free, no key needed, no rate limit for typical use |
-| **OpenRouter** | Yes | `OPENROUTER_API_KEY` | Uses the same key as your model; can be configured with `OPENROUTER_SEARCH_MODEL` env var (default: `deepseek/deepseek-v4-flash`) |
+| **Exa** | Yes | `EXA_API_KEY` | Fast neural web search; key at https://dashboard.exa.ai/api-keys |
 
 ---
 

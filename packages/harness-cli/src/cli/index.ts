@@ -779,13 +779,21 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
           options.push('Custom');
           const answers = await renderForm('Select a provider', [
             { id: 'provider', type: 'choice', label: 'Provider', options },
-          ]);
+          ], { cancelable: true });
+          if (answers === null) {
+            console.log(provTheme.info('Cancelled.'));
+            break;
+          }
           if (answers.provider === 'Custom') {
             const custom = await renderForm('Custom provider', [
               { id: 'name', type: 'text', label: 'Provider name' },
               { id: 'baseUrl', type: 'text', label: 'Base URL', placeholder: 'https://api.example.com/v1' },
               { id: 'envVar', type: 'text', label: 'API key env var name', placeholder: 'MY_API_KEY' },
-            ]);
+            ], { cancelable: true });
+            if (custom === null) {
+              console.log(provTheme.info('Cancelled.'));
+              break;
+            }
             console.log(provTheme.success(`Custom provider "${custom.name}" noted.`));
             console.log(`Set ${custom.envVar} with ${provTheme.warning('harness key ' + custom.envVar)}`);
             break;
@@ -836,13 +844,21 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
 
           const createModel = await renderForm('Create default model?', [
             { id: 'create', type: 'confirm', label: `Create a model entry for ${providerInfo.name}?` },
-          ]);
+          ], { cancelable: true });
+          if (createModel === null) {
+            console.log(provTheme.info('Cancelled.'));
+            break;
+          }
           if (createModel.create) {
             const modelAnswers = await renderForm('Model details', [
               { id: 'modelId', type: 'text', label: 'Model ID', placeholder: 'e.g. gpt-4o, deepseek/deepseek-v4-flash' },
               { id: 'alias', type: 'text', label: 'Alias', placeholder: providerInfo.name.toLowerCase() },
               { id: 'setDefault', type: 'confirm', label: 'Set as default?' },
-            ]);
+            ], { cancelable: true });
+            if (modelAnswers === null) {
+              console.log(provTheme.info('Cancelled.'));
+              break;
+            }
             const alias = String(modelAnswers.alias || providerInfo.name.toLowerCase());
             const domain = Object.keys(KNOWN_MODEL_PROVIDERS).find(k => KNOWN_MODEL_PROVIDERS[k] === providerInfo);
             addModelToConfig(alias, {

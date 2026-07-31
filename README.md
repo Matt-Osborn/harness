@@ -93,6 +93,29 @@ Any OpenAI-compatible API works — set `base_url` to:
 - `https://api.openai.com/v1` — OpenAI
 - `https://api.x.ai/v1` — xAI
 
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `harness` | Start interactive REPL (default mode) |
+| `harness -p "<text>"` | Run a single prompt in print mode |
+| `harness tui` | Launch the terminal UI |
+| `harness model` | List configured models |
+| `harness model add` | Interactively add a model |
+| `harness providers` | List known model providers |
+| `harness provider add [name]` | Set up a provider (API key + optional model) |
+| `harness key <ENV_VAR>` | Set an API key (persists to `~/.harness/.env`) |
+| `harness default` | View default model / search provider |
+| `harness default model <name>` | Set the default model |
+| `harness default search <provider>` | Set the default search provider |
+| `harness config` | Show effective configuration |
+| `harness init` | Create default config |
+| `harness sessions` | List saved sessions |
+| `harness skill list` | List available skills |
+
+Run `harness --help` (or `harness --help v` for verbose) for all flags
+and options.
+
 ## Environment & API Keys
 
 Set API keys with `/key VAR_NAME` in an interactive session, or export them

@@ -8,21 +8,25 @@ export interface FormQuestion {
   placeholder?: string;
 }
 
-function renderChoice(q: FormQuestion, rl: readline.Interface): Promise<string> {
+function renderChoice(q: FormQuestion, rl: readline.Interface, cancelable: boolean): Promise<string | null> {
   return new Promise(resolve => {
+    const options = q.options ? [...q.options] : [];
+    if (cancelable) options.push('Cancel');
     process.stdout.write(`\n${q.label}\n`);
-    if (q.options) {
-      for (let i = 0; i < q.options.length; i++) {
-        process.stdout.write(`  ${i + 1}) ${q.options[i]}\n`);
-      }
+    for (let i = 0; i < options.length; i++) {
+      process.stdout.write(`  ${i + 1}) ${options[i]}\n`);
     }
     const ask = () => {
       rl.question('Enter number: ', (answer: string) => {
         const num = parseInt(answer.trim(), 10);
-        if (q.options && num >= 1 && num <= q.options.length) {
-          resolve(q.options[num - 1]);
+        if (num >= 1 && num <= options.length) {
+          if (cancelable && num === options.length) {
+            resolve(null);
+            return;
+          }
+          resolve(options[num - 1]);
         } else {
-          process.stdout.write(`Invalid choice. Enter 1-${q.options?.length || 0}.\n`);
+          process.stdout.write(`Invalid choice. Enter 1-${options.length}.\n`);
           ask();
         }
       });
@@ -31,30 +35,45 @@ function renderChoice(q: FormQuestion, rl: readline.Interface): Promise<string> 
   });
 }
 
-function renderText(q: FormQuestion, rl: readline.Interface): Promise<string> {
+function renderText(q: FormQuestion, rl: readline.Interface, cancelable: boolean): Promise<string | null> {
   return new Promise(resolve => {
     const prompt = q.placeholder
       ? `${q.label} (${q.placeholder}): `
       : `${q.label}: `;
     rl.question(prompt, (answer: string) => {
-      resolve(answer.trim());
+      const a = answer.trim();
+      if (cancelable && a.toLowerCase() === 'cancel') {
+        resolve(null);
+        return;
+      }
+      resolve(a);
     });
   });
 }
 
-function renderConfirm(q: FormQuestion, rl: readline.Interface): Promise<boolean> {
+function renderConfirm(q: FormQuestion, rl: readline.Interface, cancelable: boolean): Promise<boolean | null> {
   return new Promise(resolve => {
     rl.question(`${q.label} [y/N] `, (answer: string) => {
       const a = answer.trim().toLowerCase();
+      if (cancelable && a === 'cancel') {
+        resolve(null);
+        return;
+      }
       resolve(a === 'y' || a === 'yes');
     });
   });
 }
 
+export interface RenderFormOptions {
+  cancelable?: boolean;
+}
+
 export async function renderForm(
   prompt: string,
-  questions: FormQuestion[]
-): Promise<Record<string, string | boolean>> {
+  questions: FormQuestion[],
+  opts?: RenderFormOptions
+): Promise<Record<string, string | boolean> | null> {
+  const cancelable = opts?.cancelable ?? false;
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -66,17 +85,20 @@ export async function renderForm(
     process.stdout.write(`\n${prompt}\n`);
 
     for (const q of questions) {
+      let result: string | boolean | null;
       switch (q.type) {
         case 'choice':
-          answers[q.id] = await renderChoice(q, rl);
+          result = await renderChoice(q, rl, cancelable);
           break;
         case 'text':
-          answers[q.id] = await renderText(q, rl);
+          result = await renderText(q, rl, cancelable);
           break;
         case 'confirm':
-          answers[q.id] = await renderConfirm(q, rl);
+          result = await renderConfirm(q, rl, cancelable);
           break;
       }
+      if (result === null) return null;
+      answers[q.id] = result;
     }
   } finally {
     rl.close();
