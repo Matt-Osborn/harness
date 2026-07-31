@@ -1,4 +1,4 @@
-import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadRulesStack, loadMemoryBank, loadEnvFiles, CliTheme, AgentRegistry, Logger, KNOWN_MODEL_PROVIDERS } from '@harness/shared';
+import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadRulesStack, loadMemoryBank, loadEnvFiles, CliTheme, AgentRegistry, Logger, KNOWN_MODEL_PROVIDERS, addModelToConfig, setDefaultModelInConfig, setSearchProviderInConfig } from '@harness/shared';
 import type { SearchProviderType, ThemeConfig, PermissionConfig, Runnable, AgentEvent } from '@harness/shared';
 import { createProvider, type Provider } from '@harness/core-ai';
 import {
@@ -78,6 +78,7 @@ export async function run(): Promise<void> {
     console.log(t.bold('Search providers:'));
     console.log(`  ${t.green('tavily')}       (requires TAVILY_API_KEY)`);
     console.log(`  ${t.green('duckduckgo')}   (free, no key needed)`);
+    console.log(`  ${t.green('exa')}          (requires EXA_API_KEY)`);
 
     console.log(`\nUsage: ${t.warning('harness -s <provider>')} or ${t.warning('harness --search <provider>')}`);
     return;
@@ -409,20 +410,6 @@ export async function run(): Promise<void> {
         break;
       }
 
-      const { homedir } = await import('node:os');
-      const { join } = await import('node:path');
-      const { existsSync, readFileSync, writeFileSync, mkdirSync } = await import('node:fs');
-      const { parse, stringify } = await import('smol-toml');
-      const configPath = join(homedir(), '.harness', 'config.toml');
-      let raw: Record<string, unknown> = {};
-      if (existsSync(configPath)) {
-        raw = parse(readFileSync(configPath, 'utf-8')) as Record<string, unknown>;
-      }
-      const write = (): void => {
-        if (!existsSync(join(homedir(), '.harness'))) mkdirSync(join(homedir(), '.harness'), { recursive: true });
-        writeFileSync(configPath, stringify(raw), 'utf-8');
-      };
-
       switch (key) {
         case 'model': {
           if (!config.models[value]) {
@@ -434,22 +421,18 @@ export async function run(): Promise<void> {
             console.log(`Add a model with: ${tDefault.warning('harness model add')}`);
             break;
           }
-          const models = (raw.models as Record<string, unknown>) || {};
-          models.default = value;
-          raw.models = models;
-          write();
+          setDefaultModelInConfig(value);
           console.log(tDefault.success(`Default model set to "${value}".`));
           break;
         }
         case 'search': {
-          const valid = ['tavily', 'duckduckgo', 'exa'];
-          if (!valid.includes(value)) {
+          const valid: SearchProviderType[] = ['tavily', 'duckduckgo', 'exa'];
+          if (!valid.includes(value as SearchProviderType)) {
             console.log(tDefault.error(`Invalid search provider "${value}".`));
             console.log(`Valid: ${valid.join(', ')}`);
             break;
           }
-          raw.search = { provider: value };
-          write();
+          setSearchProviderInConfig(value as SearchProviderType);
           console.log(tDefault.success(`Default search provider set to "${value}".`));
           break;
         }
@@ -860,17 +843,16 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
               { id: 'alias', type: 'text', label: 'Alias', placeholder: providerInfo.name.toLowerCase() },
               { id: 'setDefault', type: 'confirm', label: 'Set as default?' },
             ]);
-            const cm = new ConfigManager();
-            cm.addModel(String(modelAnswers.alias || providerInfo.name.toLowerCase()), {
+            const alias = String(modelAnswers.alias || providerInfo.name.toLowerCase());
+            const domain = Object.keys(KNOWN_MODEL_PROVIDERS).find(k => KNOWN_MODEL_PROVIDERS[k] === providerInfo);
+            addModelToConfig(alias, {
               model: String(modelAnswers.modelId),
-              base_url: Object.keys(KNOWN_MODEL_PROVIDERS).find(k => KNOWN_MODEL_PROVIDERS[k] === providerInfo) || undefined,
+              base_url: domain ? `https://${domain}/v1` : undefined,
               api_key_env: providerInfo.envVar,
               name: `${providerInfo.name} — ${modelAnswers.modelId}`,
               kind: 'openai-compatible',
-            });
-            if (modelAnswers.setDefault) cm.setDefaultModel(String(modelAnswers.alias || providerInfo.name.toLowerCase()));
-            cm.save();
-            console.log(provTheme.success(`Model "${modelAnswers.alias}" added to config.`));
+            }, { setDefault: !!modelAnswers.setDefault });
+            console.log(provTheme.success(`Model "${alias}" added to config.`));
           }
         }
         break;

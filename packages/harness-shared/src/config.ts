@@ -1,7 +1,7 @@
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { parse, stringify } from 'smol-toml';
+import { parse } from 'smol-toml';
 import type { CLIConfig, Config, ContextConfig, DisplayConfig, FormatConfig, ModelConfig, MCPServerConfig, PermissionConfig, PermissionMode, SearchConfig, SearchProviderType, ThemeConfig } from './types.js';
 import { validateModelApiKey, validateSearchProviderApiKey } from './validation.js';
 import type { ValidationResult } from './validation.js';
@@ -245,32 +245,6 @@ export class ConfigManager {
     const config = this.config.models[name];
     if (!config) return { valid: false, message: `Model "${name}" not found in config.` };
     return validateModelApiKey(config);
-  }
-
-  addModel(name: string, config: ModelConfig): void {
-    this.config.models[name] = config;
-  }
-
-  setDefaultModel(name: string): void {
-    this.config.default_model = name;
-  }
-
-  setSearchProvider(provider: SearchProviderType): void {
-    if (!this.config.search) this.config.search = {};
-    this.config.search.provider = provider;
-  }
-
-  removeModel(name: string): void {
-    delete this.config.models[name];
-  }
-
-  save(): void {
-    const target = this.configFiles[0] || join(homedir(), '.harness', 'config.toml');
-    const dir = join(target, '..');
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-
-    const raw = stringify(this.config as unknown as Record<string, unknown>) as string;
-    writeFileSync(target, raw, 'utf-8');
   }
 
   validateSearchProvider(provider?: SearchProviderType): ValidationResult {

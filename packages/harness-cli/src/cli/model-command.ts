@@ -1,4 +1,4 @@
-import { ConfigManager, CliTheme, KNOWN_MODEL_PROVIDERS } from '@harness/shared';
+import { CliTheme, addModelToConfig } from '@harness/shared';
 import type { ProviderKeyInfo } from '@harness/shared';
 import { renderForm } from '../prompts/render-form.js';
 import type { FormQuestion } from '../prompts/render-form.js';
@@ -50,16 +50,13 @@ export async function runModelAdd(knownProviders: Record<string, ProviderKeyInfo
     { id: 'setDefault', type: 'confirm', label: 'Set as default model?' },
   ]);
 
-  const cm = new ConfigManager();
-  cm.addModel(alias, {
+  addModelToConfig(alias, {
     model: modelId,
     base_url: baseUrl || undefined,
     api_key_env: apiKeyEnv || undefined,
     name: `${displayName} — ${modelId}`,
     kind: 'openai-compatible',
-  });
-  if (confirmDefault.setDefault) cm.setDefaultModel(alias);
-  cm.save();
+  }, { setDefault: !!confirmDefault.setDefault });
 
   console.log(t.success(`\nModel "${alias}" added.`));
   if (confirmDefault.setDefault) console.log(t.success(`  → Set as default`));

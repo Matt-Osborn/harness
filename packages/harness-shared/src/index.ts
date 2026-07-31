@@ -3,6 +3,13 @@ export {
   ensureConfigDir,
 } from './config.js';
 
+export {
+  addModelToConfig,
+  setDefaultModelInConfig,
+  setSearchProviderInConfig,
+} from './config-write.js';
+export type { AddModelOptions } from './config-write.js';
+
 export { loadEnvFiles } from './env.js';
 
 export {
