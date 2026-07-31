@@ -1,4 +1,4 @@
-import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadRulesStack, loadMemoryBank, loadEnvFiles, CliTheme, AgentRegistry, Logger } from '@harness/shared';
+import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadRulesStack, loadMemoryBank, loadEnvFiles, CliTheme, AgentRegistry, Logger, KNOWN_MODEL_PROVIDERS } from '@harness/shared';
 import type { SearchProviderType, ThemeConfig, PermissionConfig, Runnable, AgentEvent } from '@harness/shared';
 import { createProvider, type Provider } from '@harness/core-ai';
 import {
@@ -346,6 +346,11 @@ export async function run(): Promise<void> {
   switch (commands[0]) {
     case 'model':
     case 'models': {
+      if (commands[1] === 'add') {
+        const { runModelAdd } = await import('./model-command.js');
+        await runModelAdd(KNOWN_MODEL_PROVIDERS);
+        break;
+      }
       const config = new ConfigManager();
       const tModels = new CliTheme({ ...config.themeConfig, ...themeOverride });
       const models = config.allModels;
@@ -694,6 +699,119 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
           rl.close();
         }
       }
+      break;
+    }
+
+    case 'providers':
+    case 'provider': {
+      const provTheme = new CliTheme();
+
+      if (commands[1] === 'add') {
+        const providerName = commands[2]?.toLowerCase();
+        let providerInfo: typeof KNOWN_MODEL_PROVIDERS[string] | undefined;
+
+        if (providerName) {
+          providerInfo = Object.values(KNOWN_MODEL_PROVIDERS).find(
+            i => i.name.toLowerCase() === providerName
+          );
+          if (!providerInfo) {
+            console.log(provTheme.error(`Unknown provider: ${providerName}`));
+            console.log('Known: ' + Object.values(KNOWN_MODEL_PROVIDERS).map(i => i.name).join(', '));
+            break;
+          }
+        } else {
+          const options = Object.values(KNOWN_MODEL_PROVIDERS).map(i => i.name);
+          options.push('Custom');
+          const answers = await renderForm('Select a provider', [
+            { id: 'provider', type: 'choice', label: 'Provider', options },
+          ]);
+          if (answers.provider === 'Custom') {
+            const custom = await renderForm('Custom provider', [
+              { id: 'name', type: 'text', label: 'Provider name' },
+              { id: 'baseUrl', type: 'text', label: 'Base URL', placeholder: 'https://api.example.com/v1' },
+              { id: 'envVar', type: 'text', label: 'API key env var name', placeholder: 'MY_API_KEY' },
+            ]);
+            console.log(provTheme.success(`Custom provider "${custom.name}" noted.`));
+            console.log(`Set ${custom.envVar} with ${provTheme.warning('harness key ' + custom.envVar)}`);
+            break;
+          }
+          providerInfo = Object.values(KNOWN_MODEL_PROVIDERS).find(i => i.name === answers.provider);
+        }
+
+        if (providerInfo) {
+          const keySet = !!process.env[providerInfo.envVar];
+          console.log(`\n${provTheme.bold(providerInfo.name)}`);
+          console.log(`  Env var: ${provTheme.warning(providerInfo.envVar)}`);
+          console.log(`  ${providerInfo.instructions}\n`);
+
+          if (!keySet) {
+            const { createInterface } = await import('node:readline/promises');
+            const rl = createInterface({ input: process.stdin, output: process.stdout });
+            let keyValue = '';
+            try {
+              keyValue = await rl.question(`Enter your ${providerInfo.name} API key: `);
+            } finally {
+              rl.close();
+            }
+            if (keyValue) {
+              process.env[providerInfo.envVar] = keyValue;
+              const { existsSync, readFileSync, appendFileSync, mkdirSync } = await import('node:fs');
+              const { join } = await import('node:path');
+              const os = await import('node:os');
+              const envFile = join(os.homedir(), '.harness', '.env');
+              if (existsSync(envFile) && readFileSync(envFile, 'utf-8').includes(`${providerInfo.envVar}=`)) {
+                console.log(provTheme.warning(`⚠ ${providerInfo.envVar} already in ~/.harness/.env — session only`));
+              } else {
+                const rl2 = createInterface({ input: process.stdin, output: process.stdout });
+                try {
+                  const save = await rl2.question('Save to ~/.harness/.env? [Y/n] ');
+                  if (save.toLowerCase() !== 'n') {
+                    if (!existsSync(join(os.homedir(), '.harness'))) mkdirSync(join(os.homedir(), '.harness'), { recursive: true });
+                    appendFileSync(envFile, `\n${providerInfo.envVar}=${keyValue}`);
+                    console.log(provTheme.success(`Saved to ~/.harness/.env`));
+                  }
+                } finally {
+                  rl2.close();
+                }
+              }
+            }
+          } else {
+            console.log(provTheme.success(`✓ ${providerInfo.envVar} is already set`));
+          }
+
+          const createModel = await renderForm('Create default model?', [
+            { id: 'create', type: 'confirm', label: `Create a model entry for ${providerInfo.name}?` },
+          ]);
+          if (createModel.create) {
+            const modelAnswers = await renderForm('Model details', [
+              { id: 'modelId', type: 'text', label: 'Model ID', placeholder: 'e.g. gpt-4o, deepseek/deepseek-v4-flash' },
+              { id: 'alias', type: 'text', label: 'Alias', placeholder: providerInfo.name.toLowerCase() },
+              { id: 'setDefault', type: 'confirm', label: 'Set as default?' },
+            ]);
+            const cm = new ConfigManager();
+            cm.addModel(String(modelAnswers.alias || providerInfo.name.toLowerCase()), {
+              model: String(modelAnswers.modelId),
+              base_url: Object.keys(KNOWN_MODEL_PROVIDERS).find(k => KNOWN_MODEL_PROVIDERS[k] === providerInfo) || undefined,
+              api_key_env: providerInfo.envVar,
+              name: `${providerInfo.name} — ${modelAnswers.modelId}`,
+              kind: 'openai-compatible',
+            });
+            if (modelAnswers.setDefault) cm.setDefaultModel(String(modelAnswers.alias || providerInfo.name.toLowerCase()));
+            cm.save();
+            console.log(provTheme.success(`Model "${modelAnswers.alias}" added to config.`));
+          }
+        }
+        break;
+      }
+
+      console.log(provTheme.bold('Model providers:'));
+      for (const info of Object.values(KNOWN_MODEL_PROVIDERS)) {
+        const keySet = !!process.env[info.envVar];
+        const status = keySet ? provTheme.success('✓ key set') : provTheme.warning('⚠ not set');
+        const url = info.keyUrl ? provTheme.dim(info.keyUrl) : '';
+        console.log(`  ${provTheme.bold(info.name.padEnd(12))} ${status.padEnd(18)} ${url}`);
+      }
+      console.log(`\nSet a key with ${provTheme.warning('harness provider add <name>')} or ${provTheme.warning('harness key <ENV_VAR>')}`);
       break;
     }
 

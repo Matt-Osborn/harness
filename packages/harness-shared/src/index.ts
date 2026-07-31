@@ -12,6 +12,7 @@ export {
   getSearchProviderInfo,
   validateModelApiKey,
   validateSearchProviderApiKey,
+  KNOWN_MODEL_PROVIDERS,
 } from './validation.js';
 export type { ProviderKeyInfo, ValidationResult } from './validation.js';
 

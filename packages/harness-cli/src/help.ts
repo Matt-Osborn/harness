@@ -45,6 +45,9 @@ ${t.bold('COMMANDS:')}
   skill <sub> [name]    Manage skills (list|enable|disable)
   tui                    Launch the TUI (terminal UI) mode
   key                    Set or prompt for an API key (persists to ~/.harness/.env)
+  providers              List known model providers
+  provider add [name]    Set up a provider and optionally create a model
+  model add              Add a new model interactively
 
 ${t.bold('EXAMPLES:')}
   harness                          Start in build mode (default)
@@ -52,6 +55,9 @@ ${t.bold('EXAMPLES:')}
   harness --search duckduckgo      Use DuckDuckGo search
   harness model list               List configured models
   harness key OPENROUTER_API_KEY   Securely set your API key
+  harness providers                List known model providers
+  harness provider add openrouter  Set up OpenRouter
+  harness model add                Add a new model interactively
   harness -w 100                          Set wrap width to 100
   harness -S 20250616-143021-a1b2         Resume a specific session
   harness -r                              Resume the most recent session
@@ -131,6 +137,9 @@ ${t.bold('COMMANDS:')}
   skill <sub> [name]    Manage skills (list|enable|disable)
   tui                    Launch the TUI (terminal UI) mode
   key                    Set or prompt for an API key (persists to ~/.harness/.env)
+  providers              List known model providers
+  provider add [name]    Set up a provider and optionally create a model
+  model add              Add a new model interactively
 
 ${t.bold('EXAMPLES:')}
   harness                          Start in build mode (default)
@@ -139,6 +148,9 @@ ${t.bold('EXAMPLES:')}
   harness -m deepseek -p "hello"   Use a specific model
   harness --search duckduckgo      Use DuckDuckGo search
   harness key OPENROUTER_API_KEY   Securely set your API key
+  harness providers                List known model providers
+  harness provider add openrouter  Set up OpenRouter
+  harness model add                Add a new model interactively
   harness -r                       Resume the most recent session
   harness -S 20250616-143021-a1b2  Resume a specific session
   harness --sessions               List saved sessions

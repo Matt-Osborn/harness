@@ -159,6 +159,18 @@ Display this help message and exit.
 List configured models. Shows name, display name, kind, key status,
 and base URL. The default model is marked with
 .BR * .
+Use
+.B "model add"
+for an interactive wizard to add a new model.
+.TP
+.B providers
+List known model providers (OpenRouter, OpenAI, DeepSeek, etc.) and
+whether each one has an API key set.
+.TP
+.BI "provider add " [name]
+Set up a model provider. Without a name, shows an interactive picker.
+With a name, uses that provider directly. Prompts for an API key and
+optionally creates a default model entry.
 .TP
 .B sessions
 List saved sessions (same as

@@ -16,7 +16,7 @@ export interface ValidationResult {
   message: string;
 }
 
-const KNOWN_MODEL_PROVIDERS: Record<string, ProviderKeyInfo> = {
+export const KNOWN_MODEL_PROVIDERS: Record<string, ProviderKeyInfo> = {
   'openrouter.ai': {
     name: 'OpenRouter',
     envVar: 'OPENROUTER_API_KEY',
