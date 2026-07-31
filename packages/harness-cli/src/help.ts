@@ -40,6 +40,7 @@ ${t.bold('COMMANDS:')}
   model                  List configured models
   sessions               List saved sessions
   config                 Show effective configuration
+  default                View or set default model / search provider
   init                   Create default config at ~/.harness/config.toml
   help                   Show this help message
   skill <sub> [name]    Manage skills (list|enable|disable)
@@ -58,6 +59,9 @@ ${t.bold('EXAMPLES:')}
   harness providers                List known model providers
   harness provider add openrouter  Set up OpenRouter
   harness model add                Add a new model interactively
+  harness default                  View current defaults
+  harness default model deepseek   Set default model
+  harness default search tavily    Set default search provider
   harness -w 100                          Set wrap width to 100
   harness -S 20250616-143021-a1b2         Resume a specific session
   harness -r                              Resume the most recent session
@@ -132,6 +136,7 @@ ${t.bold('COMMANDS:')}
   model                  List configured models
   sessions               List saved sessions
   config                 Show effective configuration
+  default                View or set default model / search provider
   init                   Create default config at ~/.harness/config.toml
   help                   Show this help message
   skill <sub> [name]    Manage skills (list|enable|disable)
@@ -151,6 +156,9 @@ ${t.bold('EXAMPLES:')}
   harness providers                List known model providers
   harness provider add openrouter  Set up OpenRouter
   harness model add                Add a new model interactively
+  harness default                  View current defaults
+  harness default model deepseek   Set default model
+  harness default search tavily    Set default search provider
   harness -r                       Resume the most recent session
   harness -S 20250616-143021-a1b2  Resume a specific session
   harness --sessions               List saved sessions

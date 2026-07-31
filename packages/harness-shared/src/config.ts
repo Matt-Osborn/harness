@@ -255,6 +255,11 @@ export class ConfigManager {
     this.config.default_model = name;
   }
 
+  setSearchProvider(provider: SearchProviderType): void {
+    if (!this.config.search) this.config.search = {};
+    this.config.search.provider = provider;
+  }
+
   removeModel(name: string): void {
     delete this.config.models[name];
   }

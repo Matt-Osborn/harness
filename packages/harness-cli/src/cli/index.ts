@@ -387,6 +387,78 @@ export async function run(): Promise<void> {
       console.log(`${tConfig.bold('MCP servers:')}  ${Object.keys(config.mcpServers || {}).length} configured`);
       break;
     }
+    case 'default': {
+      const config = new ConfigManager();
+      const tDefault = new CliTheme({ ...config.themeConfig, ...themeOverride });
+      const key = commands[1];
+      const value = commands[2];
+
+      if (!key) {
+        console.log('');
+        console.log(`${tDefault.bold('Model:')}   ${config.defaultModel || '(none)'}`);
+        console.log(`${tDefault.bold('Search:')}  ${config.searchProvider || 'auto-detect'}`);
+        console.log('');
+        console.log(`Set with: ${tDefault.warning('harness default <key> <value>')}`);
+        console.log(`Keys: ${tDefault.bold('model')}, ${tDefault.bold('search')}`);
+        break;
+      }
+
+      if (!value) {
+        console.log(tDefault.error(`Missing value for "${key}".`));
+        console.log(`Usage: ${tDefault.warning(`harness default ${key} <value>`)}`);
+        break;
+      }
+
+      const { homedir } = await import('node:os');
+      const { join } = await import('node:path');
+      const { existsSync, readFileSync, writeFileSync, mkdirSync } = await import('node:fs');
+      const { parse, stringify } = await import('smol-toml');
+      const configPath = join(homedir(), '.harness', 'config.toml');
+      let raw: Record<string, unknown> = {};
+      if (existsSync(configPath)) {
+        raw = parse(readFileSync(configPath, 'utf-8')) as Record<string, unknown>;
+      }
+      const write = (): void => {
+        if (!existsSync(join(homedir(), '.harness'))) mkdirSync(join(homedir(), '.harness'), { recursive: true });
+        writeFileSync(configPath, stringify(raw), 'utf-8');
+      };
+
+      switch (key) {
+        case 'model': {
+          if (!config.models[value]) {
+            console.log(tDefault.error(`Unknown model "${value}".`));
+            const available = Object.keys(config.models);
+            if (available.length > 0) {
+              console.log(`Available models: ${available.join(', ')}`);
+            }
+            console.log(`Add a model with: ${tDefault.warning('harness model add')}`);
+            break;
+          }
+          const models = (raw.models as Record<string, unknown>) || {};
+          models.default = value;
+          raw.models = models;
+          write();
+          console.log(tDefault.success(`Default model set to "${value}".`));
+          break;
+        }
+        case 'search': {
+          const valid = ['tavily', 'duckduckgo', 'exa'];
+          if (!valid.includes(value)) {
+            console.log(tDefault.error(`Invalid search provider "${value}".`));
+            console.log(`Valid: ${valid.join(', ')}`);
+            break;
+          }
+          raw.search = { provider: value };
+          write();
+          console.log(tDefault.success(`Default search provider set to "${value}".`));
+          break;
+        }
+        default:
+          console.log(tDefault.error(`Unknown key "${key}".`));
+          console.log('Valid keys: model, search');
+      }
+      break;
+    }
     case 'sessions':
       // handled above by the --sessions check
       break;

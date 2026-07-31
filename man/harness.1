@@ -180,6 +180,21 @@ List saved sessions (same as
 Show the effective configuration: config file paths, default model,
 permission mode, search provider, and MCP server count.
 .TP
+.B default
+View the effective default model and search provider, or set them.
+With no arguments, shows current defaults. Sub-keys:
+.RS
+.TP
+.BI "model " <name>
+Set the default model. Must match a configured model key
+(see
+.BR [model.<name>] ).
+.TP
+.BI "search " <provider>
+Set the default search provider
+.RB ( tavily ", " duckduckgo ", " exa ).
+.RE
+.TP
 .B init
 Create the default configuration at
 .BR ~/.harness/config.toml ,
@@ -610,6 +625,12 @@ List configured models:
 .TP
 Show effective configuration:
 .B "harness config"
+.TP
+View current default model and search provider:
+.B "harness default"
+.TP
+Set the default model:
+.B "harness default model deepseek"
 .TP
 Initialize configuration:
 .B "harness init"
