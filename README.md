@@ -102,7 +102,7 @@ Any OpenAI-compatible API works — set `base_url` to:
 |---------|-------------|
 | `harness` | Start interactive REPL (default mode) |
 | `harness -p "<text>"` | Run a single prompt in print mode |
-| `harness tui` | Launch the terminal UI |
+| `harness tui` | Launch the terminal UI (experimental) |
 | `harness model` | List configured models |
 | `harness model add` | Interactively add a model |
 | `harness providers` | List known model providers |

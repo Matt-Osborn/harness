@@ -228,6 +228,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
   const handleSubmit = useCallback(async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || isRunning) return;
+    setInputValue('');
 
     if (trimmed === '/exit' || trimmed === '/quit') {
       handleExit();
@@ -408,7 +409,6 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
       return;
     }
 
-    setInputValue('');
     setNotification('');
     setIsRunning(true);
 

@@ -44,7 +44,7 @@ ${t.bold('COMMANDS:')}
   init                   Create default config at ~/.harness/config.toml
   help                   Show this help message
   skill <sub> [name]    Manage skills (list|enable|disable)
-  tui                    Launch the TUI (terminal UI) mode
+  tui                    Launch the TUI (terminal UI, experimental) mode
   key                    Set or prompt for an API key (persists to ~/.harness/.env)
   providers              List known model providers
   provider add [name]    Set up a provider and optionally create a model
@@ -140,7 +140,7 @@ ${t.bold('COMMANDS:')}
   init                   Create default config at ~/.harness/config.toml
   help                   Show this help message
   skill <sub> [name]    Manage skills (list|enable|disable)
-  tui                    Launch the TUI (terminal UI) mode
+  tui                    Launch the TUI (terminal UI, experimental) mode
   key                    Set or prompt for an API key (persists to ~/.harness/.env)
   providers              List known model providers
   provider add [name]    Set up a provider and optionally create a model
