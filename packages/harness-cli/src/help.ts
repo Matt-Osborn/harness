@@ -3,7 +3,7 @@ import { CliTheme } from '@harness/shared';
 export function showHelp(): void {
   const t = new CliTheme();
   console.log(`
-${t.bold('AI Harness')} — Agentic Coding CLI
+${t.bold('harness-cli')} — Agentic Coding CLI
 
 ${t.bold('USAGE:')}
   harness [OPTIONS] [COMMAND]
@@ -75,7 +75,7 @@ Run '${t.warning('harness --help v')}' for verbose help with all flags.
 export function showHelpVerbose(): void {
   const t = new CliTheme();
   console.log(`
-${t.bold('AI Harness')} — Agentic Coding CLI
+${t.bold('harness-cli')} — Agentic Coding CLI
 
 ${t.bold('USAGE:')}
   harness [OPTIONS] [COMMAND]

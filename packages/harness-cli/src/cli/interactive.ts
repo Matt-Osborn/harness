@@ -38,7 +38,7 @@ function formatSessionExport(messages: Message[], ext: string, sid: string, mode
   }
 
   const lines: string[] = [
-    `# AI Harness Session`,
+    `# harness-cli Session`,
     '',
     `**Session:** \`${sid}\``,
     `**Model:** ${modelName || '(default)'}`,
@@ -853,7 +853,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
     process.exit(0);
   });
 
-  console.log(`${t.bold('AI Harness')} — Interactive mode (Ctrl+C to quit)`);
+  console.log(`${t.bold('harness-cli')} — Interactive mode (Ctrl+C to quit)`);
   if (modelName) console.log(`Model: ${t.highlight(modelName)}${modelIsDefault ? ` ${t.dim('(default)')}` : ''}`);
   console.log(`Search: ${t.green(currentSearch)}${searchIsDefault ? ` ${t.dim('(default)')}` : ''}`);
   console.log(`Mode:   ${currentMode === 'plan' ? t.warning('plan') : t.success('build')}`);
@@ -863,7 +863,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
     console.log(`Session: ${t.highlight(sessionId)}  (resumed, ${msgCount} messages)\n`);
     reprintConversation(history);
   } else {
-    console.log(`Session: ${t.highlight(sessionId)}  (new)`);
+    console.log(`Session: ${t.highlight(sessionId)}  (new)\n`);
   }
 
   console.log(`Type ${t.warning('/help')} for available commands`);

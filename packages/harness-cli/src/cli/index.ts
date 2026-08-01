@@ -578,7 +578,7 @@ export async function run(): Promise<void> {
         console.log(`Config already exists at ${configPath}`);
         return;
       }
-      const defaultConfig = `# AI Harness Configuration
+      const defaultConfig = `# harness-cli Configuration
 # Edit this file to configure your models, MCP servers, permissions, and search.
 
 [model.deepseek]
@@ -669,7 +669,7 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
 
       const envPath = `${dir}/.env`;
       if (!existsSync(envPath)) {
-        const envTemplate = `# AI Harness Environment Variables
+        const envTemplate = `# harness-cli Environment Variables
 # Set API keys here — works in all terminals (cmd.exe, PowerShell, Cygwin, Linux)
 # Shell environment variables always take precedence over this file.
 

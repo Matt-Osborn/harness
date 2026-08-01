@@ -12,7 +12,7 @@ export function TitleBar({ theme, model, sessionId }: TitleBarProps) {
     <Static items={['title']}>
       {(key) => (
         <Text key={key}>
-          <Text bold color={theme.primary}>AI Harness</Text>
+          <Text bold color={theme.primary}>harness-cli</Text>
           <Text color={theme.textMuted}> │ </Text>
           {model && <Text color={theme.secondary}>model: {model}</Text>}
           {model && <Text color={theme.textMuted}> │ </Text>}

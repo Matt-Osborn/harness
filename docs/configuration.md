@@ -1,4 +1,4 @@
-# AI Harness Configuration Reference
+# harness-cli Configuration Reference
 
 Configuration files use [TOML](https://toml.io/) format. They are loaded in
 order from the following locations (later files override earlier ones):

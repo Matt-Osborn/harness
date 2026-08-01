@@ -337,7 +337,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
     if (trimmed === '/export') {
       const msgs = historyRef.current.filter(m => m.role === 'user' || m.role === 'assistant');
       const lines: string[] = [
-        `# AI Harness Session`,
+        `# harness-cli Session`,
         '',
         `**Session:** \`${sessionId}\``,
         `**Model:** ${modelName || '(default)'}`,

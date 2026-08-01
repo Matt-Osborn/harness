@@ -1,6 +1,6 @@
-# AI Harness CLI Reference
+# harness-cli CLI Reference
 
-The AI Harness is an agentic coding CLI that connects to any OpenAI-compatible
+harness-cli is an agentic coding CLI that connects to any OpenAI-compatible
 API — local models (Ollama, llama.cpp, vLLM) or remote providers (OpenRouter,
 OpenAI, Anthropic, etc.) — with tools for file editing, shell commands,
 and web search.

@@ -2,7 +2,7 @@ const TODAY = new Date().toISOString().split('T')[0];
 
 export const DEFAULT_SYSTEM_PROMPT = `Current date: ${TODAY}
 
-You are a helpful coding assistant running in an AI Harness.
+You are a helpful coding assistant running in harness-cli.
 You have access to tools for reading, writing, editing files, executing shell commands,
 searching the web (web_search), fetching web pages (web_fetch), and searching project files (glob, grep).
 

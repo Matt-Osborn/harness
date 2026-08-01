@@ -51,7 +51,7 @@ export class WebFetchTool implements AgentTool {
         const response = await fetch(url, {
           signal: controller.signal,
           headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; AIHarness/1.0; +https://gitlab.com/x0rn/harness)',
+            'User-Agent': 'Mozilla/5.0 (compatible; harness-cli/1.0; +https://gitlab.com/x0rn/harness)',
             Accept: 'text/html,text/plain,application/json,*/*',
           },
           redirect: 'follow',
