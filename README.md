@@ -1,7 +1,10 @@
 # harness-cli
 
-A minimal, extensible AI agentic coding CLI — works with local LLMs (llama.cpp,
-Ollama) or remote APIs (OpenRouter, OpenAI, etc.).
+![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)
+
+A minimal, extensible AI agentic coding CLI. Bring your own models —
+llama.cpp, Ollama, OpenRouter, OpenAI, or any OpenAI-compatible API —
+and keep full control over your code and your data.
 
 ## Quick Start
 
