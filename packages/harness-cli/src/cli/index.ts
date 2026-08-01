@@ -1,5 +1,5 @@
-import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadRulesStack, loadMemoryBank, loadEnvFiles, CliTheme, AgentRegistry, Logger, KNOWN_MODEL_PROVIDERS, addModelToConfig, setDefaultModelInConfig, setSearchProviderInConfig } from '@harness/shared';
-import type { SearchProviderType, ThemeConfig, PermissionConfig, Runnable, AgentEvent } from '@harness/shared';
+import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadRulesStack, loadMemoryBank, loadEnvFiles, CliTheme, AgentRegistry, Logger, KNOWN_MODEL_PROVIDERS, LOCAL_MODEL_PROVIDERS, addModelToConfig, setDefaultModelInConfig, setSearchProviderInConfig } from '@harness/shared';
+import type { SearchProviderType, ThemeConfig, PermissionConfig, Runnable, AgentEvent, ProviderKeyInfo } from '@harness/shared';
 import { createProvider, type Provider } from '@harness/core-ai';
 import {
   Agent,
@@ -349,7 +349,7 @@ export async function run(): Promise<void> {
     case 'models': {
       if (commands[1] === 'add') {
         const { runModelAdd } = await import('./model-command.js');
-        await runModelAdd(KNOWN_MODEL_PROVIDERS);
+        await runModelAdd(KNOWN_MODEL_PROVIDERS, LOCAL_MODEL_PROVIDERS);
         break;
       }
       const config = new ConfigManager();
@@ -763,19 +763,26 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
 
       if (commands[1] === 'add') {
         const providerName = commands[2]?.toLowerCase();
-        let providerInfo: typeof KNOWN_MODEL_PROVIDERS[string] | undefined;
+        const allProviders = [...LOCAL_MODEL_PROVIDERS, ...Object.values(KNOWN_MODEL_PROVIDERS)];
+        let providerInfo: ProviderKeyInfo | undefined;
 
         if (providerName) {
-          providerInfo = Object.values(KNOWN_MODEL_PROVIDERS).find(
+          providerInfo = allProviders.find(
             i => i.name.toLowerCase() === providerName
           );
           if (!providerInfo) {
             console.log(provTheme.error(`Unknown provider: ${providerName}`));
-            console.log('Known: ' + Object.values(KNOWN_MODEL_PROVIDERS).map(i => i.name).join(', '));
+            console.log('Known: ' + allProviders.map(i => i.name).join(', '));
             break;
           }
         } else {
-          const options = Object.values(KNOWN_MODEL_PROVIDERS).map(i => i.name);
+          const options: (string | { header: string })[] = [];
+          if (LOCAL_MODEL_PROVIDERS.length > 0) {
+            options.push({ header: 'Local' });
+            options.push(...LOCAL_MODEL_PROVIDERS.map(i => i.name));
+          }
+          options.push({ header: 'Remote' });
+          options.push(...Object.values(KNOWN_MODEL_PROVIDERS).map(i => i.name));
           options.push('Custom');
           const answers = await renderForm('Select a provider', [
             { id: 'provider', type: 'choice', label: 'Provider', options },
@@ -798,16 +805,20 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
             console.log(`Set ${custom.envVar} with ${provTheme.warning('harness key ' + custom.envVar)}`);
             break;
           }
-          providerInfo = Object.values(KNOWN_MODEL_PROVIDERS).find(i => i.name === answers.provider);
+          providerInfo = allProviders.find(i => i.name === answers.provider);
         }
 
         if (providerInfo) {
-          const keySet = !!process.env[providerInfo.envVar];
+          const isLocal = !providerInfo.envVar;
+          const keySet = isLocal ? true : !!process.env[providerInfo.envVar];
           console.log(`\n${provTheme.bold(providerInfo.name)}`);
-          console.log(`  Env var: ${provTheme.warning(providerInfo.envVar)}`);
+          if (providerInfo.baseUrl) console.log(`  Base URL: ${provTheme.dim(providerInfo.baseUrl)}`);
+          if (!isLocal) console.log(`  Env var: ${provTheme.warning(providerInfo.envVar)}`);
           console.log(`  ${providerInfo.instructions}\n`);
 
-          if (!keySet) {
+          if (isLocal) {
+            console.log(provTheme.success('✓ local provider — no API key needed'));
+          } else if (!keySet) {
             const { createInterface } = await import('node:readline/promises');
             const rl = createInterface({ input: process.stdin, output: process.stdout });
             let keyValue = '';
@@ -863,8 +874,8 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
             const domain = Object.keys(KNOWN_MODEL_PROVIDERS).find(k => KNOWN_MODEL_PROVIDERS[k] === providerInfo);
             addModelToConfig(alias, {
               model: String(modelAnswers.modelId),
-              base_url: domain ? `https://${domain}/v1` : undefined,
-              api_key_env: providerInfo.envVar,
+              base_url: providerInfo.baseUrl ?? (domain ? `https://${domain}/v1` : undefined),
+              api_key_env: providerInfo.envVar || undefined,
               name: `${providerInfo.name} — ${modelAnswers.modelId}`,
               kind: 'openai-compatible',
             }, { setDefault: !!modelAnswers.setDefault });
@@ -875,6 +886,11 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
       }
 
       console.log(provTheme.bold('Model providers:'));
+      if (LOCAL_MODEL_PROVIDERS.length > 0) console.log(`  ${provTheme.dim('Local')}`);
+      for (const info of LOCAL_MODEL_PROVIDERS) {
+        console.log(`  ${provTheme.bold(info.name.padEnd(12))} ${provTheme.success('✓ local (no key)').padEnd(18)} ${provTheme.dim(info.baseUrl || '')}`);
+      }
+      console.log(`  ${provTheme.dim('Remote')}`);
       for (const info of Object.values(KNOWN_MODEL_PROVIDERS)) {
         const keySet = !!process.env[info.envVar];
         const status = keySet ? provTheme.success('✓ key set') : provTheme.warning('⚠ not set');

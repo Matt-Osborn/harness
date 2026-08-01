@@ -3,10 +3,16 @@ import type { ProviderKeyInfo } from '@harness/shared';
 import { renderForm } from '../prompts/render-form.js';
 import type { FormQuestion } from '../prompts/render-form.js';
 
-export async function runModelAdd(knownProviders: Record<string, ProviderKeyInfo>): Promise<void> {
+export async function runModelAdd(knownProviders: Record<string, ProviderKeyInfo>, localProviders: ProviderKeyInfo[]): Promise<void> {
   const t = new CliTheme();
 
-  const providerOptions = Object.values(knownProviders).map(i => i.name);
+  const providerOptions: (string | { header: string })[] = [];
+  if (localProviders.length > 0) {
+    providerOptions.push({ header: 'Local' });
+    providerOptions.push(...localProviders.map(i => i.name));
+  }
+  providerOptions.push({ header: 'Remote' });
+  providerOptions.push(...Object.values(knownProviders).map(i => i.name));
   providerOptions.push('Custom');
 
   const pickProvider = await renderForm('Add a model', [
@@ -35,14 +41,15 @@ export async function runModelAdd(knownProviders: Record<string, ProviderKeyInfo
     baseUrl = String(custom.baseUrl);
     apiKeyEnv = String(custom.apiKeyEnv).toUpperCase();
   } else {
-    const info = Object.values(knownProviders).find(i => i.name === pickProvider.provider);
+    const allProviders = [...localProviders, ...Object.values(knownProviders)];
+    const info = allProviders.find(i => i.name === pickProvider.provider);
     if (!info) {
       console.log(t.error('Unknown provider.'));
       return;
     }
     const keyUrl = Object.keys(knownProviders).find(k => knownProviders[k] === info) || '';
-    baseUrl = `https://${keyUrl}/v1`;
-    apiKeyEnv = info.envVar;
+    baseUrl = info.baseUrl || (keyUrl ? `https://${keyUrl}/v1` : '');
+    apiKeyEnv = info.envVar || '';
     displayName = info.name;
   }
 

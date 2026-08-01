@@ -1,10 +1,12 @@
 import * as readline from 'node:readline';
 
+export type ChoiceOption = string | { header: string };
+
 export interface FormQuestion {
   id: string;
   type: 'choice' | 'text' | 'confirm';
   label: string;
-  options?: string[];
+  options?: ChoiceOption[];
   placeholder?: string;
 }
 
@@ -12,21 +14,29 @@ function renderChoice(q: FormQuestion, rl: readline.Interface, cancelable: boole
   return new Promise(resolve => {
     const options = q.options ? [...q.options] : [];
     if (cancelable) options.push('Cancel');
+    const selectable = options.filter((o): o is string => typeof o === 'string');
     process.stdout.write(`\n${q.label}\n`);
-    for (let i = 0; i < options.length; i++) {
-      process.stdout.write(`  ${i + 1}) ${options[i]}\n`);
+    let num = 0;
+    for (const opt of options) {
+      if (typeof opt === 'string') {
+        num++;
+        process.stdout.write(`  ${num}) ${opt}\n`);
+      } else {
+        process.stdout.write(`\n  ${opt.header}\n`);
+      }
     }
+    const max = selectable.length;
     const ask = () => {
       rl.question('Enter number: ', (answer: string) => {
-        const num = parseInt(answer.trim(), 10);
-        if (num >= 1 && num <= options.length) {
-          if (cancelable && num === options.length) {
+        const n = parseInt(answer.trim(), 10);
+        if (n >= 1 && n <= max) {
+          if (cancelable && selectable[n - 1] === 'Cancel') {
             resolve(null);
             return;
           }
-          resolve(options[num - 1]);
+          resolve(selectable[n - 1]);
         } else {
-          process.stdout.write(`Invalid choice. Enter 1-${options.length}.\n`);
+          process.stdout.write(`Invalid choice. Enter 1-${max}.\n`);
           ask();
         }
       });

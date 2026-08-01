@@ -9,6 +9,8 @@ export interface ProviderKeyInfo {
   envVar: string;
   instructions: string;
   keyUrl?: string;
+  baseUrl?: string;
+  category?: 'local' | 'remote';
 }
 
 export interface ValidationResult {
@@ -54,6 +56,23 @@ export const KNOWN_MODEL_PROVIDERS: Record<string, ProviderKeyInfo> = {
     keyUrl: 'https://console.anthropic.com',
   },
 };
+
+export const LOCAL_MODEL_PROVIDERS: ProviderKeyInfo[] = [
+  {
+    name: 'Ollama',
+    envVar: '',
+    instructions: 'Local server — start `ollama serve`, no API key',
+    baseUrl: 'http://localhost:11434/v1',
+    category: 'local',
+  },
+  {
+    name: 'llama.cpp',
+    envVar: '',
+    instructions: 'Local server — start `llama-server`, no API key',
+    baseUrl: 'http://localhost:8080/v1',
+    category: 'local',
+  },
+];
 
 const SEARCH_PROVIDER_INFO: Record<string, ProviderKeyInfo> = {
   tavily: {
