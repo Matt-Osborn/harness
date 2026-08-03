@@ -67,6 +67,7 @@ export type {
   CLIConfig,
   ContextConfig,
   Config,
+  GeneralConfig,
   AgentEvent,
   AgentDefinition,
   AgentToolFilter,

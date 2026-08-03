@@ -240,7 +240,7 @@ export async function run(): Promise<void> {
     const skillRegistry = new SkillRegistry();
     const searchTool = new WebSearchTool(search);
     const tools = createDefaultTools({ searchProvider: search, skillRegistry, searchTool, formatConfig: config.formatConfig });
-    const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
+    const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey, config.anonymous);
     const rulesStack = loadRulesStack();
     const memBank = loadMemoryBank();
     const baseProjectRules = memBank
@@ -271,7 +271,7 @@ export async function run(): Promise<void> {
     if (compConfig && compConfig.model) {
       const compApiKey = compConfig.api_key || (compConfig.api_key_env ? process.env[compConfig.api_key_env] : undefined);
       try {
-        compactificationProvider = createProvider(compConfig.model, compConfig, compApiKey);
+        compactificationProvider = createProvider(compConfig.model, compConfig, compApiKey, config.anonymous);
       } catch {
         // compactification model invalid — fall back to main provider
       }
@@ -463,7 +463,7 @@ export async function run(): Promise<void> {
     if (topPOverride !== undefined) resolved!.config.top_p = topPOverride;
     if (seedOverride !== undefined) resolved!.config.seed = seedOverride;
     if (flagDropParams !== undefined) resolved!.config.drop_params = flagDropParams;
-    const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey);
+    const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey, config.anonymous);
     const mode = args.includes('--plan') ? 'plan' : args.includes('--build') ? 'build' : undefined;
     const tuiRulesStack = loadRulesStack();
     const tuiMemBank = loadMemoryBank();
@@ -493,7 +493,7 @@ export async function run(): Promise<void> {
     if (compConfig && compConfig.model) {
       const compApiKey = compConfig.api_key || (compConfig.api_key_env ? process.env[compConfig.api_key_env] : undefined);
       try {
-        compactificationProvider = createProvider(compConfig.model, compConfig, compApiKey);
+        compactificationProvider = createProvider(compConfig.model, compConfig, compApiKey, config.anonymous);
       } catch {
         // compactification model invalid — fall back to main provider
       }

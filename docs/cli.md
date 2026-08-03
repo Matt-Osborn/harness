@@ -128,6 +128,7 @@ Files are loaded in order (later overrides earlier):
 | `HARNESS_STYLED` | `true`/`1` or `false`/`0` | Enable/disable styled Markdown output. |
 | `HARNESS_CONTEXT_MANAGEMENT` | `true`/`1` or `false`/`0` | Enable/disable context management. |
 | `HARNESS_STATUS_LINE` | `true`/`1` or `false`/`0` | Enable/disable progress spinner. |
+| `HARNESS_ANONYMOUS` | `true`/`1` or `false`/`0` | Suppress identification headers sent to API providers. Overrides `[general] anonymous` in config. |
 
 ### Model API Keys
 

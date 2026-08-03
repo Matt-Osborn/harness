@@ -38,7 +38,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
   if (topPOverride !== undefined) resolved.config.top_p = topPOverride;
   if (seedOverride !== undefined) resolved.config.seed = seedOverride;
   if (dropParamsOverride !== undefined) resolved.config.drop_params = dropParamsOverride;
-  const provider = createProvider(resolved.config.model, resolved.config, resolved.apiKey);
+  const provider = createProvider(resolved.config.model, resolved.config, resolved.apiKey, config.anonymous);
 
   const ctxConfig = config.contextConfig;
   const contextManagement = ctxConfig?.management ?? true;
@@ -50,7 +50,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
   if (compConfig && compConfig.model) {
     const compApiKey = compConfig.api_key || (compConfig.api_key_env ? process.env[compConfig.api_key_env] : undefined);
     try {
-      compactificationProvider = createProvider(compConfig.model, compConfig, compApiKey);
+      compactificationProvider = createProvider(compConfig.model, compConfig, compApiKey, config.anonymous);
     } catch {
       // compactification model invalid — fall back to main provider
     }

@@ -130,6 +130,10 @@ export interface DisplayConfig {
   hide_tools?: boolean;
 }
 
+export interface GeneralConfig {
+  anonymous?: boolean;
+}
+
 export interface Config {
   models: Record<string, ModelConfig>;
   default_model?: string;
@@ -143,6 +147,7 @@ export interface Config {
   format?: FormatConfig;
   theme?: ThemeConfig;
   display?: DisplayConfig;
+  general?: GeneralConfig;
 }
 
 export type SessionLabel = 'INTERACTIVE' | 'PROMPT';

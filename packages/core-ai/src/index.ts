@@ -8,10 +8,11 @@ export function createProvider(
   modelId: string,
   config: ModelConfig,
   apiKey?: string,
+  anonymous?: boolean,
 ): OpenAICompatibleProvider {
   switch (config.kind) {
     case 'openai-compatible':
-      return new OpenAICompatibleProvider(modelId, config, apiKey);
+      return new OpenAICompatibleProvider(modelId, config, apiKey, anonymous);
     default:
       throw new Error(`Unknown provider kind: ${config.kind}`);
   }

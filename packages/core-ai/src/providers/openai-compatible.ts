@@ -128,6 +128,7 @@ export class OpenAICompatibleProvider implements Provider {
   private stop: string[] | undefined;
   private dropParams: boolean;
   private configExtras: string[];
+  private anonymous: boolean;
 
   static inferContextWindow(modelId: string): number {
     const id = modelId.toLowerCase();
@@ -142,7 +143,7 @@ export class OpenAICompatibleProvider implements Provider {
     return 32768;
   }
 
-  constructor(modelId: string, config: ModelConfig, apiKey?: string) {
+  constructor(modelId: string, config: ModelConfig, apiKey?: string, anonymous?: boolean) {
     this.modelId = modelId;
     this.contextWindow = OpenAICompatibleProvider.inferContextWindow(modelId);
     this.baseUrl = (config.base_url || 'https://api.openai.com/v1').replace(/\/+$/, '');
@@ -154,6 +155,7 @@ export class OpenAICompatibleProvider implements Provider {
     this.stop = config.stop ? (Array.isArray(config.stop) ? config.stop : [config.stop]) : undefined;
     this.dropParams = config.drop_params ?? false;
     this.configExtras = config.drop_params_extra ?? [];
+    this.anonymous = anonymous ?? false;
   }
 
   setTemperature(t: number | undefined): void {
@@ -249,7 +251,17 @@ export class OpenAICompatibleProvider implements Provider {
     if (this.apiKey) {
       h['Authorization'] = `Bearer ${this.apiKey}`;
     }
+    if (!this.isAnonymous()) {
+      h['X-Title'] = 'harness-cli';
+      h['HTTP-Referer'] = 'https://gitlab.com/x0rn/harness';
+    }
     return h;
+  }
+
+  private isAnonymous(): boolean {
+    const env = process.env.HARNESS_ANONYMOUS;
+    if (env !== undefined) return env === '1' || env === 'true';
+    return this.anonymous;
   }
 
   async *streamResponse(

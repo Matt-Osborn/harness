@@ -88,7 +88,7 @@ export function buildAgentFromDefinition(options: BuildAgentOptions): Agent {
   const { modelConfig, apiKey } = resolveModelConfig(definition, config, providerOverride);
 
   // Create provider
-  const provider = createProvider(modelConfig.model, modelConfig, apiKey);
+  const provider = createProvider(modelConfig.model, modelConfig, apiKey, config.anonymous);
 
   // Apply overrides from definition
   if (definition.temperature !== undefined) {

@@ -28,6 +28,7 @@ commented-out options.
 [compactification]  # Separate model for conversation summarization
 [format]            # Auto-formatting on file write
 [theme]             # Color theme overrides
+[general]           # General settings (privacy, etc.)
 ```
 
 ---
@@ -297,6 +298,17 @@ cube for rendering. Future support for truecolor is planned.
 ```toml
 [theme]
 colors = { error = "#ff4444", success = "#44ff44", warning = "#ffaa00" }
+```
+
+## `[general]` — General Settings
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `anonymous` | bool | `false` | Suppresses identification headers (`X-Title`, `HTTP-Referer`) sent to API providers like OpenRouter. Can also be set via `HARNESS_ANONYMOUS` env var, which takes precedence over this config field. |
+
+```toml
+[general]
+anonymous = true
 ```
 
 ---

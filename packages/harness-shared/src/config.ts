@@ -2,7 +2,7 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parse } from 'smol-toml';
-import type { CLIConfig, Config, ContextConfig, DisplayConfig, FormatConfig, ModelConfig, MCPServerConfig, PermissionConfig, PermissionMode, SearchConfig, SearchProviderType, ThemeConfig } from './types.js';
+import type { CLIConfig, Config, ContextConfig, DisplayConfig, FormatConfig, GeneralConfig, ModelConfig, MCPServerConfig, PermissionConfig, PermissionMode, SearchConfig, SearchProviderType, ThemeConfig } from './types.js';
 import { validateModelApiKey, validateSearchProviderApiKey } from './validation.js';
 import type { ValidationResult } from './validation.js';
 
@@ -166,6 +166,13 @@ export class ConfigManager {
           hide_tools: typeof d.hide_tools === 'boolean' ? d.hide_tools : merged.display?.hide_tools,
         };
       }
+
+      if (raw.general && typeof raw.general === 'object') {
+        const g = raw.general as Record<string, unknown>;
+        merged.general = {
+          anonymous: typeof g.anonymous === 'boolean' ? g.anonymous : merged.general?.anonymous,
+        };
+      }
     }
 
     return merged;
@@ -221,6 +228,10 @@ export class ConfigManager {
 
   get logEnabled(): boolean {
     return this.config.log ?? false;
+  }
+
+  get anonymous(): boolean {
+    return this.config.general?.anonymous ?? false;
   }
 
   getResolvedModel(modelName?: string): { config: ModelConfig; apiKey: string | undefined } | null {
