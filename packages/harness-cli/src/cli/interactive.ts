@@ -1,6 +1,8 @@
 import * as readline from 'node:readline';
 import { writeFile } from 'node:fs/promises';
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync } from 'node:child_process';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Agent } from '@harness/core-agent';
 import type { PermissionEngine } from '@harness/core-agent';
 import type { AgentTool } from '@harness/core-agent';
@@ -9,6 +11,25 @@ import { getShellInfo } from '@harness/core-agent';
 import type { Message, SearchProviderType } from '@harness/shared';
 import { TextWrapper, SessionManager, isWSL, CliTheme, writeSessionSummary, Logger } from '@harness/shared';
 import { MarkdownRenderer } from './markdown.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function tryPrintChafaBanner(): void {
+  const imgPath = join(__dirname, '..', '..', 'brand', 'exit-banner.png');
+  try {
+    execFileSync('chafa', ['-s', '12x6', imgPath], { timeout: 500, stdio: 'inherit' });
+  } catch (e) {
+    console.error('chafa:', e instanceof Error ? e.message : e);
+    process.stdout.write('\x1b[32m[H]\x1b[0m\n');
+  }
+}
+
+function printExitEpilogue(sessionId: string, theme?: CliTheme): void {
+  tryPrintChafaBanner();
+  const t = theme ?? new CliTheme();
+  console.log(`\n${t.bold('Session')}    ${t.highlight(sessionId)}`);
+  console.log(`${t.bold('Continue')}   ${t.warning(`harness -S ${sessionId}`)}\n`);
+}
 
 function formatSessionExport(messages: Message[], ext: string, sid: string, modelName?: string): string {
   const msgs = messages.filter(m => m.role === 'user' || m.role === 'assistant');
@@ -265,19 +286,12 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
     enableKeypressListener();
 
     rl.on('SIGINT', () => {
-      saveSession();
-      endLog('sigint');
-      rl.close();
-      process.stdout.write('\n');
-      process.exit(0);
+      handleExit('sigint');
     });
 
     rl.on('close', () => {
       if (treatNextCloseAsExit) {
-        saveSession();
-        endLog('close');
-        process.stdout.write('\n');
-        process.exit(0);
+        handleExit('close');
       }
     });
 
@@ -500,10 +514,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       }
 
       if (trimmed === '/exit' || trimmed === '/quit') {
-        saveSession();
-        endLog('exit');
-        process.stdout.write('Goodbye.\n');
-        process.exit(0);
+        handleExit('exit');
       }
 
       if (trimmed === '/help') {
@@ -846,11 +857,19 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
     rl.prompt();
   }
 
-  process.on('SIGINT', () => {
+  let didExit = false;
+
+  function handleExit(label: string): void {
+    if (didExit) return;
+    didExit = true;
     saveSession();
-    endLog('sigint');
-    process.stdout.write('\n');
+    endLog(label as 'exit' | 'sigint' | 'close');
+    printExitEpilogue(sessionId, t);
     process.exit(0);
+  }
+
+  process.on('SIGINT', () => {
+    handleExit('sigint');
   });
 
   console.log(`${t.bold('harness-cli')} — Interactive mode (Ctrl+C to quit)`);
