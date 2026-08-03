@@ -17,6 +17,8 @@ export {
   isLocalUrl,
   isWSL,
   getSearchProviderInfo,
+  detectLocalProviders,
+  fetchLocalModels,
   validateModelApiKey,
   validateSearchProviderApiKey,
   KNOWN_MODEL_PROVIDERS,

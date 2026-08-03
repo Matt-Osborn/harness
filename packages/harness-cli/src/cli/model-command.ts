@@ -1,4 +1,4 @@
-import { CliTheme, addModelToConfig } from '@harness/shared';
+import { CliTheme, addModelToConfig, detectLocalProviders, fetchLocalModels } from '@harness/shared';
 import type { ProviderKeyInfo } from '@harness/shared';
 import { renderForm } from '../prompts/render-form.js';
 import type { FormQuestion } from '../prompts/render-form.js';
@@ -53,8 +53,19 @@ export async function runModelAdd(knownProviders: Record<string, ProviderKeyInfo
     displayName = info.name;
   }
 
+  let modelPlaceholder = 'e.g. gpt-4o, deepseek/deepseek-v4-flash';
+  const allProviders = [...localProviders, ...Object.values(knownProviders)];
+  const pickedInfo = allProviders.find(i => i.name === pickProvider.provider);
+  if (pickedInfo?.category === 'local') {
+    const running = await detectLocalProviders();
+    if (running.some(r => r.name === pickedInfo.name)) {
+      const models = await fetchLocalModels(pickedInfo);
+      if (models.length > 0) modelPlaceholder = models[0];
+    }
+  }
+
   const modelDetails = await renderForm('Model details', [
-    { id: 'modelId', type: 'text', label: 'Model ID', placeholder: 'e.g. gpt-4o, deepseek/deepseek-v4-flash' },
+    { id: 'modelId', type: 'text', label: 'Model ID', placeholder: modelPlaceholder },
     { id: 'alias', type: 'text', label: 'Alias (config key)', placeholder: displayName.toLowerCase().replace(/\s+/g, '-') },
   ], { cancelable: true });
   if (modelDetails === null) {

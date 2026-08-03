@@ -121,6 +121,49 @@ export function getSearchProviderInfo(provider: string): ProviderKeyInfo | null 
   return SEARCH_PROVIDER_INFO[provider] || null;
 }
 
+export async function detectLocalProviders(): Promise<ProviderKeyInfo[]> {
+  const probes = LOCAL_MODEL_PROVIDERS.map(async info => {
+    try {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 800);
+      const endpoint = info.name === 'Ollama' ? '/api/tags' : '/v1/models';
+      const base = info.baseUrl!.replace('/v1', '');
+      const res = await fetch(`${base}${endpoint}`, { signal: controller.signal });
+      clearTimeout(id);
+      return res.ok ? info : null;
+    } catch {
+      return null;
+    }
+  });
+  const results = await Promise.all(probes);
+  return results.filter((r): r is ProviderKeyInfo => r !== null);
+}
+
+export async function fetchLocalModels(info: ProviderKeyInfo): Promise<string[]> {
+  try {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 800);
+    const base = info.baseUrl!.replace('/v1', '');
+    let url: string;
+    if (info.name === 'Ollama') {
+      url = `${base}/api/tags`;
+    } else {
+      url = `${base}/v1/models`;
+    }
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(id);
+    if (!res.ok) return [];
+    if (info.name === 'Ollama') {
+      const data = await res.json() as { models?: Array<{ name: string }> };
+      return data.models?.map(m => m.name) || [];
+    }
+    const data = await res.json() as { data?: Array<{ id: string }> };
+    return data.data?.map(m => m.id) || [];
+  } catch {
+    return [];
+  }
+}
+
 export function validateModelApiKey(config: { base_url?: string; api_key?: string; api_key_env?: string }): ValidationResult {
   if (config.api_key) return { valid: true, message: '' };
 

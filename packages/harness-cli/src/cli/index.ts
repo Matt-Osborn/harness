@@ -1,4 +1,4 @@
-import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadRulesStack, loadMemoryBank, loadEnvFiles, CliTheme, AgentRegistry, Logger, KNOWN_MODEL_PROVIDERS, LOCAL_MODEL_PROVIDERS, addModelToConfig, setDefaultModelInConfig, setSearchProviderInConfig } from '@harness/shared';
+import { ConfigManager, ensureConfigDir, SessionManager, SkillRegistry, loadRulesStack, loadMemoryBank, loadEnvFiles, CliTheme, AgentRegistry, Logger, KNOWN_MODEL_PROVIDERS, LOCAL_MODEL_PROVIDERS, detectLocalProviders, fetchLocalModels, addModelToConfig, setDefaultModelInConfig, setSearchProviderInConfig } from '@harness/shared';
 import type { SearchProviderType, ThemeConfig, PermissionConfig, Runnable, AgentEvent, ProviderKeyInfo } from '@harness/shared';
 import { createProvider, type Provider } from '@harness/core-ai';
 import {
@@ -667,6 +667,12 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
         console.log(`\n  The harness will still work — formatting will be skipped\n  until these are available.\n`);
       }
 
+      const runningInit = await detectLocalProviders();
+      for (const r of runningInit) {
+        console.log(tGlobal.success(`✓ Detected ${r.name} running on ${r.baseUrl?.replace('/v1', '')}`));
+        console.log(`  Add a model with ${tGlobal.warning('harness model add')}\n`);
+      }
+
       const envPath = `${dir}/.env`;
       if (!existsSync(envPath)) {
         const envTemplate = `# harness-cli Environment Variables
@@ -776,10 +782,13 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
             break;
           }
         } else {
+          const runningProviders = await detectLocalProviders();
           const options: (string | { header: string })[] = [];
           if (LOCAL_MODEL_PROVIDERS.length > 0) {
             options.push({ header: 'Local' });
-            options.push(...LOCAL_MODEL_PROVIDERS.map(i => i.name));
+            options.push(...LOCAL_MODEL_PROVIDERS.map(i =>
+              runningProviders.some(r => r.name === i.name) ? `${i.name} (running)` : i.name
+            ));
           }
           options.push({ header: 'Remote' });
           options.push(...Object.values(KNOWN_MODEL_PROVIDERS).map(i => i.name));
@@ -887,8 +896,10 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
 
       console.log(provTheme.bold('Model providers:'));
       if (LOCAL_MODEL_PROVIDERS.length > 0) console.log(`  ${provTheme.dim('Local')}`);
+      const runningProviders = await detectLocalProviders();
       for (const info of LOCAL_MODEL_PROVIDERS) {
-        console.log(`  ${provTheme.bold(info.name.padEnd(12))} ${provTheme.success('✓ local (no key)').padEnd(18)} ${provTheme.dim(info.baseUrl || '')}`);
+        const running = runningProviders.some(r => r.name === info.name) ? ' (running)' : '';
+        console.log(`  ${provTheme.bold((info.name + running).padEnd(16))} ${provTheme.success('✓ local (no key)').padEnd(18)} ${provTheme.dim(info.baseUrl || '')}`);
       }
       console.log(`  ${provTheme.dim('Remote')}`);
       for (const info of Object.values(KNOWN_MODEL_PROVIDERS)) {

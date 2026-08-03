@@ -77,16 +77,16 @@ harness [OPTIONS] [COMMAND]
 | Command | Description |
 |---------|-------------|
 | `model` / `models` | List configured models with key status, kind, and base URL. |
-| `model add` | Interactively add a new model (choose a provider or custom, enter model ID and alias, optionally set as default). |
-| `providers` | List known model providers with API key status and key-setup URLs. |
-| `provider add [name]` | Set up a provider: prompts for an API key and optionally creates a default model entry. Without a name, shows an interactive picker. |
+| `model add` | Interactively add a new model. If a running local server is detected, pre-fills the model ID from its available models. |
+| `providers` | List known model providers with API key status and key-setup URLs. Running local servers are marked with `(running)`. |
+| `provider add [name]` | Set up a provider: prompts for an API key and optionally creates a default model entry. Without a name, shows an interactive picker with running local servers highlighted. |
 | `key <ENV_VAR>` | Set an API key for this session and optionally persist it to `~/.harness/.env`. |
 | `default` | View current default model and search provider. |
 | `default model <name>` | Set the default model (must match a configured model key). |
 | `default search <provider>` | Set the default search provider (`tavily`, `duckduckgo`, `exa`). |
 | `sessions` | List saved sessions. |
 | `config` | Show effective configuration: file paths, default model, permission mode, search provider. |
-| `init` | Create default `~/.harness/config.toml`, `.env` template, and optionally `AGENTS.md`. |
+| `init` | Create default `~/.harness/config.toml`, `.env` template, and optionally `AGENTS.md`. Detects and reports running local servers (Ollama, llama.cpp). |
 | `skill list` | List available skills and their enabled status. |
 | `skill enable <name>` | Enable a skill by adding a hint to AGENTS.md. |
 | `skill disable <name>` | Disable a skill by removing its hint from AGENTS.md. |
