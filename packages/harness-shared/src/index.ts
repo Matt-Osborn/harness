@@ -16,6 +16,7 @@ export {
   identifyModelProvider,
   isLocalUrl,
   isWSL,
+  isCygwin,
   getSearchProviderInfo,
   detectLocalProviders,
   fetchLocalModels,

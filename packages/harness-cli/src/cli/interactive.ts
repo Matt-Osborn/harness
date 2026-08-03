@@ -9,17 +9,17 @@ import type { AgentTool } from '@harness/core-agent';
 import type { WebSearchTool } from '@harness/core-agent';
 import { getShellInfo } from '@harness/core-agent';
 import type { Message, SearchProviderType } from '@harness/shared';
-import { TextWrapper, SessionManager, isWSL, CliTheme, writeSessionSummary, Logger } from '@harness/shared';
+import { TextWrapper, SessionManager, isWSL, isCygwin, CliTheme, writeSessionSummary, Logger } from '@harness/shared';
 import { MarkdownRenderer } from './markdown.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function tryPrintChafaBanner(): void {
+  if (isCygwin()) { process.stdout.write('\x1b[32m[H]\x1b[0m\n'); return; }
   const imgPath = join(__dirname, '..', '..', 'brand', 'exit-banner.png');
   try {
     execFileSync('chafa', ['-s', '12x6', imgPath], { timeout: 500, stdio: 'inherit' });
-  } catch (e) {
-    console.error('chafa:', e instanceof Error ? e.message : e);
+  } catch {
     process.stdout.write('\x1b[32m[H]\x1b[0m\n');
   }
 }

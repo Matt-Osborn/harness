@@ -117,6 +117,12 @@ export function isWSL(): boolean {
   }
 }
 
+export function isCygwin(): boolean {
+  if (process.platform !== 'win32') return false;
+  const shell = process.env.SHELL || '';
+  return shell.startsWith('/') && !process.env.WSL_DISTRO_NAME;
+}
+
 export function getSearchProviderInfo(provider: string): ProviderKeyInfo | null {
   return SEARCH_PROVIDER_INFO[provider] || null;
 }
