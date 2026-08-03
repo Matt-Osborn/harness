@@ -15,7 +15,7 @@ import { MarkdownRenderer } from './markdown.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function tryPrintChafaBanner(): void {
-  if (isCygwin()) { process.stdout.write('\x1b[32m[H]\x1b[0m\n'); return; }
+  if (isCygwin() || isWSL()) { process.stdout.write('\x1b[32m[H]\x1b[0m\n'); return; }
   const imgPath = join(__dirname, '..', '..', 'brand', 'exit-banner.png');
   try {
     execFileSync('chafa', ['-s', '12x6', imgPath], { timeout: 500, stdio: 'inherit' });
