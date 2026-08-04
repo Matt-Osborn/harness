@@ -2,6 +2,7 @@ import type { Provider } from '@harness/core-ai';
 import type { Message, StreamEvent, AgentEvent, ToolCall, ToolCallDelta, AgentDefinition, Logger } from '@harness/shared';
 import type { AgentTool } from './tool.js';
 import { buildSystemPrompt } from './prompt.js';
+import { READ_ONLY_TOOLS } from './permissions.js';
 
 export type { AgentTool } from './tool.js';
 
@@ -390,6 +391,51 @@ export class Agent {
           }
         }
 
+        const runToolCalls = async (calls: { tc: ToolCall; args: Record<string, unknown>; tool: AgentTool }[]): Promise<AgentEvent[]> => {
+          const parallel = calls.length > 1 && READ_ONLY_TOOLS.includes(calls[0].tc.function.name);
+          const results: { tc: ToolCall; result: string; isError: boolean }[] = [];
+
+          if (parallel) {
+            const settled = await Promise.allSettled(
+              calls.map(c => c.tool.execute(c.args, { workingDir: process.cwd(), signal }))
+            );
+            for (let i = 0; i < calls.length; i++) {
+              const s = settled[i];
+              if (s.status === 'fulfilled') {
+                results.push({ tc: calls[i].tc, result: s.value, isError: false });
+              } else {
+                const errText = s.reason instanceof Error ? s.reason.message : String(s.reason);
+                results.push({ tc: calls[i].tc, result: `Tool "${calls[i].tc.function.name}" execution failed: ${errText}`, isError: true });
+              }
+            }
+          } else {
+            for (const c of calls) {
+              if (c.tc.function.name === 'ask_user' && this.askUserHandler) {
+                results.push({ tc: c.tc, result: await this.askUserHandler(c.args), isError: false });
+                continue;
+              }
+              results.push({ tc: c.tc, result: await c.tool.execute(c.args, { workingDir: process.cwd(), signal }), isError: false });
+            }
+          }
+
+          return results.map(({ tc, result, isError }) => {
+            const toolMsg: Message = {
+              role: 'tool',
+              content: result,
+              tool_call_id: tc.id,
+              name: tc.function.name,
+              timestamp: Date.now(),
+            };
+            fullMessages.push(toolMsg);
+            userHistory.push(toolMsg);
+            return {
+              type: 'tool_result',
+              data: isError ? { name: tc.function.name, error: result } : { name: tc.function.name, result },
+              timestamp: Date.now(),
+            } as AgentEvent;
+          });
+        };
+
         for (const group of groups) {
           const isBatch = group.indices.length > 1 && this.permissionBatchCheck;
 
@@ -448,6 +494,7 @@ export class Agent {
               continue;
             }
 
+            const approved: { tc: ToolCall; args: Record<string, unknown>; tool: AgentTool }[] = [];
             for (const pc of parsedCalls) {
               if (pc.args === null) continue;
               const tc = pc.tc;
@@ -466,35 +513,11 @@ export class Agent {
                 yield { type: 'tool_result', data: { name: tc.function.name, error: errMsg }, timestamp: Date.now() };
                 continue;
               }
-
-              if (tc.function.name === 'ask_user' && this.askUserHandler) {
-                const result = await this.askUserHandler(pc.args);
-                const toolMsg: Message = {
-                  role: 'tool',
-                  content: result,
-                  tool_call_id: tc.id,
-                  name: tc.function.name,
-                  timestamp: Date.now(),
-                };
-                fullMessages.push(toolMsg);
-                userHistory.push(toolMsg);
-                yield { type: 'tool_result', data: { name: tc.function.name, result }, timestamp: Date.now() };
-                continue;
-              }
-
-              const result = await tool.execute(pc.args, { workingDir: process.cwd(), signal });
-              const toolMsg: Message = {
-                role: 'tool',
-                content: result,
-                tool_call_id: tc.id,
-                name: tc.function.name,
-                timestamp: Date.now(),
-              };
-              fullMessages.push(toolMsg);
-              userHistory.push(toolMsg);
-              yield { type: 'tool_result', data: { name: tc.function.name, result }, timestamp: Date.now() };
+              approved.push({ tc, args: pc.args, tool });
             }
+            yield* await runToolCalls(approved);
           } else {
+            const approved: { tc: ToolCall; args: Record<string, unknown>; tool: AgentTool }[] = [];
             for (const idx of group.indices) {
               const tc = toolCalls[idx];
               yield { type: 'tool_call', data: { name: tc.function.name, args: tc.function.arguments }, timestamp: Date.now() };
@@ -553,33 +576,9 @@ export class Agent {
                 }
               }
 
-              if (tc.function.name === 'ask_user' && this.askUserHandler) {
-              const result = await this.askUserHandler(args);
-                const toolMsg: Message = {
-                  role: 'tool',
-                  content: result,
-                  tool_call_id: tc.id,
-                  name: tc.function.name,
-                  timestamp: Date.now(),
-                };
-                fullMessages.push(toolMsg);
-                userHistory.push(toolMsg);
-                yield { type: 'tool_result', data: { name: tc.function.name, result }, timestamp: Date.now() };
-                continue;
-              }
-
-              const result = await tool.execute(args, { workingDir: process.cwd(), signal });
-              const toolMsg: Message = {
-                role: 'tool',
-                content: result,
-                tool_call_id: tc.id,
-                name: tc.function.name,
-                timestamp: Date.now(),
-              };
-              fullMessages.push(toolMsg);
-              userHistory.push(toolMsg);
-              yield { type: 'tool_result', data: { name: tc.function.name, result }, timestamp: Date.now() };
+              approved.push({ tc, args, tool });
             }
+            yield* await runToolCalls(approved);
           }
         }
         this.lastSentHashes = truncatedMessages.map(m => this.hashMessage(m));
