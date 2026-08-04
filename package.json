@@ -6,6 +6,7 @@
     "packages/*"
   ],
   "scripts": {
+    "prebuild": "npm install",
     "build": "tsc -b",
     "build:watch": "tsc -b -w",
     "dev": "tsx packages/harness-cli/src/index.ts",

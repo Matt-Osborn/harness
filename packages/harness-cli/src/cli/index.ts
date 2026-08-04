@@ -587,7 +587,8 @@ export async function run(): Promise<void> {
       const dir = ensureConfigDir();
       const configPath = `${dir}/config.toml`;
       const { writeFileSync, existsSync, readFileSync } = await import('node:fs');
-      const { join } = await import('node:path');
+      const { join, dirname } = await import('node:path');
+      const { fileURLToPath } = await import('node:url');
       const { execFileSync } = await import('node:child_process');
       if (existsSync(configPath)) {
         console.log(`Config already exists at ${configPath}`);
@@ -719,6 +720,25 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
               const agentsMdContent = readFileSync(agentsMdPath, 'utf-8');
               writeFileSync(agentsMdPath, agentsMdContent.trimEnd() + '\n' + hintLine('file-backup') + '\n', 'utf-8');
               console.log('Enabled file-backup skill in AGENTS.md.');
+            }
+          }
+        } finally {
+          rl.close();
+        }
+      }
+
+      const installManScript = join(dirname(fileURLToPath(import.meta.url)), '../../../../scripts/install-man.sh');
+      if (process.stdin.isTTY && existsSync(installManScript)) {
+        const { createInterface } = await import('node:readline/promises');
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        try {
+          const answer = await rl.question('Install man page? (Y/n) ');
+          if (answer.toLowerCase() !== 'n') {
+            try {
+              execFileSync('bash', [installManScript], { stdio: 'inherit' });
+            } catch (err) {
+              console.log(tGlobal.warning('⚠ Could not run the man page installer.'));
+              console.log(`  Install it manually with ${tGlobal.warning('bash scripts/install-man.sh')}.\n`);
             }
           }
         } finally {
