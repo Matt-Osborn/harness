@@ -558,17 +558,33 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         }
         if (!agentName) {
           process.stdout.write(t.bold('Available agents:') + '\n');
-          for (const a of agentRegistry.allAgents) {
-            process.stdout.write(`  ${t.highlight(a.name)}${a.description ? t.dim(` — ${a.description}`) : ''}\n`);
+          process.stdout.write(`  ${t.bold('Built-in:')}\n`);
+          // `default` hidden here — see plans/v0.2-roadmap.md v0.3 note (#22)
+          const builtinNote: Record<string, string> = {
+            plan: 'Plan mode (read-only; same as Tab)',
+            build: 'Build mode (all tools; same as Tab)',
+          };
+          for (const a of agentRegistry.builtinAgents) {
+            if (a.name === 'default') continue;
+            const desc = builtinNote[a.name] ?? a.description;
+            process.stdout.write(`  ${t.highlight(a.name)}${desc ? t.dim(` — ${desc}`) : ''}\n`);
+          }
+          const custom = agentRegistry.userAgents;
+          if (custom.length > 0) {
+            process.stdout.write(`  ${t.bold('Custom:')}\n`);
+            for (const a of custom) {
+              process.stdout.write(`  ${t.highlight(a.name)}${a.description ? t.dim(` — ${a.description}`) : ''}\n`);
+            }
           }
           const pipelines = agentRegistry.allPipelines;
           if (pipelines.length > 0) {
-            process.stdout.write(t.bold('Pipelines:') + '\n');
+            process.stdout.write(`  ${t.bold('Pipelines:')}\n`);
             for (const p of pipelines) {
               process.stdout.write(`  ${t.highlight(p.name)}${p.description ? t.dim(` — ${p.description}`) : ''}\n`);
             }
           }
-          process.stdout.write(`\nUse ${t.warning('/agent <name>')} to switch agents, or ${t.warning('--agent <name>')} at startup.\n\n`);
+          process.stdout.write(`\nUse ${t.warning('/agent <name>')} to switch agents, or ${t.warning('--agent <name>')} at startup.\n`);
+          process.stdout.write(`Plan/build modes are also toggled with ${t.warning('Tab')}.\n\n`);
           rl.prompt();
           return;
         }

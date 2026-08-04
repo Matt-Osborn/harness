@@ -218,6 +218,17 @@ export class AgentRegistry {
     return Array.from(this.pipelines.values());
   }
 
+  get builtinAgents(): AgentDefinition[] {
+    return Object.keys(BUILTIN_AGENTS)
+      .map(name => this.agents.get(name))
+      .filter((a): a is AgentDefinition => !!a);
+  }
+
+  get userAgents(): AgentDefinition[] {
+    const builtin = new Set(Object.keys(BUILTIN_AGENTS));
+    return Array.from(this.agents.values()).filter(a => !builtin.has(a.name));
+  }
+
   /**
    * Human-readable description of all registered runnables, for display
    * in help text or the system prompt.
