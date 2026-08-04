@@ -15,7 +15,7 @@ npm install
 npm approve-scripts
 npm run build
 npm link @harness/cli
-bash scripts/install-man.sh   # optional: install man page (man harness)
+bash scripts/install-man.sh   # optional: install man page
 ```
 
 > **Why `npm link @harness/cli`?** Makes the `harness` command available

@@ -233,3 +233,14 @@ harness -m ollama
 # Disable parameter stripping
 harness --no-drop-params
 ```
+
+## Man Page
+
+The man page is at `man/harness.1` in the repo. To read it:
+
+- **If installed system-wide** (via `install-man.sh` with `--system` or passwordless sudo): `man harness`
+- **If installed user-local** (default fallback): `man -l path/to/man/harness.1`
+- **Directly from the repo** (no install needed): `man -l man/harness.1`
+
+Run `bash scripts/install-man.sh` during setup to install it. The script
+tells you which command to use after installation.

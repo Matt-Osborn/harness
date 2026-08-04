@@ -84,15 +84,43 @@ if [ "$TARGET_DIR" = "WINDOWS" ]; then
   exit 0
 fi
 
+# Determine install privileges and final target.
+# macOS targets are user-writable; --prefix is user-controlled.
+# On Linux, try passwordless sudo for /usr/local/share/man/man1;
+# fall back to ~/.local/share/man/man1 if sudo -n fails.
+INSTALL_CMD="install -m 644"
+MKDIR_CMD="mkdir -p"
+MANDB_CMD=""
+USE_MAN_L=0
+
+if [ -z "$PREFIX" ] && [ "$(uname -s)" != "Darwin" ]; then
+  if [ "$SYSTEM" = "1" ]; then
+    INSTALL_CMD="sudo install -m 644"
+    MKDIR_CMD="sudo mkdir -p"
+    MANDB_CMD="sudo mandb -q"
+  else
+    TARGET_DIR="/usr/local/share/man/man1"
+    if sudo -n true 2>/dev/null; then
+      INSTALL_CMD="sudo install -m 644"
+      MKDIR_CMD="sudo mkdir -p"
+      MANDB_CMD="sudo mandb -q"
+    else
+      TARGET_DIR="$HOME/.local/share/man/man1"
+      USE_MAN_L=1
+    fi
+  fi
+fi
+
 if [ "$DRY_RUN" = "1" ]; then
   echo "Would install to: $TARGET_DIR/harness.1"
   exit 0
 fi
 
-mkdir -p "$TARGET_DIR"
-install -m 644 "$MANPAGE" "$TARGET_DIR/harness.1"
+$MKDIR_CMD "$TARGET_DIR"
+$INSTALL_CMD "$MANPAGE" "$TARGET_DIR/harness.1"
 echo "Installed man page to: $TARGET_DIR/harness.1"
 
+# Refresh man database
 case "$(uname -s)" in
   Darwin)
     if command -v makewhatis >/dev/null 2>&1; then
@@ -100,10 +128,21 @@ case "$(uname -s)" in
     fi
     ;;
   *)
-    if command -v mandb >/dev/null 2>&1; then
+    if [ -n "$MANDB_CMD" ]; then
+      $MANDB_CMD "$TARGET_DIR" >/dev/null 2>&1 || true
+    elif command -v mandb >/dev/null 2>&1; then
       mandb -q "$TARGET_DIR" >/dev/null 2>&1 || true
     fi
     ;;
 esac
 
-echo "Verify with: man harness"
+if [ "$USE_MAN_L" = "1" ]; then
+  echo ""
+  echo "Read the man page with:  man -l '$MANPAGE'"
+  echo ""
+  echo "To enable 'man harness' from anywhere, add to ~/.bashrc:"
+  echo "  export MANPATH=\"\$HOME/.local/share/man:\$MANPATH\""
+  echo "Then run: man harness"
+else
+  echo "Verify with: man harness"
+fi
