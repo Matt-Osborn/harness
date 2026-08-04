@@ -117,6 +117,7 @@ export async function run(): Promise<void> {
     console.error(t.error(`Invalid routing mode: "${routingValue}". Use: balanced, cost, speed, quality`));
     process.exit(1);
   }
+  const suffixOverride = args.includes('--free-tier') ? 'free' : undefined;
 
   const flagStyled = args.includes('--styled') ? true : args.includes('--no-styled') ? false : undefined;
   const envStyled = process.env.HARNESS_STYLED;
@@ -167,7 +168,7 @@ export async function run(): Promise<void> {
       process.exit(1);
     }
     const printAgentFlag = parseArg(args, '--agent');
-    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools, printAgentFlag, config.logEnabled || flagLog, routingOverride);
+    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools, printAgentFlag, config.logEnabled || flagLog, routingOverride, suffixOverride);
     return;
   }
 
@@ -250,7 +251,7 @@ export async function run(): Promise<void> {
     const skillRegistry = new SkillRegistry();
     const searchTool = new WebSearchTool(search);
     const tools = createDefaultTools({ searchProvider: search, skillRegistry, searchTool, formatConfig: config.formatConfig });
-    const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey, { anonymous: config.anonymous, routing: routingOverride });
+    const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey, { anonymous: config.anonymous, routing: routingOverride, suffix: suffixOverride });
     const rulesStack = loadRulesStack();
     const memBank = loadMemoryBank();
     const baseProjectRules = memBank
@@ -281,7 +282,7 @@ export async function run(): Promise<void> {
     if (compConfig && compConfig.model) {
       const compApiKey = compConfig.api_key || (compConfig.api_key_env ? process.env[compConfig.api_key_env] : undefined);
       try {
-        compactificationProvider = createProvider(compConfig.model, compConfig, compApiKey, { anonymous: config.anonymous, routing: routingOverride });
+        compactificationProvider = createProvider(compConfig.model, compConfig, compApiKey, { anonymous: config.anonymous, routing: routingOverride, suffix: suffixOverride });
       } catch {
         // compactification model invalid — fall back to main provider
       }
@@ -322,6 +323,7 @@ export async function run(): Promise<void> {
           compactificationProvider,
           maxIterations, resumed,
           routing: routingOverride,
+          suffix: suffixOverride,
         });
       }
     } else {
@@ -474,7 +476,7 @@ export async function run(): Promise<void> {
     if (topPOverride !== undefined) resolved!.config.top_p = topPOverride;
     if (seedOverride !== undefined) resolved!.config.seed = seedOverride;
     if (flagDropParams !== undefined) resolved!.config.drop_params = flagDropParams;
-    const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey, { anonymous: config.anonymous, routing: routingOverride });
+    const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey, { anonymous: config.anonymous, routing: routingOverride, suffix: suffixOverride });
     const mode = args.includes('--plan') ? 'plan' : args.includes('--build') ? 'build' : undefined;
     const tuiRulesStack = loadRulesStack();
     const tuiMemBank = loadMemoryBank();
@@ -504,7 +506,7 @@ export async function run(): Promise<void> {
     if (compConfig && compConfig.model) {
       const compApiKey = compConfig.api_key || (compConfig.api_key_env ? process.env[compConfig.api_key_env] : undefined);
       try {
-        compactificationProvider = createProvider(compConfig.model, compConfig, compApiKey, { anonymous: config.anonymous, routing: routingOverride });
+        compactificationProvider = createProvider(compConfig.model, compConfig, compApiKey, { anonymous: config.anonymous, routing: routingOverride, suffix: suffixOverride });
       } catch {
         // compactification model invalid — fall back to main provider
       }
@@ -548,6 +550,7 @@ export async function run(): Promise<void> {
             maxIterations: tuiMaxIterations,
             resumed: tuiResumed,
             routing: routingOverride,
+            suffix: suffixOverride,
           });
         }
       } else {

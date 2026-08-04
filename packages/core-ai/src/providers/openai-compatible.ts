@@ -146,8 +146,9 @@ export class OpenAICompatibleProvider implements Provider {
   }
 
   constructor(modelId: string, config: ModelConfig, apiKey?: string, options?: ProviderOptions) {
-    this.modelId = modelId;
-    this.contextWindow = OpenAICompatibleProvider.inferContextWindow(modelId);
+    const suffix = options?.suffix;
+    this.modelId = suffix ? `${modelId}:${suffix}` : modelId;
+    this.contextWindow = OpenAICompatibleProvider.inferContextWindow(this.modelId);
     this.baseUrl = (config.base_url || 'https://api.openai.com/v1').replace(/\/+$/, '');
     this.apiKey = apiKey;
     this.maxTokens = config.max_tokens;

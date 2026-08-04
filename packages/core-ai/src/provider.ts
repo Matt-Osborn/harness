@@ -3,6 +3,7 @@ import type { Message, ToolDefinition, StreamEvent } from '@harness/shared';
 export interface ProviderOptions {
   anonymous?: boolean;
   routing?: 'balanced' | 'cost' | 'speed' | 'quality';
+  suffix?: string;
 }
 
 export interface Provider {

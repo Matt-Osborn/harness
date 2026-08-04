@@ -18,11 +18,12 @@ export interface BuildAgentOptions {
   permissionBatchCheck?: PermissionBatchCheck;
   askUserHandler?: AskUserHandler;
   projectRules?: string | null;
-  providerOverride?: string;  // --model flag override
+  providerOverride?: string;
   compactificationProvider?: Provider;
   maxIterations?: number;
   resumed?: boolean;
   routing?: 'balanced' | 'cost' | 'speed' | 'quality';
+  suffix?: string;
 }
 
 /**
@@ -89,7 +90,7 @@ export function buildAgentFromDefinition(options: BuildAgentOptions): Agent {
   const { modelConfig, apiKey } = resolveModelConfig(definition, config, providerOverride);
 
   // Create provider
-  const provider = createProvider(modelConfig.model, modelConfig, apiKey, { anonymous: config.anonymous, routing: options.routing });
+  const provider = createProvider(modelConfig.model, modelConfig, apiKey, { anonymous: config.anonymous, routing: options.routing, suffix: options.suffix });
 
   // Apply overrides from definition
   if (definition.temperature !== undefined) {
