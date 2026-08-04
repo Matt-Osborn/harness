@@ -29,6 +29,7 @@ harness [OPTIONS] [COMMAND]
 | `--temperature <0-2>` | float (0–2) | Override sampling temperature. When unset, model default is used. |
 | `--top-p <0-1>` | float (0–1) | Override nucleus sampling. When unset, model default is used. |
 | `--seed <int>` | int | Override random seed for deterministic sampling. |
+| `--routing <mode>` | `balanced`, `cost`, `speed`, `quality` | OpenRouter routing mode. Only affects OpenRouter. |
 | `--drop-params` | flag | Strip unsupported params automatically (e.g. temperature on OpenAI o-series, DeepSeek Reasoner, or older local server builds). |
 | `--no-drop-params` | flag | Disable automatic param stripping. |
 

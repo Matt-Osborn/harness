@@ -23,6 +23,7 @@ ${t.bold('OPTIONS:')}
   --temperature <0-2>    Set temperature for this session
   --top-p <0-1>          Set top_p (nucleus sampling) for this session
   --seed <int>           Set seed for deterministic sampling
+  --routing <mode>       OpenRouter routing mode: balanced, cost, speed, quality
   --theme <name>         Apply a bundled theme (dracula, tokyonight, monokai,
                            github, carbonfox, catppuccin, and 8 more)
   --list-themes          List available bundled themes
@@ -85,6 +86,7 @@ ${t.bold('MODEL SETTINGS:')}
   --temperature <0-2>        Override sampling temperature (omitted = model default)
   --top-p <0-1>              Override nucleus sampling (omitted = model default)
   --seed <int>               Override random seed for deterministic sampling
+  --routing <mode>           OpenRouter routing mode: balanced, cost, speed, quality
   --drop-params              Strip unsupported parameters automatically
   --no-drop-params           Disable automatic parameter stripping
 

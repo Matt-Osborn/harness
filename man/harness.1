@@ -41,6 +41,10 @@ When unset, the model uses its own default.
 Override the random seed for deterministic sampling.
 When unset, no seed is sent and the model samples nondeterministically.
 .TP
+.BI \-\-routing " <mode>"
+OpenRouter routing mode: \fBbalanced\fR, \fBcost\fR, \fBspeed\fR, or \fBquality\fR.
+Only affects OpenRouter routes.
+.TP
 .BR \-\-drop\-params ", " \-\-no\-drop\-params
 Strip unsupported parameters automatically
 (e.g. temperature on reasoning models like OpenAI o-series,

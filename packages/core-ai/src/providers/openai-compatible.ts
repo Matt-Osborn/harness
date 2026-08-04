@@ -10,6 +10,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { Provider } from '../provider.js';
+import type { ProviderOptions } from '../provider.js';
 
 interface OpenAIChoice {
   index: number;
@@ -129,6 +130,7 @@ export class OpenAICompatibleProvider implements Provider {
   private dropParams: boolean;
   private configExtras: string[];
   private anonymous: boolean;
+  private routing: string | undefined;
 
   static inferContextWindow(modelId: string): number {
     const id = modelId.toLowerCase();
@@ -143,7 +145,7 @@ export class OpenAICompatibleProvider implements Provider {
     return 32768;
   }
 
-  constructor(modelId: string, config: ModelConfig, apiKey?: string, anonymous?: boolean) {
+  constructor(modelId: string, config: ModelConfig, apiKey?: string, options?: ProviderOptions) {
     this.modelId = modelId;
     this.contextWindow = OpenAICompatibleProvider.inferContextWindow(modelId);
     this.baseUrl = (config.base_url || 'https://api.openai.com/v1').replace(/\/+$/, '');
@@ -155,7 +157,8 @@ export class OpenAICompatibleProvider implements Provider {
     this.stop = config.stop ? (Array.isArray(config.stop) ? config.stop : [config.stop]) : undefined;
     this.dropParams = config.drop_params ?? false;
     this.configExtras = config.drop_params_extra ?? [];
-    this.anonymous = anonymous ?? false;
+    this.anonymous = options?.anonymous ?? false;
+    this.routing = options?.routing;
   }
 
   setTemperature(t: number | undefined): void {
@@ -212,6 +215,7 @@ export class OpenAICompatibleProvider implements Provider {
     if (this.topP !== undefined) body.top_p = this.topP;
     if (this.seed !== undefined) body.seed = this.seed;
     if (this.stop !== undefined) body.stop = this.stop;
+    if (this.routing) body.route = this.routing;
     return body;
   }
 

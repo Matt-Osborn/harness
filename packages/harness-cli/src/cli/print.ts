@@ -9,7 +9,7 @@ import { MarkdownRenderer } from './markdown.js';
 import { renderForm } from '../prompts/render-form.js';
 import type { FormQuestion } from '../prompts/render-form.js';
 
-export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, agentName?: string, logEnabled?: boolean): Promise<void> {
+export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, agentName?: string, logEnabled?: boolean, routingOverride?: 'balanced' | 'cost' | 'speed' | 'quality'): Promise<void> {
   const config = new ConfigManager();
   const t = theme ?? new CliTheme(config.themeConfig);
 
@@ -38,7 +38,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
   if (topPOverride !== undefined) resolved.config.top_p = topPOverride;
   if (seedOverride !== undefined) resolved.config.seed = seedOverride;
   if (dropParamsOverride !== undefined) resolved.config.drop_params = dropParamsOverride;
-  const provider = createProvider(resolved.config.model, resolved.config, resolved.apiKey, config.anonymous);
+  const provider = createProvider(resolved.config.model, resolved.config, resolved.apiKey, { anonymous: config.anonymous, routing: routingOverride });
 
   const ctxConfig = config.contextConfig;
   const contextManagement = ctxConfig?.management ?? true;
@@ -50,7 +50,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
   if (compConfig && compConfig.model) {
     const compApiKey = compConfig.api_key || (compConfig.api_key_env ? process.env[compConfig.api_key_env] : undefined);
     try {
-      compactificationProvider = createProvider(compConfig.model, compConfig, compApiKey, config.anonymous);
+      compactificationProvider = createProvider(compConfig.model, compConfig, compApiKey, { anonymous: config.anonymous, routing: routingOverride });
     } catch {
       // compactification model invalid — fall back to main provider
     }
@@ -98,6 +98,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
         projectRules,
         providerOverride: modelName,
         compactificationProvider,
+        routing: routingOverride,
       });
     }
   } else {

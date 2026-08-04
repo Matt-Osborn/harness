@@ -22,6 +22,7 @@ export interface BuildAgentOptions {
   compactificationProvider?: Provider;
   maxIterations?: number;
   resumed?: boolean;
+  routing?: 'balanced' | 'cost' | 'speed' | 'quality';
 }
 
 /**
@@ -88,7 +89,7 @@ export function buildAgentFromDefinition(options: BuildAgentOptions): Agent {
   const { modelConfig, apiKey } = resolveModelConfig(definition, config, providerOverride);
 
   // Create provider
-  const provider = createProvider(modelConfig.model, modelConfig, apiKey, config.anonymous);
+  const provider = createProvider(modelConfig.model, modelConfig, apiKey, { anonymous: config.anonymous, routing: options.routing });
 
   // Apply overrides from definition
   if (definition.temperature !== undefined) {
