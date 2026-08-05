@@ -11,6 +11,12 @@ if (args.includes('-h') || args.includes('--help') || args[0] === 'help') {
     const { showHelpVerbose } = await import('./help.js');
     showHelpVerbose();
   } else {
+    const topic = args[0] === 'help' ? args[1] : helpIdx !== -1 ? args[helpIdx + 1] : args[hIdx + 1];
+    if (topic && topic !== 'v') {
+      const { loadHelpStub } = await import('./help/loader.js');
+      const stub = loadHelpStub(topic);
+      if (stub) { console.log(stub); process.exit(0); }
+    }
     const { showHelp } = await import('./help.js');
     showHelp();
   }
