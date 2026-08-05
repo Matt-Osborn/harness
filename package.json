@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "prebuild": "npm install",
-    "build": "tsc -b",
+    "build": "tsc -b --force",
     "build:watch": "tsc -b -w",
     "dev": "tsx packages/harness-cli/src/index.ts",
     "test": "vitest"
@@ -17,5 +17,9 @@
     "tsx": "^4.19.0",
     "typescript": "^5.8.0",
     "vitest": "^3.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "esbuild@0.27.7": true
   }
 }
