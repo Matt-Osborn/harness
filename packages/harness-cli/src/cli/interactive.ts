@@ -310,8 +310,12 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
           const result = execSync(cmd, { encoding: 'utf-8', shell: shellInfo.shell, timeout: 30000 });
           process.stdout.write(result + '\n');
         } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          process.stdout.write(t.error(msg) + '\n');
+          const err = e as Error & { status?: number; stdout?: string; stderr?: string };
+          if (err.status === 1 && !err.stderr) {
+            process.stdout.write((err.stdout || '') + '\n');
+          } else {
+            process.stdout.write(t.error(err.message || String(e)) + '\n');
+          }
         }
         rl.prompt();
         return;

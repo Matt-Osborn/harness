@@ -153,7 +153,7 @@ export class BashTool implements AgentTool {
           settle(`Error executing command:\nCommand timed out after ${timeout}ms`);
           return;
         }
-        if (code !== null && code !== 0) {
+        if (code !== null && code !== 0 && !(code === 1 && !stderr)) {
           const combined = stderr || stdout;
           if (combined.length > MAX_OUTPUT_LENGTH) {
             settle(`Error executing command:\n${combined.slice(0, MAX_OUTPUT_LENGTH)}\n... [output truncated]`);
@@ -166,7 +166,7 @@ export class BashTool implements AgentTool {
           settle(stdout.slice(0, MAX_OUTPUT_LENGTH) + `\n... [output truncated at ${MAX_OUTPUT_LENGTH} characters]`);
           return;
         }
-        settle(stdout || '(command completed with no output)');
+        settle(stdout || '');
       });
     });
   }
