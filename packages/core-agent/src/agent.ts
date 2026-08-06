@@ -92,6 +92,10 @@ export class Agent {
     this.provider.setTemperature(t);
   }
 
+  setProvider(provider: Provider): void {
+    this.provider = provider;
+  }
+
   applyDefinition(def: AgentDefinition, fullTools: AgentTool[], projectRules?: string | null): void {
     if (def.mode) {
       this.mode = def.mode;

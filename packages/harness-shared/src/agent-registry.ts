@@ -10,11 +10,6 @@ import type {
 } from './types.js';
 
 const BUILTIN_AGENTS: Record<string, AgentDefinition> = {
-  default: {
-    type: 'agent',
-    name: 'default',
-    description: 'Default agent with all tools and the standard system prompt',
-  },
   plan: {
     type: 'agent',
     name: 'plan',

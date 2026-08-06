@@ -10,7 +10,14 @@ import type { WebSearchTool } from '@harness/core-agent';
 import { getShellInfo } from '@harness/core-agent';
 import type { Message, SearchProviderType } from '@harness/shared';
 import { TextWrapper, SessionManager, isWSL, isCygwin, CliTheme, writeSessionSummary, Logger } from '@harness/shared';
+import type { ProviderOptions } from '@harness/core-ai';
 import { MarkdownRenderer } from './markdown.js';
+
+let providerOptions: ProviderOptions | undefined;
+
+export function setSessionProviderOptions(opts: ProviderOptions | undefined): void {
+  providerOptions = opts;
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -538,6 +545,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write(`  ${t.warning('/hide-tools')}         Hide tool call lines\n`);
         process.stdout.write(`  ${t.warning('/show-tools')}         Show tool call lines\n`);
         process.stdout.write(`  ${t.warning('/agent [name]')}      Switch agent (no arg lists available agents)\n`);
+        process.stdout.write(`  ${t.warning('/model [name]')}      Show current model or switch to a different model\n`);
         process.stdout.write(`  ${t.warning('/summarize')}           Write session summary to memory-bank\n`);
         process.stdout.write(`  ${t.warning('/plan')}                Switch to plan mode (Tab also toggles)\n`);
         process.stdout.write(`  ${t.warning('/build')}               Switch to build mode (Tab also toggles)\n`);
@@ -569,7 +577,6 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
             build: 'Build mode (all tools; same as Tab)',
           };
           for (const a of agentRegistry.builtinAgents) {
-            if (a.name === 'default') continue;
             const desc = builtinNote[a.name] ?? a.description;
             process.stdout.write(`  ${t.highlight(a.name)}${desc ? t.dim(` — ${desc}`) : ''}\n`);
           }
@@ -608,6 +615,44 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         currentMode = agent.getMode();
         rl.setPrompt(`${getModePrefix()}${t.success('❯')} `);
         process.stdout.write(t.success(`Switched to agent "${agentName}"`) + '\n\n');
+        rl.prompt();
+        return;
+      }
+
+      if (trimmed === '/model') {
+        const { ConfigManager, CliTheme } = await import('@harness/shared');
+        const cfg = new ConfigManager();
+        const tM = new CliTheme();
+        const models = cfg.allModels;
+        process.stdout.write(tM.bold('Configured models:\n'));
+        for (const { name, config: mc } of models) {
+          const isDefault = name === cfg.defaultModel;
+          const prefix = isDefault ? `${tM.success('*')} ` : '  ';
+          const keyOk = cfg.validateModel(name).valid;
+          const keyStatus = keyOk ? tM.success('✓ key set') : tM.warning('⚠ no key');
+          process.stdout.write(`${prefix}${tM.bold(name)}: ${mc.name || mc.model} (${tM.green(mc.kind)}) ${keyStatus}\n`);
+          if (mc.base_url) process.stdout.write(`     url: ${mc.base_url}\n`);
+        }
+        process.stdout.write(`\nUse ${tM.warning('/model <name>')} to switch.\n`);
+        rl.prompt();
+        return;
+      }
+
+      if (trimmed.startsWith('/model ')) {
+        const name = trimmed.slice(7).trim();
+        const { ConfigManager } = await import('@harness/shared');
+        const { createProvider } = await import('@harness/core-ai');
+        const cfg = new ConfigManager();
+        const resolved = cfg.getResolvedModel(name);
+        if (!resolved) {
+          process.stdout.write(t.error(`Unknown model: ${name}. Use /model to list configured models.\n`));
+          rl.prompt();
+          return;
+        }
+        const newProvider = createProvider(resolved.config.model, resolved.config, resolved.apiKey, providerOptions);
+        agent.setProvider(newProvider);
+        modelName = name;
+        process.stdout.write(t.success(`Switched to model: ${name}\n`));
         rl.prompt();
         return;
       }

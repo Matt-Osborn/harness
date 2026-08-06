@@ -11,7 +11,7 @@ import { createCliPromptFn } from '../permissions/engine.js';
 import { renderForm } from '../prompts/render-form.js';
 import type { FormQuestion } from '../prompts/render-form.js';
 import { runPrintMode } from './print.js';
-import { runInteractive } from './interactive.js';
+import { runInteractive, setSessionProviderOptions } from './interactive.js';
 
 import { runSkillCommand, AGENTS_MD_TEMPLATE, hintLine } from './skill-command.js';
 import { showHelp, showHelpVerbose } from '../help.js';
@@ -354,6 +354,7 @@ export async function run(): Promise<void> {
     }
 
     const searchIsDefault = !searchFlagPresent;
+    setSessionProviderOptions({ anonymous: config.anonymous, routing: routingOverride, suffix: suffixOverride });
     await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, searchIsDefault, initialTemp, statusEnabled, tInteractive, hideThinking, hideTools, permissions, agentRegistry, tools, projectRules, config.logEnabled || flagLog);
     return;
   }
