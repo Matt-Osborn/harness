@@ -14,5 +14,9 @@ Topic-based help for harness-cli flags and commands.
 | `mode` | `--plan`, `--build` — operating modes |
 | `export` | `/export` — session export |
 | `routing` | `--routing` — OpenRouter provider routing |
+| `init` | `harness init` — first-time configuration |
+| `config` | `harness config` — effective configuration display |
+| `tui` | `harness tui` — experimental terminal UI |
+| `skill` | `harness skill` — skill management |
 
 Usage: `harness help <topic>` or `harness --help <topic>`

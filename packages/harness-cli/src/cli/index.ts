@@ -654,6 +654,12 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
 # base_url = "http://localhost:11434/v1"
 # kind = "openai-compatible"
 # api_key_env = "OPENROUTER_API_KEY"
+
+[display]
+# Theme for help stub rendering (harness --help <topic>)
+# Also configurable via HARNESS_GLAMOUR_STYLE env var (takes priority)
+# Options: dracula, tokyo-night, dark, light, pink, ascii, auto
+# glamour_style = "dracula"
 `;
       writeFileSync(configPath, defaultConfig, 'utf-8');
       console.log(`Created config at ${configPath}`);

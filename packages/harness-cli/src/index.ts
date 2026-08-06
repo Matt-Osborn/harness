@@ -15,7 +15,32 @@ if (args.includes('-h') || args.includes('--help') || args[0] === 'help') {
     if (topic && topic !== 'v') {
       const { loadHelpStub } = await import('./help/loader.js');
       const stub = loadHelpStub(topic);
-      if (stub) { console.log(stub); process.exit(0); }
+      if (stub) {
+        if (process.stdout.isTTY) {
+          const glamour = await import('@oakoliver/glamour');
+          const { readFileSync, existsSync } = await import('node:fs');
+          const { join } = await import('node:path');
+          const { homedir } = await import('node:os');
+          const envStyle = process.env.HARNESS_GLAMOUR_STYLE;
+          let style = 'dracula';
+          if (envStyle) {
+            style = envStyle;
+          } else {
+            try {
+              const configPath = join(homedir(), '.harness', 'config.toml');
+              if (existsSync(configPath)) {
+                const config = readFileSync(configPath, 'utf-8');
+                const m = config.match(/^glamour_style\s*=\s*"([^"]+)"/m);
+                if (m) style = m[1];
+              }
+            } catch {}
+          }
+          process.stdout.write(glamour.render(stub, style) + '\n');
+        } else {
+          console.log(stub);
+        }
+        process.exit(0);
+      }
     }
     const { showHelp } = await import('./help.js');
     showHelp();

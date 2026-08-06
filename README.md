@@ -163,4 +163,5 @@ harness-cli → core-agent → core-ai → harness-shared
 ## Full Documentation
 
 - `man harness` — complete reference for all flags, commands, config, and env vars
-- How-to guides in `docs/` — setting up local models, pipelines, custom agents, etc.
+- `docs/README.md` — how-to guides for local models, pipelines, custom agents, and more
+- `harness help <topic>` — quick topic-based reference (`help`, `width`, `session`, etc.)
