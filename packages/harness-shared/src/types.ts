@@ -88,10 +88,18 @@ export interface PermissionConfig {
   readonly?: ReadonlyMode;
 }
 
-export type SearchProviderType = 'tavily' | 'duckduckgo' | 'exa';
+export type SearchProviderType = 'tavily' | 'duckduckgo' | 'exa' | 'searxng';
 
 export interface SearchConfig {
   provider?: SearchProviderType;
+  search_priority?: SearchProviderType[];
+  searxng?: {
+    instances?: string[];
+  };
+  exa?: {
+    search_type?: 'auto' | 'fast' | 'deep';
+    result_cap?: number;
+  };
 }
 
 export interface SearchResult {

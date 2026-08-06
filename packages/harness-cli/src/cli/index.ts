@@ -79,6 +79,7 @@ export async function run(): Promise<void> {
     console.log(`  ${t.green('tavily')}       (requires TAVILY_API_KEY)`);
     console.log(`  ${t.green('duckduckgo')}   (free, no key needed)`);
     console.log(`  ${t.green('exa')}          (requires EXA_API_KEY)`);
+    console.log(`  ${t.green('searxng')}      (self-hosted, set base_url in config)`);
 
     console.log(`\nUsage: ${t.warning('harness -s <provider>')} or ${t.warning('harness --search <provider>')}`);
     return;
@@ -626,7 +627,7 @@ kind = "openai-compatible"
 default = "deepseek"
 
 [search]
-provider = "tavily"
+# provider = "tavily"      # uncomment to override auto-detect
 
 [permissions]
 mode = "ask"

@@ -1,18 +1,26 @@
-import type { SearchProviderType, SearchResult } from '@harness/shared';
+import type { SearchConfig, SearchProviderType, SearchResult } from '@harness/shared';
 import type { AgentTool } from '../tool.js';
 import { createSearchProvider } from './search/index.js';
 
 const MAX_RESULTS = 20;
 const MAX_LINE_LENGTH = 500;
 
-export function resolveAutoProvider(): SearchProviderType {
-  if (process.env.EXA_API_KEY) return 'exa';
-  if (process.env.TAVILY_API_KEY) return 'tavily';
+const DEFAULT_PRIORITY: SearchProviderType[] = ['exa', 'tavily', 'duckduckgo'];
+
+export function resolveAutoProvider(searchConfig?: SearchConfig): SearchProviderType {
+  const priority = searchConfig?.search_priority || DEFAULT_PRIORITY;
+  for (const p of priority) {
+    if (p === 'searxng' && searchConfig?.searxng?.instances?.length) return 'searxng';
+    if (p === 'exa' && !!process.env.EXA_API_KEY) return 'exa';
+    if (p === 'tavily' && !!process.env.TAVILY_API_KEY) return 'tavily';
+    if (p === 'duckduckgo') return 'duckduckgo';
+  }
   return 'duckduckgo';
 }
 
-export function isProviderAvailable(provider?: SearchProviderType): boolean {
+export function isProviderAvailable(provider?: SearchProviderType, searchConfig?: SearchConfig): boolean {
   if (!provider) return true;
+  if (provider === 'searxng') return !!(searchConfig?.searxng?.instances?.length);
   if (provider === 'duckduckgo') return true;
   if (provider === 'exa') return !!process.env.EXA_API_KEY;
   if (provider === 'tavily') return !!process.env.TAVILY_API_KEY;
@@ -21,7 +29,7 @@ export function isProviderAvailable(provider?: SearchProviderType): boolean {
 
 export class WebSearchTool implements AgentTool {
   readonly name = 'web_search';
-  readonly description = 'Search the web for information. Supports multiple providers: tavily (requires TAVILY_API_KEY), duckduckgo (free). Use this for finding documentation, news, packages, tutorials, and any online information.';
+  readonly description = 'Search the web for information. Supports multiple providers: tavily (requires TAVILY_API_KEY), duckduckgo (free), exa, searxng. Use this for finding documentation, news, packages, tutorials, and any online information.';
 
   readonly parameters = {
     type: 'object',
@@ -36,7 +44,7 @@ export class WebSearchTool implements AgentTool {
       },
       provider: {
         type: 'string',
-        enum: ['tavily', 'duckduckgo', 'exa'],
+        enum: ['tavily', 'duckduckgo', 'exa', 'searxng'],
         description: 'Search provider override. Default: from config or auto-detected.',
       },
       timeout: {
@@ -48,13 +56,19 @@ export class WebSearchTool implements AgentTool {
   };
 
   private defaultProvider?: SearchProviderType;
+  private searchConfig?: SearchConfig;
 
-  constructor(defaultProvider?: SearchProviderType) {
+  constructor(defaultProvider?: SearchProviderType, searchConfig?: SearchConfig) {
     this.defaultProvider = defaultProvider;
+    this.searchConfig = searchConfig;
   }
 
   setProvider(provider: SearchProviderType): void {
     this.defaultProvider = provider;
+  }
+
+  setSearchConfig(config: SearchConfig): void {
+    this.searchConfig = config;
   }
 
   async execute(args: Record<string, unknown>): Promise<string> {
@@ -63,12 +77,12 @@ export class WebSearchTool implements AgentTool {
     let provider = (args.provider as SearchProviderType) || this.defaultProvider;
     const timeout = Math.min(Number(args.timeout || 10), 30) * 1000;
 
-    if (provider && !isProviderAvailable(provider)) {
-      provider = resolveAutoProvider();
+    if (provider && !isProviderAvailable(provider, this.searchConfig)) {
+      provider = resolveAutoProvider(this.searchConfig);
     }
 
     try {
-      const searchProvider = createSearchProvider(provider);
+      const searchProvider = createSearchProvider(provider, undefined, this.searchConfig);
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeout);
       let results: SearchResult[];

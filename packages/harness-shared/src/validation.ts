@@ -75,6 +75,12 @@ export const LOCAL_MODEL_PROVIDERS: ProviderKeyInfo[] = [
 ];
 
 const SEARCH_PROVIDER_INFO: Record<string, ProviderKeyInfo> = {
+  searxng: {
+    name: 'SearXNG',
+    envVar: '',
+    instructions: 'Self-hosted or public SearXNG instance. Set base_url in [search.searxng] config.',
+    keyUrl: undefined,
+  },
   tavily: {
     name: 'Tavily',
     envVar: 'TAVILY_API_KEY',

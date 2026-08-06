@@ -11,7 +11,7 @@ ${t.bold('USAGE:')}
 ${t.bold('OPTIONS:')}
   -p, --prompt <text>    Run a single prompt in print mode (must be last argument)
   -m, --model <name>     Specify which model to use
-  -s, --search <provider> Search provider (tavily, duckduckgo, exa)
+  -s, --search <provider> Search provider (tavily, duckduckgo, exa, searxng)
   -w, --width <cols>     Wrap output at column width (default: auto, fallback 80)
   -S, --session <id>     Resume a specific session
   -r, --resume           Resume the most recent session
@@ -124,7 +124,7 @@ ${t.bold('AGENT & PIPELINE:')}
 
 ${t.bold('MISCELLANEOUS:')}
   -p, --prompt <text>        Run a single prompt in print mode (must be last argument)
-  -s, --search <provider>    Set search provider (tavily, duckduckgo, exa)
+  -s, --search <provider>    Set search provider (tavily, duckduckgo, exa, searxng)
   -h, --help                 Show compact help message
   --help v                   Show this verbose help message
 

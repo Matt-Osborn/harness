@@ -110,7 +110,12 @@ export class ConfigManager {
 
       if (raw.search && typeof raw.search === 'object') {
         const s = raw.search as Record<string, unknown>;
-        merged.search = { provider: (s.provider as SearchProviderType) || merged.search?.provider };
+        merged.search = {
+          provider: (s.provider as SearchProviderType) || merged.search?.provider,
+          search_priority: (s.search_priority as SearchProviderType[]) || merged.search?.search_priority,
+          searxng: (s.searxng as { instances?: string[] }) || merged.search?.searxng,
+          exa: (s.exa as { search_type?: 'auto' | 'fast' | 'deep'; result_cap?: number }) || merged.search?.exa,
+        };
       }
 
       if (raw.cli && typeof raw.cli === 'object') {

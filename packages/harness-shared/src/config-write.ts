@@ -47,6 +47,8 @@ export function setDefaultModelInConfig(alias: string): void {
 
 export function setSearchProviderInConfig(provider: SearchProviderType): void {
   const raw = readGlobalConfig();
-  raw.search = { provider };
+  const search = (raw.search as Record<string, unknown>) || {};
+  search.provider = provider;
+  raw.search = search;
   writeGlobalConfig(raw);
 }

@@ -5,15 +5,19 @@ import { Exa } from 'exa-js';
 export class ExaSearchProvider implements SearchProvider {
   readonly name = 'exa' as const;
   private client: Exa;
+  private searchType: string;
+  private resultCap: number;
 
-  constructor(apiKey?: string) {
+  constructor(apiKey?: string, config?: { search_type?: string; result_cap?: number }) {
     this.client = new Exa(apiKey || process.env.EXA_API_KEY || '');
+    this.searchType = config?.search_type || 'auto';
+    this.resultCap = config?.result_cap || 20;
   }
 
   async search(query: string, numResults = 8, _signal?: AbortSignal): Promise<SearchResult[]> {
     const response = await this.client.search(query, {
-      type: 'auto',
-      numResults: Math.min(numResults, 20),
+      type: this.searchType as 'auto' | 'keyword' | 'neural' | 'hybrid',
+      numResults: Math.min(numResults, this.resultCap),
       contents: { text: true },
     });
     return (response.results as Array<{ title?: string; url: string; text?: string; score?: number }>).map(r => ({

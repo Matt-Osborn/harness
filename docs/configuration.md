@@ -171,19 +171,48 @@ These are always treated as read-only regardless of the permission mode:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `provider` | string | `"auto-detect"` | Search provider. One of: `"tavily"`, `"duckduckgo"`, `"exa"`. |
+| `provider` | string | auto-detect | Search provider. One of: `"tavily"`, `"duckduckgo"`, `"exa"`, `"searxng"`. |
+| `search_priority` | string[] | `["exa", "tavily", "duckduckgo"]` | Auto-detect priority order. |
 
-Auto-detection priority: `EXA_API_KEY` → `TAVILY_API_KEY` → DuckDuckGo (free).
+Default auto-detect priority: `EXA_API_KEY → TAVILY_API_KEY → DuckDuckGo`.
 
 ```toml
 [search]
-provider = "tavily"
+# provider = "tavily"    # uncomment to override auto-detect
+```
+
+### `[search.searxng]` — SearXNG options
+
+SearXNG is a self-hosted or public metasearch engine that aggregates results
+from dozens of search services.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `instances` | string[] | `["http://localhost:8888"]` | SearXNG instance URLs. First available is used. |
+
+```toml
+[search.searxng]
+instances = ["http://localhost:8888", "https://searx.example.org"]
+```
+
+### `[search.exa]` — Exa options
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `search_type` | string | `"auto"` | Search mode: `"auto"`, `"fast"`, or `"deep"` |
+| `result_cap` | number | `20` | Maximum results per search |
+
+```toml
+[search.exa]
+search_type = "auto"
+result_cap = 20
 ```
 
 ### Search Providers
 
 | Provider | API Key Required | Env Var | Notes |
 |----------|-----------------|---------|-------|
+| **SearXNG** | No | *(none)* | Self-hosted metasearch; set `instances` in `[search.searxng]` |
 | **Tavily** | Yes | `TAVILY_API_KEY` | High-quality web search API |
 | **DuckDuckGo** | No | *(none)* | Free, no key needed, no rate limit for typical use |
 | **Exa** | Yes | `EXA_API_KEY` | Fast neural web search; key at https://dashboard.exa.ai/api-keys |
