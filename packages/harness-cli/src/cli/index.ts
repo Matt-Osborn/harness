@@ -244,7 +244,7 @@ export async function run(): Promise<void> {
     const search = searchOverride || config.searchProvider || resolveAutoProvider();
     const isInter = process.stdin.isTTY ?? false;
     const permConfig: PermissionConfig = { ...config.permissions };
-    if (args.includes('--ask')) permConfig.readonly = 'ask';
+    if (args.includes('--ask')) { permConfig.mode = 'ask'; permConfig.readonly = 'ask'; }
     const permissions = new PermissionEngine(permConfig, {
       interactive: isInter,
       promptFn: isInter ? createCliPromptFn() : undefined,
@@ -293,6 +293,14 @@ export async function run(): Promise<void> {
     const agentRegistry = new AgentRegistry();
     let agent: Agent;
     let agentDef: Runnable | null = null;
+
+    if (args.includes('--agent') && !agentFlag) {
+      console.log(tInteractive.bold('Available agents:'));
+      for (const a of agentRegistry.allAgents) {
+        console.log(`  ${tInteractive.green(a.name)}${a.description ? tInteractive.dim(` — ${a.description}`) : ''}`);
+      }
+      return;
+    }
 
     if (agentFlag) {
       const runnable = agentRegistry.resolve(agentFlag);
@@ -631,9 +639,12 @@ default = "deepseek"
 # provider = "tavily"      # uncomment to override auto-detect
 
 [permissions]
-mode = "ask"
-
-[permissions.tools]
+# mode = "ask"       # uncomment to require confirmation for all tool calls
+# [permissions.tools]
+# bash = "ask"
+# write = "ask"
+# read = "auto"
+# edit = "ask"
 bash = "ask"
 write = "ask"
 read = "auto"

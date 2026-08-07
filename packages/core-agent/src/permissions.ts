@@ -1,6 +1,6 @@
 import type { PermissionMode, PermissionConfig, ReadonlyMode } from '@harness/shared';
 
-export const READ_ONLY_TOOLS = ['read', 'grep', 'glob', 'web_fetch', 'web_search'];
+export const READ_ONLY_TOOLS = ['read', 'grep', 'glob', 'web_fetch', 'web_search', 'skill'];
 
 const READ_ONLY_BASH_COMMANDS = new Set([
   'ls', 'cat', 'head', 'tail', 'which', 'file', 'stat', 'du', 'df',
@@ -98,6 +98,10 @@ export class PermissionEngine {
       }
     }
 
+    if (this.mode === 'build' && mode === 'auto' && toolName === 'delete') {
+      return this.askUser(toolName, args);
+    }
+
     switch (mode) {
       case 'auto':
         return true;
@@ -145,6 +149,10 @@ export class PermissionEngine {
       if (argsList.some(a => a.command && isDestructiveBashCommand(String(a.command)))) {
         return this.askUserBatch(toolName, argsList);
       }
+    }
+
+    if (this.mode === 'build' && mode === 'auto' && toolName === 'delete') {
+      return this.askUserBatch(toolName, argsList);
     }
 
     switch (mode) {

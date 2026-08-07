@@ -100,6 +100,8 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
   let rl: readline.Interface;
   let currentTemp = initialTemp;
   let treatNextCloseAsExit = true;
+  let isProcessing = false;
+  let processingController: AbortController | undefined;
   let currentMode: 'plan' | 'build' = agent.getMode();
   let modeChangeListener: ((str: string, key: { name: string }) => void) | null = null;
   let rawDataHandler: ((data: Buffer) => void) | null = null;
@@ -233,6 +235,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
   }
 
   function setupRawModeListener(controller: AbortController): void {
+    if (process.platform === 'win32') return;
     try {
       process.stdin.setRawMode?.(true);
     } catch { /* non-TTY */ }
@@ -701,6 +704,11 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         return;
       }
 
+      if (trimmed.startsWith('/')) {
+        rl.prompt();
+        return;
+      }
+
       treatNextCloseAsExit = false;
       rl.close();
 
@@ -738,10 +746,13 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         }
       }, 200);
 
+      isProcessing = true;
       const controller = new AbortController();
+      processingController = controller;
       try {
         setupRawModeListener(controller);
         for await (const event of agent.run(history, controller.signal)) {
+          if (controller.signal.aborted) { streamBuf = ''; break; }
           isWaiting = false;
           clearStatus();
           switch (event.type) {
@@ -916,6 +927,8 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         }
         thinkingBuf = '';
         startReadline();
+        isProcessing = false;
+        processingController = undefined;
       }
     });
 
@@ -934,7 +947,11 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
   }
 
   process.on('SIGINT', () => {
-    handleExit('sigint');
+    if (isProcessing && processingController) {
+      processingController.abort();
+    } else {
+      handleExit('sigint');
+    }
   });
 
   console.log(`${t.bold('harness-cli')} — Interactive mode (Ctrl+C to quit)`);
