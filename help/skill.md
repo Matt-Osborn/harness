@@ -3,8 +3,10 @@
 Manage skills — reusable instruction sets for the agent.
 
 | Command | Description |
-|---|---|
+|---|---|---|
 | `harness skill list` | List all available skills and which are enabled |
+| `harness skill add` | Interactive wizard to create a new skill |
+| `harness skill add --from <url\|path>` | Import a skill from a file or URL |
 | `harness skill enable <name>` | Add a skill to this project's AGENTS.md |
 | `harness skill disable <name>` | Remove a skill from AGENTS.md |
 

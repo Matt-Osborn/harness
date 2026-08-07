@@ -589,7 +589,7 @@ export async function run(): Promise<void> {
 
     case 'skill': {
       const registry = new SkillRegistry();
-      runSkillCommand(commands.slice(1), registry);
+      await runSkillCommand(commands.slice(1), registry);
       break;
     }
 
