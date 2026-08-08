@@ -14,6 +14,7 @@ import type { ProviderOptions } from '@harness/core-ai';
 import { MarkdownRenderer } from './markdown.js';
 
 let providerOptions: ProviderOptions | undefined;
+let cliHistory: string[] = [];
 
 export function setSessionProviderOptions(opts: ProviderOptions | undefined): void {
   providerOptions = opts;
@@ -290,6 +291,8 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       terminal: true,
       prompt: `${getModePrefix()}${t.success('❯')} `,
       completer: (line: string) => [[], line],
+      history: cliHistory,
+      historySize: 100,
     });
 
     disableKeypressListener?.();
