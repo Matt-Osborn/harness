@@ -1,0 +1,135 @@
+{
+  "$schema": "https://opencode.ai/theme.json",
+  "theme": {
+    "background": {
+      "dark": "#000000",
+      "light": "#ffffff"
+    },
+    "text": {
+      "dark": "#d8d8d8",
+      "light": "#1a1a1a"
+    },
+    "primary": {
+      "dark": "#4a9eff",
+      "light": "#2a7edf"
+    },
+    "accent": {
+      "dark": "#a679e6",
+      "light": "#7a4ebf"
+    },
+    "success": {
+      "dark": "#55d66b",
+      "light": "#3aab4d"
+    },
+    "warning": {
+      "dark": "#e6d55a",
+      "light": "#b8a62a"
+    },
+    "error": {
+      "dark": "#ff6b6b",
+      "light": "#d43b3b"
+    },
+    "info": {
+      "dark": "#4a9eff",
+      "light": "#2a7edf"
+    },
+    "border": "#1a1a1a",
+    "borderActive": {
+      "dark": "#4a9eff",
+      "light": "#2a7edf"
+    },
+    "textMuted": "#888888",
+    "diffAdded": {
+      "dark": "#55d66b",
+      "light": "#3aab4d"
+    },
+    "diffRemoved": {
+      "dark": "#ff6b6b",
+      "light": "#d43b3b"
+    },
+    "syntaxComment": "#555555",
+    "syntaxKeyword": {
+      "dark": "#4a9eff",
+      "light": "#2a7edf"
+    },
+    "syntaxString": {
+      "dark": "#e6d55a",
+      "light": "#b8a62a"
+    },
+    "syntaxFunction": {
+      "dark": "#d8d8d8",
+      "light": "#1a1a1a"
+    },
+    "syntaxVariable": {
+      "dark": "#d8d8d8",
+      "light": "#1a1a1a"
+    },
+    "syntaxProperty": {
+      "dark": "#66ccff",
+      "light": "#3a96dd"
+    },
+    "syntaxType": {
+      "dark": "#ffffff",
+      "light": "#000000"
+    },
+    "syntaxConstant": {
+      "dark": "#4a9eff",
+      "light": "#2a7edf"
+    },
+    "syntaxOperator": {
+      "dark": "#d8d8d8",
+      "light": "#1a1a1a"
+    },
+    "syntaxPunctuation": {
+      "dark": "#d8d8d8",
+      "light": "#1a1a1a"
+    },
+    "markdownHeading": {
+      "dark": "#a679e6",
+      "light": "#7a4ebf"
+    },
+    "markdownText": {
+      "dark": "#d8d8d8",
+      "light": "#1a1a1a"
+    },
+    "markdownLink": {
+      "dark": "#4a9eff",
+      "light": "#2a7edf"
+    },
+    "markdownLinkText": {
+      "dark": "#66ccff",
+      "light": "#3a96dd"
+    },
+    "markdownCode": {
+      "dark": "#55d66b",
+      "light": "#3aab4d"
+    },
+    "markdownBlockQuote": "#888888",
+    "markdownEmph": {
+      "dark": "#e6d55a",
+      "light": "#b8a62a"
+    },
+    "markdownStrong": {
+      "dark": "#4a9eff",
+      "light": "#2a7edf"
+    },
+    "markdownHorizontalRule": "#888888",
+    "markdownListItem": {
+      "dark": "#55d66b",
+      "light": "#3aab4d"
+    },
+    "markdownListEnumeration": {
+      "dark": "#66ccff",
+      "light": "#3a96dd"
+    },
+    "markdownImage": {
+      "dark": "#4a9eff",
+      "light": "#2a7edf"
+    },
+    "markdownImageText": "#888888",
+    "markdownCodeBlock": {
+      "dark": "#d8d8d8",
+      "light": "#1a1a1a"
+    }
+  }
+}

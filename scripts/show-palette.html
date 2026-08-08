@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>harness-cli Palette Viewer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #111; color: #eee; padding: 2rem; }
+h1 { font-size: 1.5rem; margin-bottom: 1rem; color: #9d7cd8; }
+.controls { margin-bottom: 2rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+.controls select { padding: 0.4rem 0.8rem; background: #222; color: #eee; border: 1px solid #444; border-radius: 4px; font-size: 0.9rem; }
+.controls label { color: #888; font-size: 0.85rem; }
+.controls input[type="file"] { font-size: 0.85rem; color: #888; }
+.mode-toggle { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.mode-toggle button { padding: 0.4rem 1rem; background: #222; color: #888; border: 1px solid #444; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+.mode-toggle button.active { background: #9d7cd8; color: #fff; border-color: #9d7cd8; }
+.swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 0.5rem; margin-bottom: 2rem; }
+.category { grid-column: 1 / -1; font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #333; }
+.slot { display: flex; align-items: center; gap: 0.75rem; padding: 0.35rem 0.5rem; border-radius: 4px; background: #1a1a1a; }
+.slot-name { min-width: 140px; font-size: 0.85rem; color: #ccc; }
+.swatch { width: 48px; height: 24px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
+.hex { font-family: 'SF Mono', 'Consolas', monospace; font-size: 0.8rem; color: #888; }
+.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<h1>harness-cli Palette Viewer</h1>
+
+<div class="controls">
+  <label>Theme:</label>
+  <select id="theme-select"><option value="">(select a theme)</option></select>
+  <label>or load custom:</label>
+  <input type="file" id="file-input" accept=".json">
+</div>
+
+<div class="mode-toggle">
+  <button data-mode="dark" class="active">Dark</button>
+  <button data-mode="light">Light</button>
+  <button data-mode="both">Both</button>
+</div>
+
+<div id="palette"></div>
+
+<script>
+const EMBEDDED_THEMES = {"aura":{"$schema":"https://opencode.ai/theme.json","theme":{"background":{"dark":"#15141b","light":"#f5f0ff"},"text":{"dark":"#edecee","light":"#2d2640"},"primary":"#a277ff","accent":{"dark":"#ff6767","light":"#d94f4f"},"success":{"dark":"#61ffca","light":"#40bf7a"},"warning":{"dark":"#ffca85","light":"#d9a24a"},"error":{"dark":"#ff6767","light":"#d94f4f"},"info":{"dark":"#82e2ff","light":"#5bb8d9"},"border":{"dark":"#15141b","light":"#f5f0ff"},"borderActive":"#a277ff","diffAdded":{"dark":"#61ffca","light":"#b3e6cc"},"diffRemoved":{"dark":"#ff6767","light":"#f5b3b3"},"syntaxComment":{"dark":"#6d6a7e","light":"#8d88a3"},"syntaxKeyword":{"dark":"#a277ff","light":"#7b5ae0"},"syntaxString":{"dark":"#61ffca","light":"#2b8a57"},"syntaxFunction":{"dark":"#82e2ff","light":"#2f78b8"},"syntaxProperty":{"dark":"#ffca85","light":"#a96a22"},"syntaxType":{"dark":"#61ffca","light":"#2b8a57"},"syntaxConstant":{"dark":"#ff6767","light":"#d94f4f"},"textMuted":{"dark":"#6d6a7e","light":"#8d88a3"}}},"campbell":{"$schema":"https://opencode.ai/theme.json","theme":{"background":{"dark":"#0C0C0C","light":"#F2F2F2"},"text":{"dark":"#CCCCCC","light":"#0C0C0C"},"primary":{"dark":"#3B78FF","light":"#0037DA"},"accent":{"dark":"#B4009E","light":"#881798"},"success":{"dark":"#16C60C","light":"#13A10E"},"warning":{"dark":"#F9F1A5","light":"#C19C00"},"error":{"dark":"#E74856","light":"#C50F1F"},"info":{"dark":"#61D6D6","light":"#3A96DD"},"border":"#767676","borderActive":{"dark":"#3B78FF","light":"#0037DA"},"textMuted":"#767676","diffAdded":{"dark":"#16C60C","light":"#13A10E"},"diffRemoved":{"dark":"#E74856","light":"#C50F1F"},"syntaxComment":"#767676","syntaxKeyword":{"dark":"#B4009E","light":"#881798"},"syntaxString":{"dark":"#16C60C","light":"#13A10E"},"syntaxFunction":{"dark":"#3B78FF","light":"#0037DA"},"syntaxVariable":{"dark":"#E74856","light":"#C50F1F"},"syntaxProperty":{"dark":"#61D6D6","light":"#3A96DD"},"syntaxType":{"dark":"#F9F1A5","light":"#C19C00"},"syntaxConstant":{"dark":"#F9F1A5","light":"#C19C00"},"syntaxOperator":{"dark":"#CCCCCC","light":"#0C0C0C"},"syntaxPunctuation":{"dark":"#CCCCCC","light":"#0C0C0C"},"markdownHeading":{"dark":"#B4009E","light":"#881798"},"markdownText":{"dark":"#CCCCCC","light":"#0C0C0C"},"markdownLink":{"dark":"#3B78FF","light":"#0037DA"},"markdownLinkText":{"dark":"#61D6D6","light":"#3A96DD"},"markdownCode":{"dark":"#16C60C","light":"#13A10E"},"markdownBlockQuote":"#767676","markdownEmph":{"dark":"#F9F1A5","light":"#C19C00"},"markdownStrong":{"dark":"#3B78FF","light":"#0037DA"},"markdownHorizontalRule":"#767676","markdownListItem":{"dark":"#16C60C","light":"#13A10E"},"markdownListEnumeration":{"dark":"#61D6D6","light":"#3A96DD"},"markdownImage":{"dark":"#3B78FF","light":"#0037DA"},"markdownImageText":"#767676","markdownCodeBlock":{"dark":"#CCCCCC","light":"#0C0C0C"}}},"carbonfox":{"$schema":"https://opencode.ai/theme.json","theme":{"background":{"dark":"#393939","light":"#8e8e8e"},"text":{"dark":"#f2f4f8","light":"#161616"},"primary":{"dark":"#33b1ff","light":"#0072c3"},"accent":{"dark":"#ff8389","light":"#da1e28"},"success":{"dark":"#42be65","light":"#198038"},"warning":"#f1c21b","error":{"dark":"#ff8389","light":"#da1e28"},"info":{"dark":"#78a9ff","light":"#0043ce"},"border":{"dark":"#393939","light":"#8e8e8e"},"borderActive":{"dark":"#33b1ff","light":"#0072c3"},"diffAdded":{"dark":"#42be65","light":"#198038"},"diffRemoved":{"dark":"#ff8389","light":"#da1e28"},"interactive":{"dark":"#4589ff","light":"#0f62fe"},"syntaxComment":"#6f6f6f","syntaxKeyword":{"dark":"#be95ff","light":"#8a3ffc"},"syntaxString":{"dark":"#42be65","light":"#198038"},"syntaxFunction":{"dark":"#33b1ff","light":"#0f62fe"},"syntaxProperty":{"dark":"#78a9ff","light":"#0043ce"},"syntaxType":{"dark":"#f1c21b","light":"#8a5f00"},"syntaxConstant":{"dark":"#ff8389","light":"#da1e28"},"textMuted":"#6f6f6f"}},"catppuccin":{"$schema":"https://opencode.ai/theme.json","theme":{"background":{"dark":"#1e1e2e","light":"#f5e0dc"},"text":{"dark":"#cdd6f4","light":"#4c4f69"},"primary":{"dark":"#b4befe","light":"#7287fd"},"accent":{"dark":"#f38ba8","light":"#d20f39"},"success":{"dark":"#a6d189","light":"#40a02b"},"warning":{"dark":"#f4b8e4","light":"#df8e1d"},"error":{"dark":"#f38ba8","light":"#d20f39"},"info":{"dark":"#89dceb","light":"#04a5e5"},"border":{"dark":"#1e1e2e","light":"#f5e0dc"},"borderActive":{"dark":"#b4befe","light":"#7287fd"},"diffAdded":{"dark":"#94e2d5","light":"#a6d189"},"diffRemoved":{"dark":"#f38ba8","light":"#e78284"},"syntaxComment":"#6c7086","syntaxKeyword":{"dark":"#cba6f7","light":"#8839ef"},"syntaxFunction":{"dark":"#89b4fa","light":"#1e66f5"},"syntaxConstant":{"dark":"#fab387","light":"#ca6702"},"textMuted":"#6c7086","markdownHeading":{"dark":"#cba6f7","light":"#8839ef"},"markdownText":{"dark":"#cdd6f4","light":"#4c4f69"},"markdownLink":{"dark":"#89b4fa","light":"#1e66f5"},"markdownLinkText":{"dark":"#89dceb","light":"#04a5e5"},"markdownCode":{"dark":"#f38ba8","light":"#d20f39"},"markdownBlockQuote":"#6c7086","markdownEmph":{"dark":"#fab387","light":"#ca6702"},"markdownStrong":{"dark":"#b4befe","light":"#7287fd"},"markdownHorizontalRule":"#6c7086","markdownListItem":{"dark":"#a6d189","light":"#40a02b"},"markdownListEnumeration":{"dark":"#89dceb","light":"#04a5e5"},"markdownImage":{"dark":"#89b4fa","light":"#1e66f5"},"markdownImageText":"#6c7086","markdownCodeBlock":{"dark":"#cdd6f4","light":"#4c4f69"}}},"dracula":{"$schema":"https://opencode.ai/theme.json","theme":{"background":{"dark":"#1d1e28","light":"#f8f8f2"},"text":{"dark":"#f8f8f2","light":"#1f1f2f"},"primary":{"dark":"#bd93f9","light":"#7c6bf5"},"accent":{"dark":"#ff79c6","light":"#d16090"},"success":{"dark":"#50fa7b","light":"#2fbf71"},"warning":{"dark":"#ffb86c","light":"#f7a14d"},"error":{"dark":"#ff5555","light":"#d9536f"},"info":{"dark":"#8be9fd","light":"#1d7fc5"},"border":{"dark":"#1d1e28","light":"#f8f8f2"},"borderActive":{"dark":"#bd93f9","light":"#7c6bf5"},"diffAdded":{"dark":"#2fb27d","light":"#9fe3b3"},"diffRemoved":{"dark":"#ff6b81","light":"#f8a1b8"},"syntaxComment":{"dark":"#6272a4","light":"#7d7f97"},"syntaxKeyword":{"dark":"#ff79c6","light":"#d16090"},"syntaxString":{"dark":"#f1fa8c","light":"#596600"},"syntaxFunction":{"dark":"#50fa7b","light":"#2f8f57"},"syntaxProperty":{"dark":"#8be9fd","light":"#1d7fc5"},"syntaxConstant":{"dark":"#bd93f9","light":"#7c6bf5"},"textMuted":{"dark":"#6272a4","light":"#7d7f97"}}},"flexoki":{"$schema":"https://opencode.ai/theme.json","theme":{"background":{"dark":"#100F0F","light":"#FFFCF0"},"text":{"dark":"#CECDC3","light":"#100F0F"},"primary":{"dark":"#DA702C","light":"#205EA6"},"accent":{"dark":"#8B7EC8","light":"#BC5215"},"success":{"dark":"#879A39","light":"#66800B"},"warning":{"dark":"#DA702C","light":"#BC5215"},"error":{"dark":"#D14D41","light":"#AF3029"},"info":{"dark":"#3AA99F","light":"#24837B"},"border":{"dark":"#100F0F","light":"#FFFCF0"},"borderActive":{"dark":"#DA702C","light":"#205EA6"},"textMuted":"#6F6E69","syntaxComment":"#6F6E69","syntaxKeyword":{"dark":"#879A39","light":"#66800B"},"syntaxString":{"dark":"#3AA99F","light":"#24837B"},"syntaxFunction":{"dark":"#DA702C","light":"#BC5215"},"syntaxVariable":{"dark":"#4385BE","light":"#205EA6"},"syntaxProperty":{"dark":"#3AA99F","light":"#24837B"},"syntaxType":{"dark":"#D0A215","light":"#AD8301"},"syntaxConstant":{"dark":"#8B7EC8","light":"#5E409D"},"syntaxOperator":{"dark":"#B7B5AC","light":"#6F6E69"},"syntaxPunctuation":{"dark":"#B7B5AC","light":"#6F6E69"},"syntaxObject":{"dark":"#4385BE","light":"#205EA6"},"markdownHeading":{"dark":"#8B7EC8","light":"#5E409D"},"markdownText":{"dark":"#CECDC3","light":"#100F0F"},"markdownLink":{"dark":"#4385BE","light":"#205EA6"},"markdownLinkText":{"dark":"#3AA99F","light":"#24837B"},"markdownCode":{"dark":"#3AA99F","light":"#24837B"},"markdownBlockQuote":{"dark":"#D0A215","light":"#AD8301"},"markdownEmph":{"dark":"#D0A215","light":"#AD8301"},"markdownStrong":{"dark":"#DA702C","light":"#BC5215"},"markdownHorizontalRule":"#6F6E69","markdownListItem":{"dark":"#DA702C","light":"#BC5215"},"markdownListEnumeration":{"dark":"#3AA99F","light":"#24837B"},"markdownImage":{"dark":"#CE5D97","light":"#A02F6F"},"markdownImageText":{"dark":"#3AA99F","light":"#24837B"},"markdownCodeBlock":{"dark":"#CECDC3","light":"#100F0F"},"interactive":{"dark":"#4385BE","light":""}}},"github":{"$schema":"https://opencode.ai/theme.json","theme":{"background":{"dark":"#0d1117","light":"#ffffff"},"text":{"dark":"#c9d1d9","light":"#24292f"},"primary":{"dark":"#58a6ff","light":"#0969da"},"accent":{"dark":"#39c5cf","light":"#1b7c83"},"success":{"dark":"#3fb950","light":"#1a7f37"},"warning":{"dark":"#e3b341","light":"#9a6700"},"error":{"dark":"#f85149","light":"#cf222e"},"info":{"dark":"#d29922","light":"#bc4c00"},"border":{"dark":"#0d1117","light":"#ffffff"},"borderActive":{"dark":"#58a6ff","light":"#0969da"},"textMuted":{"dark":"#8b949e","light":"#57606a"},"syntaxComment":{"dark":"#8b949e","light":"#57606a"},"syntaxKeyword":{"dark":"#ff7b72","light":"#cf222e"},"syntaxString":{"dark":"#39c5cf","light":"#0969da"},"syntaxFunction":{"dark":"#bc8cff","light":"#8250df"},"syntaxVariable":{"dark":"#d29922","light":"#bc4c00"},"syntaxProperty":{"dark":"#39c5cf","light":"#1b7c83"},"syntaxType":{"dark":"#d29922","light":"#bc4c00"},"syntaxConstant":{"dark":"#58a6ff","light":"#1b7c83"},"syntaxOperator":{"dark":"#ff7b72","light":"#cf222e"},"syntaxPunctuation":{"dark":"#c9d1d9","light":"#24292f"},"syntaxObject":{"dark":"#d29922","light":"#bc4c00"},"markdownHeading":{"dark":"#58a6ff","light":"#0969da"},"markdownText":{"dark":"#c9d1d9","light":"#24292f"},"markdownLink":{"dark":"#58a6ff","light":"#0969da"},"markdownLinkText":{"dark":"#39c5cf","light":"#1b7c83"},"markdownCode":{"dark":"#ff7b72","light":"#bf3989"},"markdownBlockQuote":{"dark":"#8b949e","light":"#57606a"},"markdownEmph":{"dark":"#e3b341","light":"#9a6700"},"markdownStrong":{"dark":"#d29922","light":"#bc4c00"},"markdownHorizontalRule":{"dark":"#30363d","light":"#d0d7de"},"markdownListItem":{"dark":"#58a6ff","light":"#0969da"},"markdownListEnumeration":{"dark":"#39c5cf","light":"#1b7c83"},"markdownImage":{"dark":"#58a6ff","light":"#0969da"},"markdownImageText":{"dark":"#39c5cf","light":"#1b7c83"},"markdownCodeBlock":{"dark":"#c9d1d9","light":"#24292f"}}},"matrix":{"$schema":"https://opencode.ai/theme.json","theme":{"background":{"dark":"#0a0e0a","light":"#eef3ea"},"text":{"dark":"#62ff94","light":"#203022"},"primary":{"dark":"#2eff6a","light":"#1cc24b"},"accent":"#c770ff","success":{"dark":"#62ff94","light":"#1cc24b"},"warning":"#e6ff57","error":"#ff4b4b","info":"#30b3ff","border":{"dark":"#0a0e0a","light":"#eef3ea"},"borderActive":{"dark":"#2eff6a","light":"#1cc24b"},"diffAdded":{"dark":"#77ffaf","light":"#5dac7e"},"diffRemoved":{"dark":"#ff7171","light":"#d53a3a"},"interactive":"#30b3ff","textMuted":{"dark":"#8ca391","light":"#748476"},"syntaxComment":{"dark":"#8ca391","light":"#748476"},"syntaxKeyword":"#c770ff","syntaxString":"#1cc24b","syntaxFunction":"#30b3ff","syntaxVariable":{"dark":"#62ff94","light":"#203022"},"syntaxProperty":"#24f6d9","syntaxType":"#e6ff57","syntaxConstant":"#ffa83d","syntaxOperator":"#24f6d9","syntaxPunctuation":{"dark":"#62ff94","light":"#203022"},"syntaxObject":{"dark":"#62ff94","light":"#203022"},"markdownHeading":{"dark":"#00efff","light":"#24f6d9"},"markdownText":{"dark":"#62ff94","light":"#203022"},"markdownLink":"#30b3ff","markdownLinkText":"#24f6d9","markdownCode":"#1cc24b","markdownBlockQuote":{"dark":"#8ca391","light":"#748476"},"markdownEmph":"#ffa83d","markdownStrong":"#e6ff57","markdownHorizontalRule":{"dark":"#8ca391","light":"#748476"},"markdownListItem":"#30b3ff","markdownListEnumeration":"#24f6d9","markdownImage":"#30b3ff","markdownImageText":"#24f6d9","markdownCodeBlock":{"dark":"#62ff94","light":"#203022"}}},"monokai":{"$schema":"https://opencode.ai/theme.json","theme":{"background":{"dark":"#272822","light":"#fdf8ec"},"text":{"dark":"#f8f8f2","light":"#292318"},"primary":{"dark":"#ae81ff","light":"#bf7bff"},"accent":{"dark":"#f92672","light":"#d9487c"},"success":{"dark":"#a6e22e","light":"#4fb54b"},"warning":{"dark":"#fd971f","light":"#f1a948"},"error":{"dark":"#f92672","light":"#e54b4b"},"info":{"dark":"#66d9ef","light":"#2d9ad7"},"border":{"dark":"#272822","light":"#fdf8ec"},"borderActive":{"dark":"#ae81ff","light":"#bf7bff"},"diffAdded":{"dark":"#4d7f2a","light":"#bfe7a3"},"diffRemoved":{"dark":"#f4477c","light":"#f6a3ae"},"syntaxComment":{"dark":"#75715e","light":"#8a816f"},"syntaxKeyword":{"dark":"#f92672","light":"#d9487c"},"syntaxString":{"dark":"#e6db74","light":"#8a6500"},"syntaxFunction":{"dark":"#a6e22e","light":"#3c8d2f"},"syntaxProperty":{"dark":"#66d9ef","light":"#1f88c8"},"syntaxConstant":{"dark":"#ae81ff","light":"#9b5fe0"},"textMuted":{"dark":"#75715e","light":"#8a816f"}}},"opencode":{"$schema":"https://opencode.ai/theme.json","theme":{"background":{"dark":"#0a0a0a","light":"#ffffff"},"text":{"dark":"#eeeeee","light":"#1a1a1a"},"primary":{"dark":"#fab283","light":"#3b7dd8"},"accent":{"dark":"#9d7cd8","light":"#d68c27"},"success":{"dark":"#7fd88f","light":"#3d9a57"},"warning":{"dark":"#f5a742","light":"#d68c27"},"error":{"dark":"#e06c75","light":"#d1383d"},"info":{"dark":"#56b6c2","light":"#318795"},"border":{"dark":"#0a0a0a","light":"#ffffff"},"borderActive":{"dark":"#fab283","light":"#3b7dd8"},"diffAdded":{"dark":"#b8db87","light":"#4db380"},"diffRemoved":{"dark":"#e26a75","light":"#f52a65"},"textMuted":{"dark":"#808080","light":"#8a8a8a"},"syntaxComment":{"dark":"#808080","light":"#8a8a8a"},"syntaxKeyword":{"dark":"#9d7cd8","light":"#d68c27"},"syntaxString":{"dark":"#7fd88f","light":"#3d9a57"},"syntaxFunction":{"dark":"#fab283","light":"#3b7dd8"},"syntaxVariable":{"dark":"#e06c75","light":"#d1383d"},"syntaxProperty":{"dark":"#56b6c2","light":"#318795"},"syntaxType":{"dark":"#e5c07b","light":"#b0851f"},"syntaxConstant":{"dark":"#f5a742","light":"#d68c27"},"syntaxOperator":{"dark":"#56b6c2","light":"#318795"},"syntaxPunctuation":{"dark":"#eeeeee","light":"#1a1a1a"},"syntaxObject":{"dark":"#e06c75","light":"#d1383d"},"markdownHeading":{"dark":"#9d7cd8","light":"#d68c27"},"markdownText":{"dark":"#eeeeee","light":"#1a1a1a"},"markdownLink":{"dark":"#fab283","light":"#3b7dd8"},"markdownLinkText":{"dark":"#56b6c2","light":"#318795"},"markdownCode":{"dark":"#7fd88f","light":"#3d9a57"},"markdownBlockQuote":{"dark":"#e5c07b","light":"#b0851f"},"markdownEmph":{"dark":"#e5c07b","light":"#b0851f"},"markdownStrong":{"dark":"#f5a742","light":"#d68c27"},"markdownHorizontalRule":{"dark":"#808080","light":"#8a8a8a"},"markdownListItem":{"dark":"#fab283","light":"#3b7dd8"},"markdownListEnumeration":{"dark":"#56b6c2","light":"#318795"},"markdownImage":{"dark":"#fab283","light":"#3b7dd8"},"markdownImageText":{"dark":"#56b6c2","light":"#318795"},"markdownCodeBlock":{"dark":"#eeeeee","light":"#1a1a1a"}}},"synthwave84":{"$schema":"https://opencode.ai/theme.json","theme":{"background":{"dark":"#262335","light":"#fafafa"},"text":{"dark":"#ffffff","light":"#262335"},"primary":{"dark":"#36f9f6","light":"#00bcd4"},"accent":{"dark":"#b084eb","light":"#9c27b0"},"success":{"dark":"#72f1b8","light":"#4caf50"},"warning":{"dark":"#fede5d","light":"#ff9800"},"error":{"dark":"#fe4450","light":"#f44336"},"info":{"dark":"#ff8b39","light":"#ff5722"},"border":{"dark":"#262335","light":"#fafafa"},"borderActive":{"dark":"#36f9f6","light":"#00bcd4"},"textMuted":{"dark":"#848bbd","light":"#5c5c8a"},"syntaxComment":{"dark":"#848bbd","light":"#5c5c8a"},"syntaxKeyword":{"dark":"#ff7edb","light":"#e91e63"},"syntaxString":{"dark":"#fede5d","light":"#ff9800"},"syntaxFunction":{"dark":"#ff8b39","light":"#ff5722"},"syntaxVariable":{"dark":"#ffffff","light":"#262335"},"syntaxProperty":{"dark":"#b084eb","light":"#9c27b0"},"syntaxType":{"dark":"#36f9f6","light":"#00bcd4"},"syntaxConstant":{"dark":"#b084eb","light":"#9c27b0"},"syntaxOperator":{"dark":"#ff7edb","light":"#e91e63"},"syntaxPunctuation":{"dark":"#ffffff","light":"#262335"},"syntaxObject":{"dark":"#ffffff","light":"#262335"},"markdownHeading":{"dark":"#ff7edb","light":"#e91e63"},"markdownText":{"dark":"#ffffff","light":"#262335"},"markdownLink":{"dark":"#36f9f6","light":"#00bcd4"},"markdownLinkText":{"dark":"#b084eb","light":"#9c27b0"},"markdownCode":{"dark":"#72f1b8","light":"#4caf50"},"markdownBlockQuote":{"dark":"#848bbd","light":"#5c5c8a"},"markdownEmph":{"dark":"#fede5d","light":"#ff9800"},"markdownStrong":{"dark":"#ff8b39","light":"#ff5722"},"markdownHorizontalRule":{"dark":"#495495","light":"#e0e0e0"},"markdownListItem":{"dark":"#36f9f6","light":"#00bcd4"},"markdownListEnumeration":{"dark":"#b084eb","light":"#9c27b0"},"markdownImage":{"dark":"#36f9f6","light":"#00bcd4"},"markdownImageText":{"dark":"#b084eb","light":"#9c27b0"},"markdownCodeBlock":{"dark":"#ffffff","light":"#262335"},"diffAdded":{"dark":"#97f1d8","light":""},"diffRemoved":{"dark":"#ff5e5b","light":""}}},"terminal":{"$schema":"https://opencode.ai/theme.json","theme":{"background":{"dark":"#000000","light":"#ffffff"},"text":{"dark":"#d8d8d8","light":"#1a1a1a"},"primary":{"dark":"#4a9eff","light":"#2a7edf"},"accent":{"dark":"#a679e6","light":"#7a4ebf"},"success":{"dark":"#55d66b","light":"#3aab4d"},"warning":{"dark":"#e6d55a","light":"#b8a62a"},"error":{"dark":"#ff6b6b","light":"#d43b3b"},"info":{"dark":"#4a9eff","light":"#2a7edf"},"border":"#1a1a1a","borderActive":{"dark":"#4a9eff","light":"#2a7edf"},"textMuted":"#888888","diffAdded":{"dark":"#55d66b","light":"#3aab4d"},"diffRemoved":{"dark":"#ff6b6b","light":"#d43b3b"},"syntaxComment":"#555555","syntaxKeyword":{"dark":"#4a9eff","light":"#2a7edf"},"syntaxString":{"dark":"#e6d55a","light":"#b8a62a"},"syntaxFunction":{"dark":"#d8d8d8","light":"#1a1a1a"},"syntaxVariable":{"dark":"#d8d8d8","light":"#1a1a1a"},"syntaxProperty":{"dark":"#66ccff","light":"#3a96dd"},"syntaxType":{"dark":"#ffffff","light":"#000000"},"syntaxConstant":{"dark":"#4a9eff","light":"#2a7edf"},"syntaxOperator":{"dark":"#d8d8d8","light":"#1a1a1a"},"syntaxPunctuation":{"dark":"#d8d8d8","light":"#1a1a1a"},"markdownHeading":{"dark":"#a679e6","light":"#7a4ebf"},"markdownText":{"dark":"#d8d8d8","light":"#1a1a1a"},"markdownLink":{"dark":"#4a9eff","light":"#2a7edf"},"markdownLinkText":{"dark":"#66ccff","light":"#3a96dd"},"markdownCode":{"dark":"#55d66b","light":"#3aab4d"},"markdownBlockQuote":"#888888","markdownEmph":{"dark":"#e6d55a","light":"#b8a62a"},"markdownStrong":{"dark":"#4a9eff","light":"#2a7edf"},"markdownHorizontalRule":"#888888","markdownListItem":{"dark":"#55d66b","light":"#3aab4d"},"markdownListEnumeration":{"dark":"#66ccff","light":"#3a96dd"},"markdownImage":{"dark":"#4a9eff","light":"#2a7edf"},"markdownImageText":"#888888","markdownCodeBlock":{"dark":"#d8d8d8","light":"#1a1a1a"}}},"tokyonight":{"$schema":"https://opencode.ai/theme.json","theme":{"background":{"dark":"#1a1b26","light":"#e1e2e7"},"text":{"dark":"#c0caf5","light":"#273153"},"primary":{"dark":"#7aa2f7","light":"#2e7de9"},"accent":{"dark":"#ff9e64","light":"#b15c00"},"success":{"dark":"#9ece6a","light":"#587539"},"warning":{"dark":"#e0af68","light":"#8c6c3e"},"error":{"dark":"#f7768e","light":"#c94060"},"info":{"dark":"#7dcfff","light":"#007197"},"border":{"dark":"#1a1b26","light":"#e1e2e7"},"borderActive":{"dark":"#7aa2f7","light":"#2e7de9"},"diffAdded":{"dark":"#41a6b5","light":"#4f8f7b"},"diffRemoved":{"dark":"#c34043","light":"#d05f7c"},"syntaxComment":{"dark":"#565f89","light":"#6b6f7a"},"syntaxKeyword":{"dark":"#bb9af7","light":"#9854f1"},"syntaxFunction":{"dark":"#7aa2f7","light":"#1f6fd4"},"syntaxProperty":{"dark":"#7dcfff","light":"#007197"},"syntaxConstant":{"dark":"#ff9e64","light":"#b15c00"},"textMuted":{"dark":"#565f89","light":"#6b6f7a"},"markdownHeading":{"dark":"#bb9af7","light":"#9854f1"},"markdownText":{"dark":"#c0caf5","light":"#273153"},"markdownLink":{"dark":"#7aa2f7","light":"#2e7de9"},"markdownLinkText":{"dark":"#7dcfff","light":"#007197"},"markdownCode":{"dark":"#ff9e64","light":"#b15c00"},"markdownBlockQuote":{"dark":"#565f89","light":"#6b6f7a"},"markdownEmph":{"dark":"#e0af68","light":"#8c6c3e"},"markdownStrong":{"dark":"#7aa2f7","light":"#2e7de9"},"markdownHorizontalRule":{"dark":"#565f89","light":"#6b6f7a"},"markdownListItem":{"dark":"#9ece6a","light":"#587539"},"markdownListEnumeration":{"dark":"#7dcfff","light":"#007197"},"markdownImage":{"dark":"#7aa2f7","light":"#2e7de9"},"markdownImageText":{"dark":"#565f89","light":"#6b6f7a"},"markdownCodeBlock":{"dark":"#c0caf5","light":"#273153"}}},"vercel":{"$schema":"https://opencode.ai/theme.json","theme":{"background":{"dark":"#000000","light":"#FFFFFF"},"text":{"dark":"#EDEDED","light":"#171717"},"primary":"#0070F3","accent":"#8E4EC6","success":{"dark":"#46A758","light":"#388E3C"},"warning":{"dark":"#FFB224","light":"#FF9500"},"error":{"dark":"#E5484D","light":"#DC3545"},"info":{"dark":"#52A8FF","light":"#0070F3"},"border":{"dark":"#000000","light":"#FFFFFF"},"borderActive":"#0070F3","diffAdded":{"dark":"#63C46D","light":"#46A758"},"diffRemoved":{"dark":"#FF6166","light":"#E5484D"},"textMuted":{"dark":"#878787","light":"#666666"},"syntaxComment":{"dark":"#878787","light":"#888888"},"syntaxKeyword":{"dark":"#F75590","light":"#E93D82"},"syntaxString":{"dark":"#63C46D","light":"#46A758"},"syntaxFunction":{"dark":"#BF7AF0","light":"#8E4EC6"},"syntaxVariable":{"dark":"#52A8FF","light":"#0070F3"},"syntaxProperty":{"dark":"#0AC7AC","light":"#12A594"},"syntaxType":{"dark":"#0AC7AC","light":"#12A594"},"syntaxConstant":{"dark":"#F2A700","light":"#FFB224"},"syntaxOperator":{"dark":"#F75590","light":"#E93D82"},"syntaxPunctuation":{"dark":"#EDEDED","light":"#171717"},"syntaxObject":{"dark":"#52A8FF","light":"#0070F3"},"markdownHeading":{"dark":"#BF7AF0","light":"#8E4EC6"},"markdownText":{"dark":"#EDEDED","light":"#171717"},"markdownLink":{"dark":"#52A8FF","light":"#0070F3"},"markdownLinkText":{"dark":"#0AC7AC","light":"#12A594"},"markdownCode":{"dark":"#63C46D","light":"#46A758"},"markdownBlockQuote":{"dark":"#878787","light":"#666666"},"markdownEmph":{"dark":"#F2A700","light":"#FFB224"},"markdownStrong":{"dark":"#F75590","light":"#E93D82"},"markdownHorizontalRule":{"dark":"#454545","light":"#999999"},"markdownListItem":{"dark":"#EDEDED","light":"#171717"},"markdownListEnumeration":{"dark":"#52A8FF","light":"#0070F3"},"markdownImage":{"dark":"#0AC7AC","light":"#12A594"},"markdownImageText":{"dark":"#50E3C2","light":"#12A594"},"markdownCodeBlock":{"dark":"#EDEDED","light":"#171717"},"interactive":{"dark":"#52A8FF","light":""}}}}
+
+const CATEGORIES = [
+  { label: 'Core', keys: ['background', 'text', 'primary', 'accent', 'success', 'warning', 'error', 'info', 'border', 'borderActive', 'textMuted', 'panel', 'element', 'menu'] },
+  { label: 'Diff', keys: ['diffAdded', 'diffRemoved', 'diffContext', 'diffHunkHeader', 'diffHighlightAdded', 'diffHighlightRemoved'] },
+  { label: 'Syntax', keys: ['syntaxComment', 'syntaxKeyword', 'syntaxString', 'syntaxFunction', 'syntaxVariable', 'syntaxProperty', 'syntaxType', 'syntaxConstant', 'syntaxOperator', 'syntaxPunctuation', 'syntaxObject'] },
+  { label: 'Markdown', keys: ['markdownHeading', 'markdownText', 'markdownLink', 'markdownLinkText', 'markdownCode', 'markdownBlockQuote', 'markdownEmph', 'markdownStrong', 'markdownHorizontalRule', 'markdownListItem', 'markdownListEnumeration', 'markdownImage', 'markdownImageText', 'markdownCodeBlock'] },
+  { label: 'TUI', keys: ['interactive', 'selectedListItemText'] },
+];
+
+function resolveColor(entry, mode) {
+  if (!entry) return null;
+  if (typeof entry === 'string') return entry;
+  if (entry[mode]) return entry[mode];
+  return null;
+}
+
+function renderPalette(theme, mode) {
+  const slots = theme.theme || theme.colors || theme;
+  const container = document.getElementById('palette');
+  container.innerHTML = '';
+  
+  let html = '';
+  for (const cat of CATEGORIES) {
+    const items = cat.keys.filter(k => k in slots);
+    if (items.length === 0) continue;
+    html += `<div class="category">${cat.label}</div>`;
+    for (const key of items) {
+      if (mode === 'both') {
+        const dark = resolveColor(slots[key], 'dark');
+        const light = resolveColor(slots[key], 'light');
+        html += `<div class="slot">
+          <span class="slot-name">${key}</span>
+          <div class="swatch" style="background:${dark || 'transparent'}"></div>
+          <span class="hex">${dark || '—'}</span>
+          <div class="swatch" style="background:${light || 'transparent'}"></div>
+          <span class="hex">${light || '—'}</span>
+        </div>`;
+      } else {
+        const color = resolveColor(slots[key], mode);
+        const hex = color || '—';
+        const style = color ? `background:${color}` : 'background:transparent;border:1px dashed #444';
+        html += `<div class="slot">
+          <span class="slot-name">${key}</span>
+          <div class="swatch" style="${style}"></div>
+          <span class="hex">${hex}</span>
+        </div>`;
+      }
+    }
+  }
+  container.innerHTML = html;
+}
+
+function loadThemeFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const theme = JSON.parse(e.target.result);
+      renderPalette(theme, getActiveMode());
+    } catch (err) {
+      alert('Error loading theme: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function loadBundledTheme(name) {
+  const theme = EMBEDDED_THEMES[name];
+  if (theme) renderPalette(theme, getActiveMode());
+}
+
+function getActiveMode() {
+  const active = document.querySelector('.mode-toggle .active');
+  return active ? active.dataset.mode : 'both';
+}
+
+const KNOWN_THEMES = Object.keys(EMBEDDED_THEMES).sort();
+const select = document.getElementById('theme-select');
+for (const name of KNOWN_THEMES) {
+  const opt = document.createElement('option');
+  opt.value = name;
+  opt.textContent = name;
+  select.appendChild(opt);
+}
+
+select.addEventListener('change', () => {
+  if (select.value) loadBundledTheme(select.value);
+});
+
+document.getElementById('file-input').addEventListener('change', (e) => {
+  if (e.target.files.length > 0) loadThemeFile(e.target.files[0]);
+});
+
+document.querySelectorAll('.mode-toggle button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-toggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const selectVal = document.getElementById('theme-select').value;
+    if (selectVal) loadBundledTheme(selectVal);
+  });
+});
+
+// Load default theme
+loadBundledTheme('opencode');
+</script>
+</body>
+</html>

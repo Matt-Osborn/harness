@@ -72,6 +72,62 @@
     "textMuted": {
       "dark": "#565f89",
       "light": "#6b6f7a"
+    },
+    "markdownHeading": {
+      "dark": "#bb9af7",
+      "light": "#9854f1"
+    },
+    "markdownText": {
+      "dark": "#c0caf5",
+      "light": "#273153"
+    },
+    "markdownLink": {
+      "dark": "#7aa2f7",
+      "light": "#2e7de9"
+    },
+    "markdownLinkText": {
+      "dark": "#7dcfff",
+      "light": "#007197"
+    },
+    "markdownCode": {
+      "dark": "#ff9e64",
+      "light": "#b15c00"
+    },
+    "markdownBlockQuote": {
+      "dark": "#565f89",
+      "light": "#6b6f7a"
+    },
+    "markdownEmph": {
+      "dark": "#e0af68",
+      "light": "#8c6c3e"
+    },
+    "markdownStrong": {
+      "dark": "#7aa2f7",
+      "light": "#2e7de9"
+    },
+    "markdownHorizontalRule": {
+      "dark": "#565f89",
+      "light": "#6b6f7a"
+    },
+    "markdownListItem": {
+      "dark": "#9ece6a",
+      "light": "#587539"
+    },
+    "markdownListEnumeration": {
+      "dark": "#7dcfff",
+      "light": "#007197"
+    },
+    "markdownImage": {
+      "dark": "#7aa2f7",
+      "light": "#2e7de9"
+    },
+    "markdownImageText": {
+      "dark": "#565f89",
+      "light": "#6b6f7a"
+    },
+    "markdownCodeBlock": {
+      "dark": "#c0caf5",
+      "light": "#273153"
     }
   }
 }

@@ -62,6 +62,53 @@
       "dark": "#fab387",
       "light": "#ca6702"
     },
-    "textMuted": "#6c7086"
+    "textMuted": "#6c7086",
+    "markdownHeading": {
+      "dark": "#cba6f7",
+      "light": "#8839ef"
+    },
+    "markdownText": {
+      "dark": "#cdd6f4",
+      "light": "#4c4f69"
+    },
+    "markdownLink": {
+      "dark": "#89b4fa",
+      "light": "#1e66f5"
+    },
+    "markdownLinkText": {
+      "dark": "#89dceb",
+      "light": "#04a5e5"
+    },
+    "markdownCode": {
+      "dark": "#f38ba8",
+      "light": "#d20f39"
+    },
+    "markdownBlockQuote": "#6c7086",
+    "markdownEmph": {
+      "dark": "#fab387",
+      "light": "#ca6702"
+    },
+    "markdownStrong": {
+      "dark": "#b4befe",
+      "light": "#7287fd"
+    },
+    "markdownHorizontalRule": "#6c7086",
+    "markdownListItem": {
+      "dark": "#a6d189",
+      "light": "#40a02b"
+    },
+    "markdownListEnumeration": {
+      "dark": "#89dceb",
+      "light": "#04a5e5"
+    },
+    "markdownImage": {
+      "dark": "#89b4fa",
+      "light": "#1e66f5"
+    },
+    "markdownImageText": "#6c7086",
+    "markdownCodeBlock": {
+      "dark": "#cdd6f4",
+      "light": "#4c4f69"
+    }
   }
 }
