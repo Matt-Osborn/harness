@@ -18,5 +18,6 @@ Topic-based help for harness-cli flags and commands.
 | `config` | `harness config` — effective configuration display |
 | `tui` | `harness tui` — experimental terminal UI |
 | `skill` | `harness skill` — skill management |
+| `undo` | `/undo` and `/redo` — undo/redo conversation exchanges |
 
 Usage: `harness help <topic>` or `harness --help <topic>`

@@ -29,6 +29,8 @@ are available without leaving the terminal.
 | `/summarize` | Summarize and compact session history |
 | `/skill` | List available skills |
 | `/skill <name>` | Enable a skill |
+| `/undo` | Undo the last conversation exchange |
+| `/redo` | Redo the last undone exchange |
 | `/help` | Show this help |
 
 ## TUI mode

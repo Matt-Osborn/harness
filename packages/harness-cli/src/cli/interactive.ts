@@ -9,7 +9,7 @@ import type { AgentTool } from '@harness/core-agent';
 import type { WebSearchTool } from '@harness/core-agent';
 import { getShellInfo } from '@harness/core-agent';
 import type { Message, SearchProviderType } from '@harness/shared';
-import { TextWrapper, SessionManager, isWSL, isCygwin, CliTheme, writeSessionSummary, Logger } from '@harness/shared';
+import { TextWrapper, SessionManager, isWSL, isCygwin, CliTheme, writeSessionSummary, Logger, ConfigManager } from '@harness/shared';
 import type { ProviderOptions } from '@harness/core-ai';
 import { MarkdownRenderer } from './markdown.js';
 
@@ -103,6 +103,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
   let treatNextCloseAsExit = true;
   let isProcessing = false;
   let processingController: AbortController | undefined;
+  let undoStack: Message[][] = [];
   let currentMode: 'plan' | 'build' = agent.getMode();
   let modeChangeListener: ((str: string, key: { name: string }) => void) | null = null;
   let rawDataHandler: ((data: Buffer) => void) | null = null;
@@ -290,7 +291,34 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       output: process.stdout,
       terminal: true,
       prompt: `${getModePrefix()}${t.success('❯')} `,
-      completer: (line: string) => [[], line],
+      completer: (line: string) => {
+        const SLASH_COMMANDS = ['/help', '/model', '/search', '/agent', '/plan', '/build', '/sessions', '/resume', '/export', '/exit', '/quit', '/hide-thinking', '/show-thinking', '/hide-tools', '/show-tools', '/summarize', '/temperature', '/skill', '/undo', '/redo'];
+        const parts = line.split(' ');
+        const current = parts[parts.length - 1] || '';
+        if (parts.length === 2 && parts[0] === '/model' && current) {
+          const cfg = new ConfigManager();
+          const models = cfg.allModels.map(m => m.name);
+          const hits = models.filter(m => m.startsWith(current));
+          return [hits.length ? hits : models, current];
+        }
+        if (parts.length === 2 && parts[0] === '/agent' && current) {
+          if (agentRegistry) {
+            const agents = agentRegistry.allAgents.map(a => a.name);
+            const hits = agents.filter(a => a.startsWith(current));
+            return [hits.length ? hits : agents, current];
+          }
+        }
+        if (parts.length === 2 && parts[0] === '/search' && current) {
+          const providers = ['tavily', 'duckduckgo', 'exa', 'searxng'];
+          const hits = providers.filter(p => p.startsWith(current));
+          return [hits.length ? hits : providers, current];
+        }
+        if (line.startsWith('/')) {
+          const hits = SLASH_COMMANDS.filter(c => c.startsWith(line));
+          return [hits.length ? hits : SLASH_COMMANDS, line];
+        }
+        return [[], line];
+      },
       history: cliHistory,
       historySize: 100,
     });
@@ -553,6 +581,8 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write(`  ${t.warning('/agent [name]')}      Switch agent (no arg lists available agents)\n`);
         process.stdout.write(`  ${t.warning('/model [name]')}      Show current model or switch to a different model\n`);
         process.stdout.write(`  ${t.warning('/summarize')}           Write session summary to memory-bank\n`);
+        process.stdout.write(`  ${t.warning('/undo')}               Undo the last exchange\n`);
+        process.stdout.write(`  ${t.warning('/redo')}               Redo the last undone exchange\n`);
         process.stdout.write(`  ${t.warning('/plan')}                Switch to plan mode (Tab also toggles)\n`);
         process.stdout.write(`  ${t.warning('/build')}               Switch to build mode (Tab also toggles)\n`);
         process.stdout.write(`  ${t.warning('!<command>')}            Run a shell command directly\n`);
@@ -639,26 +669,41 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
           process.stdout.write(`${prefix}${tM.bold(name)}: ${mc.name || mc.model} (${tM.green(mc.kind)}) ${keyStatus}\n`);
           if (mc.base_url) process.stdout.write(`     url: ${mc.base_url}\n`);
         }
-        process.stdout.write(`\nUse ${tM.warning('/model <name>')} to switch.\n`);
+process.stdout.write(`\nUse ${tM.warning('/model <name>')} to switch.\n`);
         rl.prompt();
         return;
       }
 
-      if (trimmed.startsWith('/model ')) {
-        const name = trimmed.slice(7).trim();
-        const { ConfigManager } = await import('@harness/shared');
-        const { createProvider } = await import('@harness/core-ai');
-        const cfg = new ConfigManager();
-        const resolved = cfg.getResolvedModel(name);
-        if (!resolved) {
-          process.stdout.write(t.error(`Unknown model: ${name}. Use /model to list configured models.\n`));
+      if (trimmed === '/undo') {
+        let lastUserIdx = -1;
+        for (let i = history.length - 1; i >= 0; i--) {
+          if (history[i].role === 'user') { lastUserIdx = i; break; }
+        }
+        if (lastUserIdx === -1) {
+          process.stdout.write(t.error('Nothing to undo.\n'));
           rl.prompt();
           return;
         }
-        const newProvider = createProvider(resolved.config.model, resolved.config, resolved.apiKey, providerOptions);
-        agent.setProvider(newProvider);
-        modelName = name;
-        process.stdout.write(t.success(`Switched to model: ${name}\n`));
+        undoStack.push(history.slice(lastUserIdx));
+        history = history.slice(0, lastUserIdx);
+        agent.setCachedHistory(history);
+        saveSession();
+        process.stdout.write(t.success('Undone.\n'));
+        rl.prompt();
+        return;
+      }
+
+      if (trimmed === '/redo') {
+        if (undoStack.length === 0) {
+          process.stdout.write(t.error('Nothing to redo.\n'));
+          rl.prompt();
+          return;
+        }
+        const restored = undoStack.pop()!;
+        history.push(...restored);
+        agent.setCachedHistory(history);
+        saveSession();
+        process.stdout.write(t.success('Redone.\n'));
         rl.prompt();
         return;
       }
@@ -715,6 +760,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       treatNextCloseAsExit = false;
       rl.close();
 
+      undoStack = [];
       history.push({ role: 'user' as const, content: trimmed, timestamp: Date.now() });
       const textWrap = styled ? null : new TextWrapper(wrapWidth);
       const md = styled ? new MarkdownRenderer(wrapWidth) : null;
