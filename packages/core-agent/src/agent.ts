@@ -31,6 +31,7 @@ export interface AgentOptions {
 export class Agent {
   private provider: Provider;
   private tools: AgentTool[];
+  private fullTools: AgentTool[];
   private systemPrompt: string;
   private maxIterations: number;
   private permissionCheck?: PermissionCheck;
@@ -50,6 +51,7 @@ export class Agent {
   constructor(options: AgentOptions) {
     this.provider = options.provider;
     this.tools = options.tools;
+    this.fullTools = [...options.tools];
     this.projectRules = options.projectRules ?? null;
     this.mode = options.mode || 'plan';
     this.systemPrompt = options.systemPrompt || buildSystemPrompt(this.projectRules, this.mode);
@@ -65,10 +67,18 @@ export class Agent {
     this.logger = options.logger;
     this.mode = options.mode || 'plan';
     this.projectRules = options.projectRules ?? null;
+    if (this.mode === 'plan') {
+      this.tools = this.fullTools.filter(t => READ_ONLY_TOOLS.includes(t.name));
+    }
   }
 
   setMode(mode: 'plan' | 'build'): void {
     this.mode = mode;
+    if (mode === 'plan') {
+      this.tools = this.fullTools.filter(t => READ_ONLY_TOOLS.includes(t.name));
+    } else {
+      this.tools = [...this.fullTools];
+    }
     this.systemPrompt = buildSystemPrompt(this.projectRules, mode);
   }
 
@@ -114,11 +124,16 @@ export class Agent {
       const filter = def.tools;
       if (filter.include) {
         const allowed = new Set(filter.include);
-        this.tools = fullTools.filter((t) => allowed.has(t.name));
+        this.fullTools = fullTools.filter((t) => allowed.has(t.name));
+        this.tools = [...this.fullTools];
       } else if (filter.exclude) {
         const blocked = new Set(filter.exclude);
-        this.tools = fullTools.filter((t) => !blocked.has(t.name));
+        this.fullTools = fullTools.filter((t) => !blocked.has(t.name));
+        this.tools = [...this.fullTools];
       }
+    }
+    if (this.mode === 'plan') {
+      this.tools = this.fullTools.filter(t => READ_ONLY_TOOLS.includes(t.name));
     }
 
     if (def.temperature !== undefined) {
