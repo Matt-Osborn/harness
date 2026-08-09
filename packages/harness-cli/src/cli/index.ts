@@ -24,7 +24,7 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
   return undefined;
 }
 
-const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme','--agent','--max-iterations']);
+const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme','--agent','--max-iterations','--base-url']);
 const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '--purge-empty-sessions', '--dry-run', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256', '--plan', '--build', '--log', '--all']);
 
 function extractCommands(args: string[]): string[] {
@@ -160,6 +160,8 @@ export async function run(): Promise<void> {
   const forceAnsi256 = flagAnsi256 ?? envAnsi256Parsed ?? configAnsi256 ?? false;
   CliTheme.defaultForceAnsi256 = forceAnsi256;
 
+  const baseUrlOverride = parseArg(args, '--base-url');
+
   if (prompt !== undefined) {
     const config = new ConfigManager();
     const valid = config.validateModel(model);
@@ -169,7 +171,7 @@ export async function run(): Promise<void> {
       process.exit(1);
     }
     const printAgentFlag = parseArg(args, '--agent');
-    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools, printAgentFlag, config.logEnabled || flagLog, routingOverride, suffixOverride);
+    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools, printAgentFlag, config.logEnabled || flagLog, routingOverride, suffixOverride, baseUrlOverride);
     return;
   }
 
@@ -239,6 +241,8 @@ export async function run(): Promise<void> {
     if (temperatureOverride !== undefined) resolved!.config.temperature = temperatureOverride;
     if (topPOverride !== undefined) resolved!.config.top_p = topPOverride;
     if (seedOverride !== undefined) resolved!.config.seed = seedOverride;
+    const baseUrlOverride = parseArg(args, '--base-url');
+    if (baseUrlOverride && resolved) resolved.config.base_url = baseUrlOverride;
     if (flagDropParams !== undefined) resolved!.config.drop_params = flagDropParams;
     const initialTemp = resolved!.config.temperature;
     const search = searchOverride || config.searchProvider || resolveAutoProvider();
@@ -485,6 +489,8 @@ export async function run(): Promise<void> {
     if (temperatureOverride !== undefined) resolved!.config.temperature = temperatureOverride;
     if (topPOverride !== undefined) resolved!.config.top_p = topPOverride;
     if (seedOverride !== undefined) resolved!.config.seed = seedOverride;
+    const baseUrlOverride = parseArg(args, '--base-url');
+    if (baseUrlOverride && resolved) resolved.config.base_url = baseUrlOverride;
     if (flagDropParams !== undefined) resolved!.config.drop_params = flagDropParams;
     const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey, { anonymous: config.anonymous, routing: routingOverride, suffix: suffixOverride });
     const mode = args.includes('--plan') ? 'plan' : args.includes('--build') ? 'build' : undefined;
@@ -604,6 +610,7 @@ export async function run(): Promise<void> {
         console.log(`Config already exists at ${configPath}`);
         return;
       }
+      const skipInit = args.includes('--skip-init') || args.includes('--skip-config');
       const defaultConfig = `# harness-cli Configuration
 # Edit this file to configure your models, MCP servers, permissions, and search.
 
@@ -678,7 +685,8 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
       console.log(`Created config at ${configPath}`);
       console.log(`Edit it to add your API keys, then run ${tGlobal.warning('harness')} to start.\n`);
 
-      const FORMATTER_INSTALL_HINTS: Record<string, string> = {
+      if (!skipInit) {
+        const FORMATTER_INSTALL_HINTS: Record<string, string> = {
         ruff: 'pip install ruff',
         prettier: 'npm install -g prettier',
         rustfmt: 'rustup component add rustfmt',
@@ -741,28 +749,10 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
               console.log('Enabled file-backup skill in AGENTS.md.');
             }
           }
-        } finally {
+} finally {
           rl.close();
         }
       }
-
-      const installManScript = join(dirname(fileURLToPath(import.meta.url)), '../../../../scripts/install-man.sh');
-      if (process.stdin.isTTY && existsSync(installManScript)) {
-        const { createInterface } = await import('node:readline/promises');
-        const rl = createInterface({ input: process.stdin, output: process.stdout });
-        try {
-          const answer = await rl.question('Install man page? (Y/n) ');
-          if (answer.toLowerCase() !== 'n') {
-            try {
-              execFileSync('bash', [installManScript], { stdio: 'inherit' });
-            } catch (err) {
-              console.log(tGlobal.warning('⚠ Could not run the man page installer.'));
-              console.log(`  Install it manually with ${tGlobal.warning('bash scripts/install-man.sh')}.\n`);
-            }
-          }
-        } finally {
-          rl.close();
-        }
       }
       break;
     }

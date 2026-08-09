@@ -9,7 +9,7 @@ import { MarkdownRenderer } from './markdown.js';
 import { renderForm } from '../prompts/render-form.js';
 import type { FormQuestion } from '../prompts/render-form.js';
 
-export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, agentName?: string, logEnabled?: boolean, routingOverride?: 'balanced' | 'cost' | 'speed' | 'quality', suffixOverride?: string): Promise<void> {
+export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, agentName?: string, logEnabled?: boolean, routingOverride?: 'balanced' | 'cost' | 'speed' | 'quality', suffixOverride?: string, baseUrlOverride?: string): Promise<void> {
   const config = new ConfigManager();
   const t = theme ?? new CliTheme(config.themeConfig);
 
@@ -38,6 +38,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
   if (topPOverride !== undefined) resolved.config.top_p = topPOverride;
   if (seedOverride !== undefined) resolved.config.seed = seedOverride;
   if (dropParamsOverride !== undefined) resolved.config.drop_params = dropParamsOverride;
+  if (baseUrlOverride) resolved.config.base_url = baseUrlOverride;
   const provider = createProvider(resolved.config.model, resolved.config, resolved.apiKey, { anonymous: config.anonymous, routing: routingOverride, suffix: suffixOverride });
 
   const ctxConfig = config.contextConfig;
