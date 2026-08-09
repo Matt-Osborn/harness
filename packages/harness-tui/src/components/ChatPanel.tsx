@@ -29,7 +29,8 @@ export const ChatPanel = memo(function ChatPanel({ messages, notification, theme
       <Box flexDirection="column" paddingX={1} paddingBottom={1}>
         {notification && (
           <Box paddingX={2} paddingY={1} marginBottom={1} backgroundColor={theme.surface}>
-            <Text color={theme.warning}>⚠ </Text>
+            <Text color={theme.warning}>⚠</Text>
+            <Text> </Text>
             <Text color={theme.text}>{notification}</Text>
           </Box>
         )}
