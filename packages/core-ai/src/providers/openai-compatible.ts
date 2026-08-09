@@ -257,6 +257,7 @@ export class OpenAICompatibleProvider implements Provider {
       h['Authorization'] = `Bearer ${this.apiKey}`;
     }
     if (!this.isAnonymous()) {
+      h['X-Title'] = 'harness-cli';
       h['X-OpenRouter-Title'] = 'harness-cli';
       h['HTTP-Referer'] = 'https://gitlab.com/x0rn/harness';
       h['X-OpenRouter-Categories'] = 'cli-agent';
