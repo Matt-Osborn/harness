@@ -45,6 +45,7 @@ export interface PermissionEngineOptions {
   interactive: boolean;
   sessionId?: string;
   promptFn?: PermissionPromptFn;
+  agentRegistry?: import('@harness/shared').AgentRegistry;
 }
 
 export class PermissionEngine {
@@ -55,16 +56,19 @@ export class PermissionEngine {
   private sessionId: string;
   private promptFn?: PermissionPromptFn;
   private mode: 'plan' | 'build' = 'plan';
+  private agentRegistry?: import('@harness/shared').AgentRegistry;
 
   constructor(permConfig: PermissionConfig | undefined, opts: PermissionEngineOptions) {
     this.permConfig = permConfig;
     this.interactive = opts.interactive;
     this.sessionId = opts.sessionId || `session_${Date.now()}`;
     this.promptFn = opts.promptFn;
+    this.agentRegistry = opts.agentRegistry;
   }
 
   setMode(mode: 'plan' | 'build'): void { this.mode = mode; }
   getMode(): 'plan' | 'build' { return this.mode; }
+  setAgentRegistry(r: import('@harness/shared').AgentRegistry): void { this.agentRegistry = r; }
 
   private getEffectiveMode(toolName: string): PermissionMode {
     if (this.permConfig?.tools?.[toolName]) return this.permConfig.tools[toolName]!;
@@ -81,6 +85,10 @@ export class PermissionEngine {
     if (this.mode === 'plan' && !READ_ONLY_TOOLS.includes(toolName)) {
       if (toolName === 'bash' && args?.command && isReadOnlyBashCommand(String(args.command))) {
         return true;
+      }
+      if ((toolName === 'subagent' || toolName === 'subagent_bg') && args?.agent_name) {
+        const def = this.agentRegistry?.getAgent(String(args.agent_name));
+        if (def && def.mode === 'plan') return true;
       }
       return false;
     }
@@ -132,6 +140,11 @@ export class PermissionEngine {
     if (this.mode === 'plan' && !READ_ONLY_TOOLS.includes(toolName)) {
       if (toolName === 'bash' && argsList) {
         if (argsList.every(a => a.command && isReadOnlyBashCommand(String(a.command)))) {
+          return true;
+        }
+      }
+      if (toolName === 'subagent' || toolName === 'subagent_bg') {
+        if (argsList.every(a => a.agent_name && this.agentRegistry?.getAgent(String(a.agent_name))?.mode === 'plan')) {
           return true;
         }
       }

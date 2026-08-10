@@ -4,7 +4,7 @@ import { createProvider, type Provider } from '@harness/core-ai';
 import {
   Agent,
   WebSearchTool, resolveAutoProvider, isProviderAvailable, getShellInfo,
-  buildSystemPrompt, createDefaultTools, PermissionEngine,
+  buildSystemPrompt, createDefaultTools, createSubAgentTools, PermissionEngine,
   buildAgentFromDefinition, runRunnable, PipelineExecutor,
 } from '@harness/core-agent';
 import { createCliPromptFn } from '../permissions/engine.js';
@@ -25,7 +25,7 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
 }
 
 const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme','--agent','--max-iterations','--base-url']);
-const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '--purge-empty-sessions', '--dry-run', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256', '--plan', '--build', '--log', '--all']);
+const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '--purge-empty-sessions', '--dry-run', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256', '--plan', '--build', '--log', '--all', '--subagent']);
 
 function extractCommands(args: string[]): string[] {
   const cmds: string[] = [];
@@ -295,6 +295,10 @@ export async function run(): Promise<void> {
 
     const agentFlag = parseArg(args, '--agent');
     const agentRegistry = new AgentRegistry();
+    if (args.includes('--subagent')) {
+      permissions.setAgentRegistry(agentRegistry);
+      tools.push(...createSubAgentTools(agentRegistry, config, tools, (name, a) => permissions.check(name, undefined, a), undefined, undefined));
+    }
     let agent: Agent;
     let agentDef: Runnable | null = null;
 

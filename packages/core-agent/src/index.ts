@@ -20,6 +20,7 @@ export { SkillTool } from './tools/skill.js';
 export { GlobTool } from './tools/glob.js';
 export { GrepTool } from './tools/grep.js';
 export { AskUserTool } from './tools/ask-user.js';
+export { SubAgentBgTool, CheckTaskTool, CancelTaskTool, createSubAgentTools } from './tools/subagent.js';
 
 export { createSearchProvider } from './tools/search/index.js';
 export type { SearchProvider } from './tools/search/index.js';
