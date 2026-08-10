@@ -400,15 +400,21 @@ export class Agent {
         const toolCalls = assistantMsg.tool_calls!;
 
         const groups: { name: string; indices: number[] }[] = [];
+        const roIndices: number[] = [];
         for (let i = 0; i < toolCalls.length; i++) {
           const name = toolCalls[i].function.name;
-          const last = groups[groups.length - 1];
-          if (last && last.name === name) {
-            last.indices.push(i);
+          if (READ_ONLY_TOOLS.includes(name)) {
+            roIndices.push(i);
           } else {
-            groups.push({ name, indices: [i] });
+            const last = groups[groups.length - 1];
+            if (last && last.name === name) {
+              last.indices.push(i);
+            } else {
+              groups.push({ name, indices: [i] });
+            }
           }
         }
+        if (roIndices.length > 0) groups.unshift({ name: 'read', indices: roIndices });
 
         const runToolCalls = async (calls: { tc: ToolCall; args: Record<string, unknown>; tool: AgentTool }[]): Promise<AgentEvent[]> => {
           const parallel = calls.length > 1 && READ_ONLY_TOOLS.includes(calls[0].tc.function.name);
