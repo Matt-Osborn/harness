@@ -1,13 +1,13 @@
 import { type ReactNode } from 'react';
 import { Box, Text } from 'ink';
 import { lexer, type Token, type Tokens } from 'marked';
-import { createHighlighter, type Highlighter } from 'shiki';
 import type { Theme } from './theme.js';
 
-let highlighter: Highlighter | null = null;
+let highlighter: import('shiki').Highlighter | null = null;
 
 export async function ensureHighlighter(): Promise<void> {
   if (!highlighter) {
+    const { createHighlighter } = await import('shiki');
     highlighter = await createHighlighter({
       themes: ['dark-plus'],
       langs: [

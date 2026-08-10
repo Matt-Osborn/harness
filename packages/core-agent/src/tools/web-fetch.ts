@@ -1,7 +1,12 @@
 import { NodeHtmlMarkdown } from 'node-html-markdown';
-import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
 import { AgentTool } from '../tool.js';
+
+let jsdomPromise: Promise<{ JSDOM: typeof import('jsdom').JSDOM }> | null = null;
+const getJSDOM = () => {
+  if (!jsdomPromise) jsdomPromise = import('jsdom') as Promise<{ JSDOM: typeof import('jsdom').JSDOM }>;
+  return jsdomPromise;
+};
 
 const MAX_RESPONSE_LENGTH = 12000;
 const MAX_LINES = 500;
@@ -73,9 +78,9 @@ export class WebFetchTool implements AgentTool {
 
         let result: string;
         if (format === 'text') {
-          result = this.extractPlainText(rawText);
+          result = await this.extractPlainText(rawText);
         } else if (contentType.includes('text/html')) {
-          result = this.extractWithReadability(rawText, url) || NodeHtmlMarkdown.translate(rawText);
+          result = await this.extractWithReadability(rawText, url) || NodeHtmlMarkdown.translate(rawText);
         } else {
           result = rawText;
         }
@@ -115,8 +120,9 @@ export class WebFetchTool implements AgentTool {
     return msg.includes('fetch failed') || msg.includes('network') || msg.includes('econnrefused') || msg.includes('enotfound') || msg.includes('econnreset') || msg.includes('etimedout');
   }
 
-  private extractWithReadability(html: string, url: string): string | null {
+  private async extractWithReadability(html: string, url: string): Promise<string | null> {
     try {
+      const { JSDOM } = await getJSDOM();
       const origWarn = console.warn;
       console.warn = () => {};
       const dom = new JSDOM(html, { url });
@@ -136,8 +142,9 @@ export class WebFetchTool implements AgentTool {
     }
   }
 
-  private extractPlainText(html: string): string {
+  private async extractPlainText(html: string): Promise<string> {
     try {
+      const { JSDOM } = await getJSDOM();
       const origWarn = console.warn;
       console.warn = () => {};
       const dom = new JSDOM(html);
