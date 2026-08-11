@@ -113,6 +113,7 @@ class SubAgentTool extends BaseSubAgentTool implements AgentTool {
     const task = String(args.task || '').trim();
     if (!agentName) return 'Error: agent_name is required.';
     if (!task) return 'Error: task is required.';
+    if (agentName === 'orchestrator') return 'Error: Orchestrator cannot delegate to itself.';
 
     const agent = await this.buildAgent(agentName);
     if (!agent) return `Error: Subagent "${agentName}" not found.`;
@@ -154,6 +155,7 @@ export class SubAgentBgTool extends BaseSubAgentTool implements AgentTool {
     const task = String(args.task || '').trim();
     if (!agentName) return 'Error: agent_name is required.';
     if (!task) return 'Error: task is required.';
+    if (agentName === 'orchestrator') return 'Error: Orchestrator cannot delegate to itself.';
 
     const agent = await this.buildAgent(agentName);
     if (!agent) return `Error: Subagent "${agentName}" not found.`;

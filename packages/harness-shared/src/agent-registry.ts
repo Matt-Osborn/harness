@@ -25,6 +25,46 @@ const BUILTIN_AGENTS: Record<string, AgentDefinition> = {
   },
 };
 
+const ORCHESTRATOR_AGENTS: Record<string, AgentDefinition> = {
+  orchestrator: {
+    type: 'agent',
+    name: 'orchestrator',
+    description: 'Plans and delegates to specialist subagents — no direct tool actions',
+    mode: 'build',
+    system_prompt: `You are an orchestrator agent. You cannot read files, run commands, or edit code directly. You plan tasks and delegate them to specialist subagents.
+
+Available subagents:
+- explore: read-only codebase and web research
+- general: broad tasks, can read files and run read-only commands
+- reviewer: code review, reads files and reports findings
+- build: full access, can edit files and run commands
+
+Delegate subtasks using subagent_bg for parallel work, check_task to check results, and subagent to wait for results. Always explain your plan to the user and why you're delegating to specific agents.`,
+    tools: { include: ['subagent', 'subagent_bg', 'check_task', 'cancel_task'] },
+  },
+  explore: {
+    type: 'agent',
+    name: 'explore',
+    description: 'Read-only codebase and web research',
+    mode: 'plan',
+    tools: { include: ['read', 'grep', 'glob', 'web_search', 'web_fetch'] },
+  },
+  general: {
+    type: 'agent',
+    name: 'general',
+    description: 'Broad tasks with read-only commands and file access',
+    mode: 'plan',
+    tools: { include: ['read', 'grep', 'glob', 'web_search', 'web_fetch', 'bash', 'ask_user'] },
+  },
+  reviewer: {
+    type: 'agent',
+    name: 'reviewer',
+    description: 'Code review — reads files and reports findings',
+    mode: 'plan',
+    tools: { include: ['read', 'grep', 'glob'] },
+  },
+};
+
 /**
  * Parses a single TOML file into a Runnable.
  * Returns null if the file is missing required fields or can't be parsed.
@@ -140,6 +180,7 @@ function loadRunnablesFromDir(
 export class AgentRegistry {
   private agents: Map<string, AgentDefinition> = new Map();
   private pipelines: Map<string, PipelineDefinition> = new Map();
+  private orchestratorEnabled: boolean = false;
 
   constructor(startDir?: string) {
     // Load built-in agents first (lowest priority)
@@ -152,6 +193,15 @@ export class AgentRegistry {
 
     // Load project definitions (highest priority)
     this.loadProject(startDir || process.cwd());
+  }
+
+  registerOrchestrator(): void {
+    this.orchestratorEnabled = true;
+    for (const [name, def] of Object.entries(ORCHESTRATOR_AGENTS)) {
+      if (!this.agents.has(name)) {
+        this.agents.set(name, def);
+      }
+    }
   }
 
   private loadGlobal(): void {
@@ -214,13 +264,22 @@ export class AgentRegistry {
   }
 
   get builtinAgents(): AgentDefinition[] {
-    return Object.keys(BUILTIN_AGENTS)
-      .map(name => this.agents.get(name))
-      .filter((a): a is AgentDefinition => !!a);
+    const builtin = new Set(Object.keys(BUILTIN_AGENTS));
+    if (this.orchestratorEnabled) {
+      for (const name of Object.keys(ORCHESTRATOR_AGENTS)) {
+        builtin.add(name);
+      }
+    }
+    return Array.from(this.agents.values()).filter(a => builtin.has(a.name));
   }
 
   get userAgents(): AgentDefinition[] {
     const builtin = new Set(Object.keys(BUILTIN_AGENTS));
+    if (this.orchestratorEnabled) {
+      for (const name of Object.keys(ORCHESTRATOR_AGENTS)) {
+        builtin.add(name);
+      }
+    }
     return Array.from(this.agents.values()).filter(a => !builtin.has(a.name));
   }
 

@@ -296,6 +296,7 @@ export async function run(): Promise<void> {
     const agentFlag = parseArg(args, '--agent');
     const agentRegistry = new AgentRegistry();
     if (args.includes('--subagent')) {
+      agentRegistry.registerOrchestrator();
       permissions.setAgentRegistry(agentRegistry);
       tools.push(...createSubAgentTools(agentRegistry, config, tools, (name, a) => permissions.check(name, undefined, a), undefined, undefined));
     }
