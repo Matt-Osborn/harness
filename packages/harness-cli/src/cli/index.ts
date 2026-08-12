@@ -14,6 +14,7 @@ import { runPrintMode } from './print.js';
 import { runInteractive, setSessionProviderOptions } from './interactive.js';
 
 import { runSkillCommand, AGENTS_MD_TEMPLATE, hintLine } from './skill-command.js';
+import { runLaunchCommand } from './launch-command.js';
 import { showHelp, showHelpVerbose } from '../help.js';
 
 function parseArg(args: string[], ...names: string[]): string | undefined {
@@ -601,6 +602,11 @@ export async function run(): Promise<void> {
     case 'skill': {
       const registry = new SkillRegistry();
       await runSkillCommand(commands.slice(1), registry);
+      break;
+    }
+
+    case 'launch': {
+      await runLaunchCommand(commands.slice(1));
       break;
     }
 

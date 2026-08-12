@@ -137,6 +137,38 @@ In interactive mode, local models are listed in the model config alongside
 remote providers. Use `/model` to switch between them (requires the `/model`
 slash command, planned for v0.3).
 
+### Troubleshooting: CUDA Out of Memory
+
+Ollama keeps models loaded in GPU VRAM between requests. If you see:
+
+```
+cudaMalloc failed: out of memory
+```
+
+The GPU doesn't have enough free VRAM for a new model. Ollama is still
+holding a previous model in memory.
+
+| Command | What it does |
+|---|---|
+| `ollama ps` | List models currently loaded in VRAM |
+| `ollama stop <name>` | Unload a specific model from VRAM |
+| `OLLAMA_KEEP_ALIVE=0 harness` | Start harness without keeping models loaded |
+| `export OLLAMA_KEEP_ALIVE=0` | Persist in `~/.bashrc` — never keep models loaded |
+
+Set `OLLAMA_KEEP_ALIVE` to control how long models stay loaded:
+
+```bash
+export OLLAMA_KEEP_ALIVE=0      # unload immediately (max free VRAM)
+export OLLAMA_KEEP_ALIVE=5m     # unload after 5 minutes
+export OLLAMA_KEEP_ALIVE=-1     # keep loaded indefinitely (default)
+```
+
+Add the export to your `~/.bashrc` or `~/.zshrc` to make it permanent:
+
+```bash
+echo 'export OLLAMA_KEEP_ALIVE=0' >> ~/.bashrc
+```
+
 ## Related
 
 - `help/init.md` — first-time setup also detects running local providers

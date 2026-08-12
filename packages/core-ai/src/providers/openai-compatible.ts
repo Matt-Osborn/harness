@@ -322,6 +322,16 @@ export class OpenAICompatibleProvider implements Provider {
           );
         }
       }
+
+      if (errText.includes('cudaMalloc') || errText.includes('out of memory')) {
+        throw new OpenAIError(
+          response.status,
+          `OpenAI API error ${response.status}: ${errText}\n\n` +
+          `Hint: Ollama ran out of GPU VRAM. Unload models with \`ollama stop <name>\`,\n` +
+          `or set \`OLLAMA_KEEP_ALIVE=0\` to unload after each request.`
+        );
+      }
+
       throw new OpenAIError(response.status, `OpenAI API error ${response.status}: ${errText}`);
     }
 

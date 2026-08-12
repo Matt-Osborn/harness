@@ -44,6 +44,7 @@ ${t.bold('COMMANDS:')}
   config                 Show effective configuration
   default                View or set default model / search provider
   init                   Create default config at ~/.harness/config.toml
+  launch <ollama|llama>  Start local inference servers
   help                   Show this help message
   skill <sub> [name]    Manage skills (list|enable|disable)
   tui                    Launch the TUI (terminal UI, experimental) mode
@@ -69,6 +70,7 @@ ${t.bold('EXAMPLES:')}
   harness -r                              Resume the most recent session
   harness --sessions                      List saved sessions
   harness init                     Set up default config
+  ${t.warning('harness launch <ollama|llama>')}   Start local inference servers
 
 Run '${t.warning('harness --help v')}' for verbose help with all flags.
 `);
@@ -142,6 +144,7 @@ ${t.bold('COMMANDS:')}
   config                 Show effective configuration
   default                View or set default model / search provider
   init                   Create default config at ~/.harness/config.toml
+  launch <ollama|llama>  Start local inference servers
   help                   Show this help message
   skill <sub> [name]    Manage skills (list|enable|disable)
   tui                    Launch the TUI (terminal UI, experimental) mode

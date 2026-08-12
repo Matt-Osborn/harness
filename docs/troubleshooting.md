@@ -80,6 +80,13 @@ harness -m deepseek -p "refactor this"     # works
 The `-p` (print mode) flag consumes all remaining arguments as the prompt.
 Put `-p` last in your command, after all other flags.
 
+## Ollama CUDA out of memory
+
+Ollama keeps models loaded in GPU VRAM. If you hit CUDA OOM errors, set
+`OLLAMA_KEEP_ALIVE=0` in your shell or use `ollama stop <model>` to unload.
+
+See `docs/local-models.md` for details.
+
 ## Styled output not working
 
 Styled Markdown rendering is enabled by default on TTY terminals. If you

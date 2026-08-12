@@ -60,6 +60,11 @@ Any OpenAI-compatible API works — set `base_url` to:
 - `https://api.x.ai/v1` — xAI
 - `https://openrouter.ai/api/v1` — OpenRouter
 
+> **Ollama VRAM:** If you hit CUDA out-of-memory errors, Ollama keeps
+> models loaded between requests. Run `export OLLAMA_KEEP_ALIVE=0` before
+> starting harness, or add it to your `~/.bashrc`. See
+> `docs/local-models.md` for details.
+
 ### Important: `-p` Must Be Last
 
 ```
