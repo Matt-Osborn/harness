@@ -1,13 +1,10 @@
 {
-  "name": "@harness/cli",
+  "name": "@harness/server",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": {
-    "harness": "./dist/index.js"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -15,11 +12,8 @@
     }
   },
   "dependencies": {
-    "@harness/core-agent": "*",
     "@harness/core-ai": "*",
-    "@harness/shared": "*",
-    "@harness/tui": "*",
-    "@harness/server": "*",
-    "@oakoliver/glamour": "^1.0.1"
+    "@harness/core-agent": "*",
+    "@harness/shared": "*"
   }
 }

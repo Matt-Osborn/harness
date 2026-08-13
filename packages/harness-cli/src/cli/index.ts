@@ -606,7 +606,7 @@ export async function run(): Promise<void> {
     }
 
     case 'launch': {
-      await runLaunchCommand(commands.slice(1));
+      await runLaunchCommand(args);
       break;
     }
 

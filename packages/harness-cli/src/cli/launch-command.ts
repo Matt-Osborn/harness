@@ -1,6 +1,7 @@
 import { execFileSync, spawn } from 'node:child_process';
 import which from 'which';
-import { CliTheme } from '@harness/shared';
+import { CliTheme, ConfigManager } from '@harness/shared';
+import { createServer } from '@harness/server';
 
 const t = new CliTheme();
 
@@ -32,7 +33,9 @@ function waitForPort(url: string, timeoutMs = 10000): Promise<boolean> {
 }
 
 export async function runLaunchCommand(args: string[]): Promise<void> {
-  const profile = args[0];
+  const launchIdx = args.indexOf('launch');
+  const profile = launchIdx !== -1 ? args[launchIdx + 1] : args[0];
+  const profileArgs = args.slice(launchIdx !== -1 ? launchIdx + 2 : 1);
 
   if (!profile) {
     console.log(`Usage: ${t.warning('harness launch <ollama|llama|headless>')} [options]`);
@@ -47,10 +50,9 @@ export async function runLaunchCommand(args: string[]): Promise<void> {
       return launchOllama();
     case 'llama':
     case 'llamacpp':
-      return launchLlama(args.slice(1));
+      return launchLlama(profileArgs);
     case 'headless':
-      console.log(t.warning('Headless server not yet implemented.'));
-      return;
+      return launchHeadless(profileArgs);
     default:
       console.log(t.error(`Unknown launch profile: ${profile}`));
       console.log(`Usage: ${t.warning('harness launch <ollama|llama|headless>')}`);
@@ -132,4 +134,29 @@ async function launchLlama(args: string[]): Promise<void> {
   } else {
     console.log(t.error('llama.cpp did not start in time. Check the logs.'));
   }
+}
+
+async function launchHeadless(args: string[]): Promise<void> {
+  const portIdx = args.indexOf('--port');
+  const port = portIdx !== -1 && args[portIdx + 1] ? parseInt(args[portIdx + 1], 10) : 8080;
+  const keyIdx = args.indexOf('--api-key');
+  const apiKey = keyIdx !== -1 && args[keyIdx + 1] ? args[keyIdx + 1] : undefined;
+  const modelIdx = args.indexOf('--model');
+  const modelName = modelIdx !== -1 && args[modelIdx + 1] ? args[modelIdx + 1] : undefined;
+
+  if (!modelName) {
+    console.log(t.error('--model <name> is required.'));
+    console.log(`  Usage: ${t.warning('harness launch headless --model my-model [--port 8080] [--api-key sk-...]')}`);
+    return;
+  }
+
+  const config = new ConfigManager();
+  const resolved = config.getResolvedModel(modelName);
+  if (!resolved) {
+    console.log(t.error(`Model "${modelName}" not found in config.`));
+    console.log(`  Add it with: ${t.warning('harness model add')}`);
+    return;
+  }
+
+  createServer(config, modelName, apiKey, port);
 }

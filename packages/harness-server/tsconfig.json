@@ -9,8 +9,6 @@
   "references": [
     { "path": "../harness-shared" },
     { "path": "../core-ai" },
-    { "path": "../core-agent" },
-    { "path": "../harness-tui" },
-    { "path": "../harness-server" }
+    { "path": "../core-agent" }
   ]
 }
