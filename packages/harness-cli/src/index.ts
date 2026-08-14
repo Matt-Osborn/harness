@@ -49,8 +49,16 @@ if (args.includes('-h') || args.includes('--help') || args[0] === 'help') {
 }
 
 try {
-  const { run } = await import('./cli/index.js');
-  await run();
+  const remoteIdx = args.indexOf('--remote');
+  if (remoteIdx !== -1) {
+    const serverUrl = args[remoteIdx + 1] || 'http://localhost:8080';
+    const apiKey = args.includes('--api-key') ? args[args.indexOf('--api-key') + 1] : undefined;
+    const { runRemoteInteractive } = await import('./cli/remote.js');
+    await runRemoteInteractive(serverUrl, apiKey);
+  } else {
+    const { run } = await import('./cli/index.js');
+    await run();
+  }
 } catch (err) {
   console.error('Fatal error:', err instanceof Error ? err.message : String(err));
   process.exit(1);

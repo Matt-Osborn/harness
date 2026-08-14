@@ -36,6 +36,7 @@ ${t.bold('OPTIONS:')}
   --max-iterations <n>   Override max agent iterations (0 = unlimited, default 25)
   --agent <name>         Use a named agent or pipeline
                            (from .harness/agents/ or .harness/pipelines/)
+  --remote <url>         Connect to a remote headless harness server
   -h, --help             Show this help message
 
 ${t.bold('COMMANDS:')}
