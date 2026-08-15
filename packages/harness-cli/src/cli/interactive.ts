@@ -32,11 +32,30 @@ function tryPrintChafaBanner(): void {
   }
 }
 
-function printExitEpilogue(sessionId: string, theme?: CliTheme): void {
+function printExitEpilogue(sessionId: string, sessionUsage: import('@harness/shared').UsageData | null, createdAt: number, messages: import('@harness/shared').Message[], theme?: CliTheme): void {
   tryPrintChafaBanner();
   const t = theme ?? new CliTheme();
+  const secs = Math.floor((Date.now() - createdAt) / 1000);
+  const duration = secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`;
+  const fromApi = sessionUsage && (sessionUsage.input_tokens > 0 || sessionUsage.output_tokens > 0);
+  const usage = fromApi ? sessionUsage! : estimateTokenUsage(messages);
+  const source = fromApi ? '(from API)' : '(estimated)';
   console.log(`\n${t.bold('Session')}    ${t.highlight(sessionId)}`);
+  console.log(`${t.bold('Tokens')}     ${usage.input_tokens.toLocaleString()} in / ${usage.output_tokens.toLocaleString()} out ${source}`);
+  console.log(`${t.bold('Duration')}   ${duration}`);
   console.log(`${t.bold('Continue')}   ${t.warning(`harness -S ${sessionId}`)}\n`);
+}
+
+function estimateTokenUsage(messages: import('@harness/shared').Message[]): import('@harness/shared').UsageData {
+  let input = 0, output = 0;
+  for (const msg of messages) {
+    const t = Math.ceil((msg.content || '').length / 4);
+    if (msg.role === 'assistant') output += t; else input += t;
+    for (const tc of msg.tool_calls || []) {
+      input += Math.ceil(JSON.stringify(tc.function?.arguments || '').length / 4);
+    }
+  }
+  return { input_tokens: input, output_tokens: output };
 }
 
 function formatSessionExport(messages: Message[], ext: string, sid: string, modelName?: string): string {
@@ -112,6 +131,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
   const sm = new SessionManager();
   let sessionId: string;
   let sessionCreatedAt: number;
+  let sessionUsage: import('@harness/shared').UsageData | null = null;
   let history: Message[] = [];
 
   if (resumeLatest) {
@@ -156,6 +176,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
       model: modelName,
       searchProvider: currentSearch,
       messages: history,
+      usage: sessionUsage,
       createdAt: sessionCreatedAt,
       updatedAt: Date.now(),
     });
@@ -413,6 +434,15 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         process.stdout.write(`${t.bold('Mode:')}     ${currentMode === 'plan' ? t.warning('plan') : t.success('build')}\n`);
         process.stdout.write(`${t.bold('Temp:')}     ${currentTemp !== undefined ? currentTemp.toFixed(2) : 'default'}\n`);
         process.stdout.write(`${t.bold('Messages:')} ${history.filter(m => m.role === 'user' || m.role === 'assistant').length}\n`);
+        const tok = sessionUsage;
+        if (tok && (tok.input_tokens > 0 || tok.output_tokens > 0)) {
+          process.stdout.write(`${t.bold('Tokens:')}   ${tok.input_tokens.toLocaleString()} in / ${tok.output_tokens.toLocaleString()} out (from API)\n`);
+        } else {
+          const estimated = estimateTokenUsage(history);
+          if (estimated.input_tokens > 0 || estimated.output_tokens > 0) {
+            process.stdout.write(`${t.bold('Tokens:')}   ${estimated.input_tokens.toLocaleString()} in / ${estimated.output_tokens.toLocaleString()} out (estimated)\n`);
+          }
+        }
         process.stdout.write(`${t.bold('Created:')}  ${new Date(sessionCreatedAt).toLocaleString()}\n`);
         process.stdout.write(`${t.bold('Saved:')}    ${new Date(Date.now()).toLocaleString()}\n\n`);
         rl.prompt();
@@ -928,8 +958,10 @@ process.stdout.write(`\nUse ${tM.warning('/model <name>')} to switch.\n`);
               console.error(t.error(`  ${String(event.data)}`));
               console.error(t.error(`─────────────`));
               break;
-            case 'done':
-              history = event.data;
+            case 'done': {
+              const doneData = event.data as { messages: Message[]; usage: import('@harness/shared').UsageData | null };
+              history = doneData.messages;
+              sessionUsage = doneData.usage;
               if (hideThinking && thinkingBuf) {
                 process.stdout.write(thinkingBuf);
                 thinkingBuf = '';
@@ -944,6 +976,7 @@ process.stdout.write(`\nUse ${tM.warning('/model <name>')} to switch.\n`);
                 streamBuf = '';
               }
               saveSession();
+              }
               break;
           }
         }
@@ -991,7 +1024,7 @@ process.stdout.write(`\nUse ${tM.warning('/model <name>')} to switch.\n`);
     didExit = true;
     saveSession();
     endLog(label as 'exit' | 'sigint' | 'close');
-    printExitEpilogue(sessionId, t);
+    printExitEpilogue(sessionId, sessionUsage, sessionCreatedAt, history, t);
     process.exit(0);
   }
 

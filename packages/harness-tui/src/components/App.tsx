@@ -496,7 +496,7 @@ export function App({ agent, modelName, searchProvider, theme: customTheme, onEx
             if (pipelineActiveRef.current) break;
             const pendingContent = streamBufRef.current;
             streamBufRef.current = '';
-            const fullHistory = event.data as Message[];
+            const fullHistory = (event.data as { messages: Message[] }).messages;
             const lastMsg = fullHistory[fullHistory.length - 1];
             if (pendingContent && lastMsg?.role === 'tool') {
               const cleanContent = pendingContent.replace(/\n{3,}/g, '\n\n').trim();

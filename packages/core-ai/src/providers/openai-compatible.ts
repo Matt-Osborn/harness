@@ -324,11 +324,27 @@ export class OpenAICompatibleProvider implements Provider {
       }
 
       if (errText.includes('cudaMalloc') || errText.includes('out of memory')) {
+        let hint = 'The provider ran out of GPU VRAM.';
+        if (isLocalUrl(this.baseUrl)) {
+          if (this.baseUrl.includes('11434')) {
+            hint =
+              `Ollama ran out of GPU VRAM.\n` +
+              `  Free memory: \`ollama stop <name>\` to unload unused models.\n` +
+              `  Reduce load: use a smaller model or set OLLAMA_KEEP_ALIVE=0.`;
+          } else if (this.baseUrl.includes('8080') || this.baseUrl.includes('8081')) {
+            hint =
+              `llama.cpp ran out of GPU VRAM.\n` +
+              `  Reduce GPU layers: restart with \`--n-gpu-layers 0\` (CPU only) or reduce layer count.\n` +
+              `  Reduce load: use a smaller model or a Q4/Q3 quantization.`;
+          } else {
+            hint =
+              `A local provider ran out of GPU VRAM.\n` +
+              `  Try using a smaller model or reducing GPU offloading.`;
+          }
+        }
         throw new OpenAIError(
           response.status,
-          `OpenAI API error ${response.status}: ${errText}\n\n` +
-          `Hint: Ollama ran out of GPU VRAM. Unload models with \`ollama stop <name>\`,\n` +
-          `or set \`OLLAMA_KEEP_ALIVE=0\` to unload after each request.`
+          `OpenAI API error ${response.status}: ${errText}\n\nHint: ${hint}`
         );
       }
 

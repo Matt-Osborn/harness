@@ -167,6 +167,7 @@ export interface SessionData {
   model?: string;
   searchProvider?: string;
   messages: Message[];
+  usage?: UsageData | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -218,7 +219,7 @@ export type AgentEvent =
   | { type: 'tool_call'; data: { name: string; args: string }; timestamp: number }
   | { type: 'tool_result'; data: { name: string; result?: string; denied?: boolean; error?: string }; timestamp: number }
   | { type: 'error'; data: string; timestamp: number }
-  | { type: 'done'; data: Message[]; timestamp: number }
+  | { type: 'done'; data: { messages: Message[]; usage: UsageData | null }; timestamp: number }
   // Pipeline events
   | { type: 'pipeline_start'; data: { name: string; step_count: number }; timestamp: number }
   | { type: 'step_start'; data: { index: number; name: string; agent: string }; timestamp: number }

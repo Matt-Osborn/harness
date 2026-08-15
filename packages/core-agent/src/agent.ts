@@ -1,5 +1,5 @@
 import type { Provider } from '@harness/core-ai';
-import type { Message, StreamEvent, AgentEvent, ToolCall, ToolCallDelta, AgentDefinition, Logger } from '@harness/shared';
+import type { Message, StreamEvent, AgentEvent, ToolCall, ToolCallDelta, AgentDefinition, Logger, UsageData } from '@harness/shared';
 import type { AgentTool } from './tool.js';
 import { buildSystemPrompt } from './prompt.js';
 import { READ_ONLY_TOOLS } from './permissions.js';
@@ -310,6 +310,7 @@ export class Agent {
     let consecutiveLengthIterations = 0;
     let consecutiveToolIterations = 0;
     let emptyResponseCount = 0;
+    let totalUsage: UsageData = { input_tokens: 0, output_tokens: 0 };
 
     while (this.maxIterations <= 0 || iterations < this.maxIterations) {
       if (signal?.aborted) return;
@@ -346,6 +347,10 @@ export class Agent {
             break;
           }
           case 'usage':
+            if (event.data) {
+              totalUsage.input_tokens += event.data.input_tokens;
+              totalUsage.output_tokens += event.data.output_tokens;
+            }
             break;
           case 'error':
             yield { type: 'error', data: event.data, timestamp: Date.now() };
@@ -367,13 +372,13 @@ export class Agent {
           fullMessages.push({ role: 'assistant', content: accumulatedText, timestamp: Date.now() });
           userHistory.push({ role: 'assistant', content: accumulatedText, timestamp: Date.now() });
           if (consecutiveLengthIterations >= 3) {
-            yield { type: 'done', data: userHistory, timestamp: Date.now() };
+            yield { type: 'done', data: { messages: userHistory, usage: totalUsage }, timestamp: Date.now() };
             return;
           }
           continue;
         }
         yield { type: 'text', data: '\n*[Response truncated — model used all available tokens. Consider raising max_tokens in your provider config.]*\n', timestamp: Date.now() };
-        yield { type: 'done', data: userHistory, timestamp: Date.now() };
+        yield { type: 'done', data: { messages: userHistory, usage: totalUsage }, timestamp: Date.now() };
         return;
       }
 
@@ -627,12 +632,12 @@ export class Agent {
         if (accumulatedText) {
           fullMessages.push({ role: 'assistant', content: accumulatedText, timestamp: Date.now() });
           userHistory.push({ role: 'assistant', content: accumulatedText, timestamp: Date.now() });
-          yield { type: 'done', data: userHistory, timestamp: Date.now() };
+          yield { type: 'done', data: { messages: userHistory, usage: totalUsage }, timestamp: Date.now() };
           return;
         }
         emptyResponseCount++;
         if (emptyResponseCount >= 2) {
-          yield { type: 'done', data: userHistory, timestamp: Date.now() };
+          yield { type: 'done', data: { messages: userHistory, usage: totalUsage }, timestamp: Date.now() };
           return;
         }
         fullMessages.push({

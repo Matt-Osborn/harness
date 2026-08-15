@@ -12,6 +12,7 @@ import type { FormQuestion } from '../prompts/render-form.js';
 export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, agentName?: string, logEnabled?: boolean, routingOverride?: 'balanced' | 'cost' | 'speed' | 'quality', suffixOverride?: string, baseUrlOverride?: string, preResolved?: { config: import('@harness/shared').ModelConfig; apiKey: string | undefined }): Promise<void> {
   const config = new ConfigManager();
   const t = theme ?? new CliTheme(config.themeConfig);
+  const startTime = Date.now();
 
   const resolved = preResolved ?? (() => {
     const valid = config.validateModel(modelName);
@@ -200,12 +201,13 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
           console.error(t.error(`─────────────`));
           break;
         case 'done': {
+          const doneData = event.data as { messages: import('@harness/shared').Message[]; usage: import('@harness/shared').UsageData | null };
           if (hideThinking && thinkingBuf) {
             process.stdout.write(thinkingBuf);
             thinkingBuf = '';
           }
           if (useStyled) {
-            const lastAssistant = [...event.data].reverse().find(m => m.role === 'assistant');
+            const lastAssistant = [...doneData.messages].reverse().find(m => m.role === 'assistant');
             if (lastAssistant?.content) {
               process.stdout.write(md!.render(lastAssistant.content) + '\n');
             } else if (streamBuf) {
@@ -216,16 +218,31 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
             const remaining = (textWrap as TextWrapper).flush();
             if (remaining) process.stdout.write(remaining);
           }
-          const fullHistory = event.data;
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
+          const duration = elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
+          const fromApi = doneData.usage && (doneData.usage.input_tokens > 0 || doneData.usage.output_tokens > 0);
+          const tok = fromApi ? doneData.usage! : (() => {
+            let input = 0, output = 0;
+            for (const msg of doneData.messages) {
+              const t = Math.ceil((msg.content || '').length / 4);
+              if (msg.role === 'assistant') output += t; else input += t;
+              for (const tc of msg.tool_calls || []) input += Math.ceil(JSON.stringify(tc.function?.arguments || '').length / 4);
+            }
+            return { input_tokens: input, output_tokens: output };
+          })();
+          const source = fromApi ? '(from API)' : '(estimated)';
           sm.save({
             id: sid,
             label: 'PROMPT',
             model: modelName,
             searchProvider: search,
-            messages: fullHistory,
-            createdAt: Date.now(),
+            messages: doneData.messages,
+            usage: doneData.usage,
+            createdAt: startTime,
             updatedAt: Date.now(),
           });
+          console.log(`\n${t.bold('Tokens')}   ${tok.input_tokens.toLocaleString()} in / ${tok.output_tokens.toLocaleString()} out ${fromApi}`);
+          console.log(`${t.bold('Duration')} ${duration}`);
           break;
         }
       }

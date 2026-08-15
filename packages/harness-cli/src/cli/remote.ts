@@ -100,7 +100,7 @@ export async function* streamEvents(serverUrl: string, apiKey: string | undefine
             yield { type: 'error' as const, data: parsed.message, timestamp: Date.now() };
             break;
           case 'done':
-            yield { type: 'done' as const, data: [] as import('@harness/shared').Message[], timestamp: Date.now() };
+            yield { type: 'done' as const, data: { messages: [] as import('@harness/shared').Message[], usage: null }, timestamp: Date.now() };
             break;
         }
       } catch { /* skip parse errors */ }
