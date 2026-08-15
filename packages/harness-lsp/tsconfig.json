@@ -8,10 +8,6 @@
   "include": ["src"],
   "references": [
     { "path": "../harness-shared" },
-    { "path": "../core-ai" },
-    { "path": "../core-agent" },
-    { "path": "../harness-tui" },
-    { "path": "../harness-server" },
-    { "path": "../harness-lsp" }
+    { "path": "../core-agent" }
   ]
 }

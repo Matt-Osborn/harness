@@ -9,7 +9,7 @@ import { MarkdownRenderer } from './markdown.js';
 import { renderForm } from '../prompts/render-form.js';
 import type { FormQuestion } from '../prompts/render-form.js';
 
-export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, agentName?: string, logEnabled?: boolean, routingOverride?: 'balanced' | 'cost' | 'speed' | 'quality', suffixOverride?: string, baseUrlOverride?: string, preResolved?: { config: import('@harness/shared').ModelConfig; apiKey: string | undefined }): Promise<void> {
+export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, agentName?: string, logEnabled?: boolean, routingOverride?: 'balanced' | 'cost' | 'speed' | 'quality', suffixOverride?: string, baseUrlOverride?: string, preResolved?: { config: import('@harness/shared').ModelConfig; apiKey: string | undefined }, lspActive?: boolean): Promise<void> {
   const config = new ConfigManager();
   const t = theme ?? new CliTheme(config.themeConfig);
   const startTime = Date.now();
@@ -36,6 +36,10 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
   const permissions = new PermissionEngine(config.permissions, { interactive: false });
 
   const tools = createDefaultTools({ searchProvider: search, formatConfig: config.formatConfig });
+  if (lspActive) {
+    const { createLspTools } = await import('@harness/lsp');
+    tools.push(...createLspTools());
+  }
 
   if (temperatureOverride !== undefined) resolved.config.temperature = temperatureOverride;
   if (topPOverride !== undefined) resolved.config.top_p = topPOverride;

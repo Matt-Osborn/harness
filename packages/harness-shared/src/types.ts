@@ -143,6 +143,10 @@ export interface GeneralConfig {
   docker_enabled?: boolean;
 }
 
+export interface LspConfig {
+  enabled?: boolean;
+}
+
 export interface Config {
   models: Record<string, ModelConfig>;
   default_model?: string;
@@ -157,6 +161,7 @@ export interface Config {
   theme?: ThemeConfig;
   display?: DisplayConfig;
   general?: GeneralConfig;
+  lsp?: LspConfig;
 }
 
 export type SessionLabel = 'INTERACTIVE' | 'PROMPT';

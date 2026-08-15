@@ -46,6 +46,7 @@ ${t.bold('COMMANDS:')}
   default                View or set default model / search provider
   init                   Create default config at ~/.harness/config.toml
   launch <ollama|llama|sandbox>  Start local servers or sandboxed harness
+  lsp <list|status>          Show LSP server info or list supported servers
   help                   Show this help message
   skill <sub> [name]    Manage skills (list|enable|disable)
   tui                    Launch the TUI (terminal UI, experimental) mode
@@ -72,6 +73,7 @@ ${t.bold('EXAMPLES:')}
   harness --sessions                      List saved sessions
   harness init                     Set up default config
   ${t.warning('harness launch <ollama|llama|sandbox>')}   Start local servers or sandboxed harness
+  ${t.warning('harness lsp')}                      Show LSP status or list supported servers
 
 Run '${t.warning('harness --help v')}' for verbose help with all flags.
 `);
@@ -103,6 +105,7 @@ ${t.bold('OUTPUT AND DISPLAY:')}
   --no-status-line           Hide progress spinner
   --hide-thinking            Suppress thinking text display (show spinner only)
   --hide-tools               Suppress tool call indicator lines (⚡ lines)
+  --lsp / --no-lsp          Enable or disable LSP integration (overrides config)
   --ansi-256                 Force ANSI 256-color mode (disable truecolor)
   --plan                     Start in plan mode (read-only, no modifications)
   --build                    Start in build mode (default, modifications allowed)
@@ -146,6 +149,7 @@ ${t.bold('COMMANDS:')}
   default                View or set default model / search provider
   init                   Create default config at ~/.harness/config.toml
   launch <ollama|llama|sandbox>  Start local servers or sandboxed harness
+  lsp <list|status>          Show LSP server info or list supported servers
   help                   Show this help message
   skill <sub> [name]    Manage skills (list|enable|disable)
   tui                    Launch the TUI (terminal UI, experimental) mode

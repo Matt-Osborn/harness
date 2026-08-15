@@ -6,7 +6,8 @@
     { "path": "packages/core-agent" },
     { "path": "packages/harness-cli" },
     { "path": "packages/harness-tui" },
-    { "path": "packages/harness-server" }
+    { "path": "packages/harness-server" },
+    { "path": "packages/harness-lsp" }
   ],
   "compilerOptions": {
     "target": "ES2023",

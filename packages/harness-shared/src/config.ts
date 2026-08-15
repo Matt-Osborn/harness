@@ -180,6 +180,13 @@ export class ConfigManager {
           docker_enabled: typeof g.docker_enabled === 'boolean' ? g.docker_enabled : merged.general?.docker_enabled,
         };
       }
+
+      if (raw.lsp && typeof raw.lsp === 'object') {
+        const l = raw.lsp as Record<string, unknown>;
+        merged.lsp = {
+          enabled: typeof l.enabled === 'boolean' ? l.enabled : merged.lsp?.enabled ?? true,
+        };
+      }
     }
 
     return merged;
@@ -243,6 +250,10 @@ export class ConfigManager {
 
   get dockerEnabled(): boolean {
     return this.config.general?.docker_enabled ?? true;
+  }
+
+  get lspEnabled(): boolean {
+    return this.config.lsp?.enabled ?? true;
   }
 
   getResolvedModel(modelName?: string): { config: ModelConfig; apiKey: string | undefined } | null {

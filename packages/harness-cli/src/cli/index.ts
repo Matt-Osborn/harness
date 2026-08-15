@@ -16,6 +16,7 @@ import { runInteractive, setSessionProviderOptions } from './interactive.js';
 import { runSkillCommand, AGENTS_MD_TEMPLATE, hintLine } from './skill-command.js';
 import { runLaunchCommand } from './launch-command.js';
 import { showHelp, showHelpVerbose } from '../help.js';
+import which from 'which';
 
 function parseArg(args: string[], ...names: string[]): string | undefined {
   for (const name of names) {
@@ -26,7 +27,7 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
 }
 
 const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme','--agent','--max-iterations','--base-url','--model-id','--name']);
-const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '--purge-empty-sessions', '--dry-run', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256', '--plan', '--build', '--log', '--all', '--subagent', '--set-default']);
+const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '--purge-empty-sessions', '--dry-run', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256', '--plan', '--build', '--log', '--all', '--subagent', '--set-default', '--lsp', '--no-lsp']);
 
 function extractCommands(args: string[]): string[] {
   const cmds: string[] = [];
@@ -172,7 +173,8 @@ export async function run(): Promise<void> {
       process.exit(1);
     }
     const printAgentFlag = parseArg(args, '--agent');
-    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools, printAgentFlag, config.logEnabled || flagLog, routingOverride, suffixOverride, baseUrlOverride, resolved);
+    const lspActive = args.includes('--lsp') ? true : args.includes('--no-lsp') ? false : config.lspEnabled;
+    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools, printAgentFlag, config.logEnabled || flagLog, routingOverride, suffixOverride, baseUrlOverride, resolved, lspActive);
     return;
   }
 
@@ -254,6 +256,11 @@ export async function run(): Promise<void> {
     const skillRegistry = new SkillRegistry();
     const searchTool = new WebSearchTool(search);
     const tools = createDefaultTools({ searchProvider: search, skillRegistry, searchTool, formatConfig: config.formatConfig });
+    const lspActive = args.includes('--lsp') ? true : args.includes('--no-lsp') ? false : config.lspEnabled;
+    if (lspActive) {
+      const { createLspTools } = await import('@harness/lsp');
+      tools.push(...createLspTools());
+    }
     const provider = createProvider(resolved.config.model, resolved.config, resolved.apiKey, { anonymous: config.anonymous, routing: routingOverride, suffix: suffixOverride });
     const rulesStack = loadRulesStack();
     const memBank = loadMemoryBank();
@@ -504,6 +511,11 @@ export async function run(): Promise<void> {
       const search = searchOverride || config.searchProvider || resolveAutoProvider();
       const skillRegistry = new SkillRegistry();
       const tools = createDefaultTools({ searchProvider: search, skillRegistry, formatConfig: config.formatConfig });
+      const lspActive = args.includes('--lsp') ? true : args.includes('--no-lsp') ? false : config.lspEnabled;
+      if (lspActive) {
+        const { createLspTools } = await import('@harness/lsp');
+        tools.push(...createLspTools());
+      }
     if (temperatureOverride !== undefined) resolved.config.temperature = temperatureOverride;
     if (topPOverride !== undefined) resolved.config.top_p = topPOverride;
     if (seedOverride !== undefined) resolved.config.seed = seedOverride;
@@ -617,6 +629,34 @@ export async function run(): Promise<void> {
 
     case 'launch': {
       await runLaunchCommand(args);
+      break;
+    }
+
+    case 'lsp': {
+      const lspCmd = commands[1];
+      const tLsp = new CliTheme({ ...themeOverride });
+      const { LANGUAGE_SERVERS, lspServerManager } = await import('@harness/lsp');
+
+      if (lspCmd === 'list' || lspCmd === '--list') {
+        console.log(tLsp.bold('Supported language servers:'));
+        console.log('');
+        for (const [lang, def] of Object.entries(LANGUAGE_SERVERS)) {
+          const installed = which.sync(def.binary, { nothrow: true });
+          const status = installed ? tLsp.success('✓') : tLsp.error('✗');
+          const hint = installed ? '' : `  ${tLsp.dim(def.installHint)}`;
+          console.log(`  ${status} ${tLsp.bold(lang.padEnd(12))} ${def.binary}${hint}`);
+        }
+        break;
+      }
+
+      // default: lsp status
+      const lspConfig = new ConfigManager();
+      const detected = process.cwd();
+      console.log(`${tLsp.bold('LSP status')}`);
+      console.log(`  Workspace: ${detected}`);
+      console.log(`  Enabled:   ${lspConfig.lspEnabled ? tLsp.success('yes') : tLsp.error('no (set lsp.enabled = true in config)')}`);
+      console.log(`  Servers:   ${LANGUAGE_SERVERS ? Object.keys(LANGUAGE_SERVERS).length : 0} configured`);
+      console.log(`\n  ${tLsp.dim('Run `harness lsp list` to see available servers.')}`);
       break;
     }
 
@@ -774,7 +814,7 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
           rl.close();
 }
         }
-      if (process.stdin.isTTY) {
+if (process.stdin.isTTY) {
         const { createInterface } = await import('node:readline/promises');
         const dockerRl = createInterface({ input: process.stdin, output: process.stdout });
         try {
@@ -789,6 +829,23 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
           }
         } finally {
           dockerRl.close();
+        }
+      }
+      if (process.stdin.isTTY) {
+        const { createInterface } = await import('node:readline/promises');
+        const lspRl = createInterface({ input: process.stdin, output: process.stdout });
+        try {
+          const lspAns = await lspRl.question('Enable LSP integration (code intelligence via language servers)? [Y/n] ');
+          if (lspAns.toLowerCase() === 'n') {
+            const configContent = readFileSync(configPath, 'utf-8');
+            const updated = configContent.includes('[lsp]')
+              ? configContent.replace('[lsp]', '[lsp]\nenabled = false')
+              : configContent + '\n[lsp]\nenabled = false\n';
+            writeFileSync(configPath, updated, 'utf-8');
+            console.log('LSP integration disabled. Set lsp.enabled = true to re-enable.');
+          }
+        } finally {
+          lspRl.close();
         }
       }
       }
@@ -936,9 +993,9 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
                     console.log(provTheme.success(`Saved to ~/.harness/.env`));
                   }
                 } finally {
-                  rl2.close();
-                }
-              }
+rl2.close();
+}
+            }
             }
           } else {
             console.log(provTheme.success(`✓ ${providerInfo.envVar} is already set`));
