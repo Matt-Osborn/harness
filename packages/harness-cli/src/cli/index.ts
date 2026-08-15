@@ -25,8 +25,8 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
   return undefined;
 }
 
-const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme','--agent','--max-iterations','--base-url']);
-const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '--purge-empty-sessions', '--dry-run', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256', '--plan', '--build', '--log', '--all', '--subagent']);
+const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme','--agent','--max-iterations','--base-url','--model-id','--name']);
+const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '--purge-empty-sessions', '--dry-run', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256', '--plan', '--build', '--log', '--all', '--subagent', '--set-default']);
 
 function extractCommands(args: string[]): string[] {
   const cmds: string[] = [];
@@ -165,14 +165,14 @@ export async function run(): Promise<void> {
 
   if (prompt !== undefined) {
     const config = new ConfigManager();
-    const valid = config.validateModel(model);
     const tPrompt = new CliTheme({ ...config.themeConfig, ...themeOverride });
-    if (!valid.valid) {
-      console.error(tPrompt.error(valid.message));
+    const resolved = config.resolveModel(model, baseUrlOverride);
+    if (!resolved) {
+      console.error(tPrompt.error('No model configured. Use --model or set a default model.'));
       process.exit(1);
     }
     const printAgentFlag = parseArg(args, '--agent');
-    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools, printAgentFlag, config.logEnabled || flagLog, routingOverride, suffixOverride, baseUrlOverride);
+    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools, printAgentFlag, config.logEnabled || flagLog, routingOverride, suffixOverride, baseUrlOverride, resolved);
     return;
   }
 
@@ -229,23 +229,20 @@ export async function run(): Promise<void> {
     for (const err of config.parseErrorMessages) {
       console.log(tInteractive.warning(`Warning: config parse error in ${err}`));
     }
-    const valid = config.validateModel(model);
-    if (!valid.valid) {
-      console.log(tInteractive.error(valid.message));
-      console.log(`Run ${tInteractive.warning('harness init')} to create a default config.`);
+    const resolved = config.resolveModel(model, baseUrlOverride);
+    if (!resolved) {
+      console.log(tInteractive.error(`Model "${model || config.defaultModel}" not found.`));
+      console.log(`Run ${tInteractive.warning('harness init')} to create a default config, or use --base-url for an ephemeral model.`);
       return;
     }
 
-    const resolved = config.getResolvedModel(model);
     const displayName = model || config.defaultModel;
     const modelIsDefault = !model;
-    if (temperatureOverride !== undefined) resolved!.config.temperature = temperatureOverride;
-    if (topPOverride !== undefined) resolved!.config.top_p = topPOverride;
-    if (seedOverride !== undefined) resolved!.config.seed = seedOverride;
-    const baseUrlOverride = parseArg(args, '--base-url');
-    if (baseUrlOverride && resolved) resolved.config.base_url = baseUrlOverride;
-    if (flagDropParams !== undefined) resolved!.config.drop_params = flagDropParams;
-    const initialTemp = resolved!.config.temperature;
+    if (temperatureOverride !== undefined) resolved.config.temperature = temperatureOverride;
+    if (topPOverride !== undefined) resolved.config.top_p = topPOverride;
+    if (seedOverride !== undefined) resolved.config.seed = seedOverride;
+    if (flagDropParams !== undefined) resolved.config.drop_params = flagDropParams;
+    const initialTemp = resolved.config.temperature;
     const search = searchOverride || config.searchProvider || resolveAutoProvider();
     const isInter = process.stdin.isTTY ?? false;
     const permConfig: PermissionConfig = { ...config.permissions };
@@ -257,7 +254,7 @@ export async function run(): Promise<void> {
     const skillRegistry = new SkillRegistry();
     const searchTool = new WebSearchTool(search);
     const tools = createDefaultTools({ searchProvider: search, skillRegistry, searchTool, formatConfig: config.formatConfig });
-    const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey, { anonymous: config.anonymous, routing: routingOverride, suffix: suffixOverride });
+    const provider = createProvider(resolved.config.model, resolved.config, resolved.apiKey, { anonymous: config.anonymous, routing: routingOverride, suffix: suffixOverride });
     const rulesStack = loadRulesStack();
     const memBank = loadMemoryBank();
     const baseProjectRules = memBank
@@ -381,6 +378,22 @@ export async function run(): Promise<void> {
     case 'model':
     case 'models': {
       if (commands[1] === 'add') {
+        const url = parseArg(args, '--base-url');
+        const modelId = parseArg(args, '--model-id');
+        const alias = parseArg(args, '--name');
+        const setDefault = args.includes('--set-default');
+
+        if (url && modelId && alias) {
+          addModelToConfig(alias, {
+            model: modelId,
+            base_url: url,
+            kind: 'openai-compatible',
+          }, { setDefault });
+          const tAdd = new CliTheme({ ...themeOverride });
+          console.log(tAdd.success(`Model "${alias}" added.`));
+          break;
+        }
+
         const { runModelAdd } = await import('./model-command.js');
         await runModelAdd(KNOWN_MODEL_PROVIDERS, LOCAL_MODEL_PROVIDERS);
         break;
@@ -482,23 +495,20 @@ export async function run(): Promise<void> {
       const { runTui } = await import('@harness/tui');
       const config = new ConfigManager();
       const tTui = new CliTheme({ ...config.themeConfig, ...themeOverride });
-      const valid = config.validateModel();
-      if (!valid.valid) {
-        console.log(tTui.error(valid.message));
+      const resolved = config.resolveModel(undefined, baseUrlOverride);
+      if (!resolved) {
+        console.log(tTui.error('No model configured. Set a default model or use --base-url.'));
         return;
       }
 
-      const resolved = config.getResolvedModel();
       const search = searchOverride || config.searchProvider || resolveAutoProvider();
       const skillRegistry = new SkillRegistry();
       const tools = createDefaultTools({ searchProvider: search, skillRegistry, formatConfig: config.formatConfig });
-    if (temperatureOverride !== undefined) resolved!.config.temperature = temperatureOverride;
-    if (topPOverride !== undefined) resolved!.config.top_p = topPOverride;
-    if (seedOverride !== undefined) resolved!.config.seed = seedOverride;
-    const baseUrlOverride = parseArg(args, '--base-url');
-    if (baseUrlOverride && resolved) resolved.config.base_url = baseUrlOverride;
-    if (flagDropParams !== undefined) resolved!.config.drop_params = flagDropParams;
-    const provider = createProvider(resolved!.config.model, resolved!.config, resolved!.apiKey, { anonymous: config.anonymous, routing: routingOverride, suffix: suffixOverride });
+    if (temperatureOverride !== undefined) resolved.config.temperature = temperatureOverride;
+    if (topPOverride !== undefined) resolved.config.top_p = topPOverride;
+    if (seedOverride !== undefined) resolved.config.seed = seedOverride;
+    if (flagDropParams !== undefined) resolved.config.drop_params = flagDropParams;
+    const provider = createProvider(resolved.config.model, resolved.config, resolved.apiKey, { anonymous: config.anonymous, routing: routingOverride, suffix: suffixOverride });
     const mode = args.includes('--plan') ? 'plan' : args.includes('--build') ? 'build' : undefined;
     const tuiRulesStack = loadRulesStack();
     const tuiMemBank = loadMemoryBank();

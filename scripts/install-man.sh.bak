@@ -75,15 +75,6 @@ detect_target_dir() {
   esac
 }
 
-detect_rc_file() {
-  case "${SHELL##*/}" in
-    zsh)  printf '%s/.zshrc' "$HOME" ;;
-    fish) printf '%s/.config/fish/config.fish' "$HOME" ;;
-    bash) printf '%s/.bashrc' "$HOME" ;;
-    *)    printf '%s/.profile' "$HOME" ;;
-  esac
-}
-
 TARGET_DIR="$(detect_target_dir)"
 
 if [ "$TARGET_DIR" = "WINDOWS" ]; then
@@ -149,32 +140,9 @@ if [ "$USE_MAN_L" = "1" ]; then
   echo ""
   echo "Read the man page with:  man -l '$MANPAGE'"
   echo ""
-
-  RC_FILE="$(detect_rc_file)"
-  MANPATH_LINE="export MANPATH=\"\$HOME/.local/share/man:\$MANPATH\""
-
-  if [ -f "$RC_FILE" ] && grep -qs 'MANPATH.*\.local/share/man' "$RC_FILE"; then
-    echo "MANPATH already configured in $RC_FILE — nothing to do."
-  elif [ -t 0 ]; then
-    printf "Add MANPATH export to %s to enable 'man harness' from anywhere? [y/N] " "$RC_FILE"
-    read -r ANSWER
-    case "$ANSWER" in
-      [yY])
-        echo "$MANPATH_LINE" >> "$RC_FILE"
-        echo "Added to $RC_FILE"
-        echo "Run: man harness"
-        ;;
-      *)
-        echo "To enable 'man harness' from anywhere, add to $RC_FILE:"
-        echo "  $MANPATH_LINE"
-        echo "Then run: man harness"
-        ;;
-    esac
-  else
-    echo "To enable 'man harness' from anywhere, add to $RC_FILE:"
-    echo "  $MANPATH_LINE"
-    echo "Then run: man harness"
-  fi
+  echo "To enable 'man harness' from anywhere, add to ~/.bashrc:"
+  echo "  export MANPATH=\"\$HOME/.local/share/man:\$MANPATH\""
+  echo "Then run: man harness"
 else
   echo "Verify with: man harness"
 fi

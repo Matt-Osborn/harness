@@ -9,21 +9,23 @@ import { MarkdownRenderer } from './markdown.js';
 import { renderForm } from '../prompts/render-form.js';
 import type { FormQuestion } from '../prompts/render-form.js';
 
-export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, agentName?: string, logEnabled?: boolean, routingOverride?: 'balanced' | 'cost' | 'speed' | 'quality', suffixOverride?: string, baseUrlOverride?: string): Promise<void> {
+export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, agentName?: string, logEnabled?: boolean, routingOverride?: 'balanced' | 'cost' | 'speed' | 'quality', suffixOverride?: string, baseUrlOverride?: string, preResolved?: { config: import('@harness/shared').ModelConfig; apiKey: string | undefined }): Promise<void> {
   const config = new ConfigManager();
   const t = theme ?? new CliTheme(config.themeConfig);
 
-  const valid = config.validateModel(modelName);
-  if (!valid.valid) {
-    console.error(t.error(valid.message));
-    process.exit(1);
-  }
-
-  const resolved = config.getResolvedModel(modelName);
-  if (!resolved) {
-    console.error('No model configured. Run `harness init` or create a config file.');
-    process.exit(1);
-  }
+  const resolved = preResolved ?? (() => {
+    const valid = config.validateModel(modelName);
+    if (!valid.valid) {
+      console.error(t.error(valid.message));
+      process.exit(1);
+    }
+    const r = config.getResolvedModel(modelName);
+    if (!r) {
+      console.error('No model configured. Run `harness init` or create a config file.');
+      process.exit(1);
+    }
+    return r;
+  })();
 
   const search = searchProvider || config.searchProvider || resolveAutoProvider();
   if (!isProviderAvailable(search)) {

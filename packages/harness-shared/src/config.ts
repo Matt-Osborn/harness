@@ -247,6 +247,22 @@ export class ConfigManager {
     return { config, apiKey: resolveApiKey(config) };
   }
 
+  resolveModel(modelName?: string, baseUrlOverride?: string): { config: ModelConfig; apiKey: string | undefined } | null {
+    const name = modelName || this.defaultModel;
+    if (!name) return null;
+    const existing = this.config.models[name];
+    if (existing) {
+      if (baseUrlOverride) {
+        return { config: { ...existing, base_url: baseUrlOverride }, apiKey: resolveApiKey(existing) };
+      }
+      return { config: existing, apiKey: resolveApiKey(existing) };
+    }
+    if (baseUrlOverride) {
+      return { config: { model: name, base_url: baseUrlOverride, kind: 'openai-compatible' as const }, apiKey: undefined };
+    }
+    return null;
+  }
+
   get allModels(): Array<{ name: string; config: ModelConfig }> {
     return Object.entries(this.config.models).map(([name, config]) => ({ name, config }));
   }
