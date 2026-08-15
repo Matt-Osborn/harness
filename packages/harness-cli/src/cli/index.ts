@@ -772,6 +772,23 @@ tools = { "*.py" = "ruff format", "*.{js,ts,jsx,tsx}" = "prettier --write", "*.{
           }
 } finally {
           rl.close();
+}
+        }
+      if (process.stdin.isTTY) {
+        const { createInterface } = await import('node:readline/promises');
+        const dockerRl = createInterface({ input: process.stdin, output: process.stdout });
+        try {
+          const dockerAns = await dockerRl.question('Enable Docker features (sandbox, container fallback for services)? [Y/n] ');
+          if (dockerAns.toLowerCase() === 'n') {
+            const configContent = readFileSync(configPath, 'utf-8');
+            const updated = configContent.includes('[general]')
+              ? configContent.replace('[general]', '[general]\ndocker_enabled = false')
+              : configContent + '\n[general]\ndocker_enabled = false\n';
+            writeFileSync(configPath, updated, 'utf-8');
+            console.log('Docker features disabled. Use --docker flag to override per-command.');
+          }
+        } finally {
+          dockerRl.close();
         }
       }
       }

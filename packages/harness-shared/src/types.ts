@@ -140,6 +140,7 @@ export interface DisplayConfig {
 
 export interface GeneralConfig {
   anonymous?: boolean;
+  docker_enabled?: boolean;
 }
 
 export interface Config {

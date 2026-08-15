@@ -29,7 +29,8 @@ export class ConfigManager {
   private findConfigFiles(startDir: string): string[] {
     const files: string[] = [];
 
-    const globalConfig = join(homedir(), '.harness', 'config.toml');
+    const harnessDir = process.env.HARNESS_CONFIG_DIR || join(homedir(), '.harness');
+    const globalConfig = join(harnessDir, 'config.toml');
     if (existsSync(globalConfig)) files.push(globalConfig);
 
     let current = resolve(startDir);
@@ -176,6 +177,7 @@ export class ConfigManager {
         const g = raw.general as Record<string, unknown>;
         merged.general = {
           anonymous: typeof g.anonymous === 'boolean' ? g.anonymous : merged.general?.anonymous,
+          docker_enabled: typeof g.docker_enabled === 'boolean' ? g.docker_enabled : merged.general?.docker_enabled,
         };
       }
     }
@@ -239,6 +241,10 @@ export class ConfigManager {
     return this.config.general?.anonymous ?? false;
   }
 
+  get dockerEnabled(): boolean {
+    return this.config.general?.docker_enabled ?? true;
+  }
+
   getResolvedModel(modelName?: string): { config: ModelConfig; apiKey: string | undefined } | null {
     const name = modelName || this.defaultModel;
     if (!name) return null;
@@ -286,7 +292,8 @@ export class ConfigManager {
 }
 
 export function ensureConfigDir(): string {
-  const dir = join(homedir(), '.harness');
+  const harnessHome = process.env.HARNESS_CONFIG_DIR || join(homedir(), '.harness');
+  const dir = harnessHome;
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
