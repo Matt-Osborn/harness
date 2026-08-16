@@ -87,9 +87,9 @@ search freely without worrying about accidental modifications.
 ## How it works
 
 Plan mode restricts the agent's tool list at the system prompt level. The
-agent literally cannot call write/edit/bash tools — they are excluded from
-its available tool set. Plan/build agents are built-in definitions that
-cannot be overridden.
+agent literally cannot call write, edit, bash_write, or bash_delete tools —
+they are excluded from its available tool set. Only read-only tools including
+`bash_read` are available.
 
 ## Related
 

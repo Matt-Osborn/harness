@@ -13,7 +13,7 @@ export type { BuildAgentOptions } from './agent-definition.js';
 export { ReadTool } from './tools/read.js';
 export { WriteTool } from './tools/write.js';
 export { EditTool } from './tools/edit.js';
-export { BashTool, getShellInfo } from './tools/bash.js';
+export { bashReadTool, bashWriteTool, bashDeleteTool, bashTools, getShellInfo } from './tools/bash.js';
 export { WebFetchTool } from './tools/web-fetch.js';
 export { WebSearchTool, resolveAutoProvider, isProviderAvailable } from './tools/web-search.js';
 export { SkillTool } from './tools/skill.js';
@@ -29,7 +29,7 @@ import type { FormatConfig, SearchProviderType, SkillRegistry } from '@harness/s
 import { ReadTool } from './tools/read.js';
 import { WriteTool } from './tools/write.js';
 import { EditTool } from './tools/edit.js';
-import { BashTool } from './tools/bash.js';
+import { bashTools, bashReadTool } from './tools/bash.js';
 import { WebFetchTool } from './tools/web-fetch.js';
 import { WebSearchTool } from './tools/web-search.js';
 import { SkillTool } from './tools/skill.js';
@@ -51,7 +51,7 @@ export function createDefaultTools(opts?: {
     new EditTool(opts?.formatConfig),
     new GlobTool(),
     new GrepTool(),
-    new BashTool(),
+    ...bashTools,
     new WebFetchTool(),
     new AskUserTool(),
     searchTool,

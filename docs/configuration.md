@@ -142,18 +142,33 @@ Controls which tools require user approval.
 Override the global mode for specific tools. The per-tool mode
 takes precedence over the global mode.
 
+The `bash` tool has been split into three separate tools with
+different permission levels:
+
+| Tool | Purpose | Example Commands |
+|------|---------|-----------------|
+| `bash_read` | Read-only commands | `ls`, `cat`, `head`, `grep`, `find`, `pwd`, `git status` |
+| `bash_write` | Write/modify commands | `sed -i`, `mv`, `cp`, `mkdir`, `npm install`, `git commit` |
+| `bash_delete` | Destructive commands | `rm`, `rmdir`, `shred`, `rm -rf` |
+
 ```toml
 [permissions]
 mode = "ask"
 
 [permissions.tools]
-bash       = "ask"
-write      = "ask"
-read       = "auto"
-edit       = "auto"
-web_search = "ask"
-web_fetch  = "ask"
+bash_read    = "auto"
+bash_write   = "auto"
+bash_delete  = "ask"
+write        = "ask"
+read         = "auto"
+edit         = "auto"
+web_search   = "ask"
+web_fetch    = "ask"
 ```
+
+**Note:** The old `bash = "..."` config key is still supported for
+backward compatibility — it is automatically mapped to all three
+new tools (`bash_read`, `bash_write`, `bash_delete`).
 
 ### Built-in Read-Only Tools
 
@@ -164,6 +179,10 @@ These are always treated as read-only regardless of the permission mode:
 - `glob`
 - `web_fetch`
 - `web_search`
+- `bash_read`
+
+In **plan mode**, only the read-only tools listed above are available
+to the agent. `bash_write` and `bash_delete` are excluded.
 
 ---
 
@@ -397,7 +416,9 @@ provider = "tavily"
 mode = "ask"
 
 [permissions.tools]
-bash = "ask"
+bash_read = "auto"
+bash_write = "auto"
+bash_delete = "ask"
 write = "ask"
 web_search = "ask"
 web_fetch = "ask"

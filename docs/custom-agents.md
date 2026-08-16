@@ -24,7 +24,8 @@ include = ["read", "grep", "glob"]
 exclude = []
 
 [tool_permissions]
-bash = "deny"
+bash_delete = "deny"
+bash_write = "deny"
 write = "deny"
 edit = "deny"
 ```
@@ -44,7 +45,7 @@ edit = "deny"
 ```toml
 [tools]
 include = ["read", "grep", "glob"]    # only these tools are available
-exclude = ["bash"]                     # remove specific tools from the full set
+exclude = ["bash_write", "bash_delete", "write", "edit"]      # remove write tools from the full set
 ```
 
 If `include` is set, the agent can only use the listed tools.
@@ -55,7 +56,9 @@ If neither is set, all tools are available.
 
 ```toml
 [tool_permissions]
-bash = "deny"
+bash_delete = "deny"
+bash_write = "ask"
+bash_read = "auto"
 write = "ask"
 edit = "auto"
 read = "auto"
@@ -125,7 +128,8 @@ description = "Web research with extended search"
 include = ["web_search", "web_fetch", "read", "grep", "glob"]
 
 [tool_permissions]
-bash = "deny"
+bash_delete = "deny"
+bash_write = "deny"
 write = "deny"
 edit = "deny"
 ```
@@ -140,7 +144,7 @@ name = "devops"
 description = "Deployment and infrastructure"
 
 [tools]
-include = ["bash", "read", "grep", "glob"]
+include = ["bash_read", "bash_write", "read", "grep", "glob"]
 
 system_prompt = """
 You are a DevOps engineer. Run deployment commands, check logs,
