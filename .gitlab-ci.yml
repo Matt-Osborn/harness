@@ -11,16 +11,15 @@ publish-npm:
     - npm run build
     - cd packages/harness-cli && npm run bundle
     - node -e "
-        const p = require('./packages/harness-cli/package.json');
+        const p = require('./package.json');
         for (const k of Object.keys(p.dependencies || {})) {
           if (k.startsWith('@harness/')) delete p.dependencies[k];
         }
         require('fs').writeFileSync(
-          './packages/harness-cli/package.json',
+          './package.json',
           JSON.stringify(p, null, 2) + '\n'
         );
       "
-    - cd packages/harness-cli
     - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
     - npm publish
   rules:
