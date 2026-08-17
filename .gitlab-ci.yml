@@ -11,7 +11,9 @@ publish-npm:
     - cd packages/harness-cli && npm run bundle
     - node -e "
         const p = require('./packages/harness-cli/package.json');
-        delete p.dependencies;
+        for (const k of Object.keys(p.dependencies || {})) {
+          if (k.startsWith('@harness/')) delete p.dependencies[k];
+        }
         require('fs').writeFileSync(
           './packages/harness-cli/package.json',
           JSON.stringify(p, null, 2) + '\n'
