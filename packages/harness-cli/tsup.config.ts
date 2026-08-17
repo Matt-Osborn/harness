@@ -10,5 +10,5 @@ export default defineConfig({
   tsconfig: 'tsconfig.tsup.json',
   target: 'node22',
   shims: true,
-  noExternal: ['@harness/*'],
+  noExternal: ['@harness/core-agent', '@harness/core-ai', '@harness/shared', '@harness/tui', '@harness/server', '@harness/lsp'],
 });

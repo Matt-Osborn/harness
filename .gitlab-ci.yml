@@ -8,6 +8,7 @@ publish-npm:
   stage: publish
   script:
     - npm ci
+    - npm run build
     - cd packages/harness-cli && npm run bundle
     - node -e "
         const p = require('./packages/harness-cli/package.json');
