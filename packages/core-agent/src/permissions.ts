@@ -2,8 +2,6 @@ import type { PermissionMode, PermissionConfig, ReadonlyMode } from '@harness/sh
 
 export const READ_ONLY_TOOLS = ['read', 'grep', 'glob', 'web_fetch', 'web_search', 'skill', 'bash_read'];
 
-const DEPRECATED_BASH_TOOLS = ['bash'];
-
 export type PermissionDecision = 'yes' | 'no' | 'always' | 'deny-session';
 
 export type PermissionPromptFn = (
@@ -28,17 +26,11 @@ export class PermissionEngine {
   private promptFn?: PermissionPromptFn;
   private mode: 'plan' | 'build' = 'plan';
   private agentRegistry?: import('@harness/shared').AgentRegistry;
+  private forcedAsk = false;
 
   constructor(permConfig: PermissionConfig | undefined, opts: PermissionEngineOptions) {
     this.permConfig = permConfig;
-
-    if (this.permConfig?.tools?.['bash']) {
-      const mode = this.permConfig.tools['bash'];
-      if (!this.permConfig.tools['bash_read']) this.permConfig.tools['bash_read'] = mode;
-      if (!this.permConfig.tools['bash_write']) this.permConfig.tools['bash_write'] = mode;
-      if (!this.permConfig.tools['bash_delete']) this.permConfig.tools['bash_delete'] = mode;
-    }
-
+    this.forcedAsk = permConfig?.ask === true;
     this.interactive = opts.interactive;
     this.sessionId = opts.sessionId || `session_${Date.now()}`;
     this.promptFn = opts.promptFn;
@@ -49,15 +41,16 @@ export class PermissionEngine {
   getMode(): 'plan' | 'build' { return this.mode; }
   setAgentRegistry(r: import('@harness/shared').AgentRegistry): void { this.agentRegistry = r; }
 
+  setForcedAsk(ask: boolean): void { this.forcedAsk = ask; }
+
   private getEffectiveMode(toolName: string): PermissionMode {
     if (this.permConfig?.tools?.[toolName]) return this.permConfig.tools[toolName]!;
     if (toolName === 'read') return 'auto';
     if (READ_ONLY_TOOLS.includes(toolName)) {
-      const roMode = this.permConfig?.readonly ?? 'auto';
-      if (roMode === 'auto') return 'auto';
+      return this.permConfig?.readonly ?? 'auto';
     }
-    if (!this.permConfig) return this.mode === 'build' ? 'auto' : 'ask';
-    return this.permConfig.mode || (this.mode === 'build' ? 'auto' : 'ask');
+    if (toolName === 'delete' || toolName === 'bash_delete') return 'ask';
+    return 'auto';
   }
 
   async check(toolName: string, _modelName?: string, args?: Record<string, unknown>): Promise<boolean> {
@@ -75,12 +68,9 @@ export class PermissionEngine {
     if (this.sessionDenies.get(sid)?.has(toolName)) return false;
 
     const mode = this.getEffectiveMode(toolName);
+    const effectiveMode = (this.forcedAsk && mode === 'auto' && !this.permConfig?.tools?.[toolName]) ? 'ask' : mode;
 
-    if (this.mode === 'build' && mode === 'auto' && toolName === 'delete') {
-      return this.askUser(toolName, args);
-    }
-
-    switch (mode) {
+    switch (effectiveMode) {
       case 'auto':
         return true;
       case 'deny':
@@ -122,12 +112,9 @@ export class PermissionEngine {
     if (this.sessionDenies.get(sid)?.has(toolName)) return false;
 
     const mode = this.getEffectiveMode(toolName);
+    const effectiveMode = (this.forcedAsk && mode === 'auto' && !this.permConfig?.tools?.[toolName]) ? 'ask' : mode;
 
-    if (this.mode === 'build' && mode === 'auto' && toolName === 'delete') {
-      return this.askUserBatch(toolName, argsList);
-    }
-
-    switch (mode) {
+    switch (effectiveMode) {
       case 'auto':
         return true;
       case 'deny':

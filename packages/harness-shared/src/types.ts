@@ -83,7 +83,7 @@ export type PermissionMode = 'auto' | 'ask' | 'accept-edits' | 'deny';
 export type ReadonlyMode = 'auto' | 'ask';
 
 export interface PermissionConfig {
-  mode?: PermissionMode;
+  ask?: boolean;
   tools?: Record<string, PermissionMode>;
   readonly?: ReadonlyMode;
 }

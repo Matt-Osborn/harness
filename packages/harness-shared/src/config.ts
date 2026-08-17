@@ -104,7 +104,7 @@ export class ConfigManager {
           }
         }
         merged.permissions = {
-          mode: (p.mode as PermissionMode) || merged.permissions?.mode,
+          ask: typeof p.ask === 'boolean' ? p.ask : merged.permissions?.ask,
           tools: { ...merged.permissions?.tools, ...filteredTools },
         };
       }

@@ -26,7 +26,7 @@ interface AppProps {
   resumeSessionId?: string;
   resumeLatest?: boolean;
   permConfig?: {
-    mode?: PermissionMode;
+    ask?: boolean;
     tools?: Record<string, PermissionMode>;
   };
   pipelineRunner?: (prompt: string, signal?: AbortSignal) => AsyncIterable<AgentEvent>;

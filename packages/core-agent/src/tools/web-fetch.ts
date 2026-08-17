@@ -42,7 +42,7 @@ export class WebFetchTool implements AgentTool {
     const url = String(args.url);
     const format = String(args.format || 'markdown') as 'markdown' | 'text';
     const timeout = Math.min(Number(args.timeout || 30), 120) * 1000;
-    const retries = Math.min(Number(args.retries || 1), 3);
+    const retries = Math.min(Number(args.retries || 2), 3);
 
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       return 'Error: URL must start with http:// or https://';

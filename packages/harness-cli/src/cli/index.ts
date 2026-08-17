@@ -248,7 +248,7 @@ export async function run(): Promise<void> {
     const search = searchOverride || config.searchProvider || resolveAutoProvider();
     const isInter = process.stdin.isTTY ?? false;
     const permConfig: PermissionConfig = { ...config.permissions };
-    if (args.includes('--ask')) { permConfig.mode = 'ask'; permConfig.readonly = 'ask'; }
+    if (args.includes('--ask')) { permConfig.ask = true; permConfig.readonly = 'ask'; }
     const permissions = new PermissionEngine(permConfig, {
       interactive: isInter,
       promptFn: isInter ? createCliPromptFn() : undefined,
@@ -377,7 +377,7 @@ export async function run(): Promise<void> {
 
     const searchIsDefault = !searchFlagPresent;
     setSessionProviderOptions({ anonymous: config.anonymous, routing: routingOverride, suffix: suffixOverride });
-    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, searchIsDefault, initialTemp, statusEnabled, tInteractive, hideThinking, hideTools, permissions, agentRegistry, tools, projectRules, config.logEnabled || flagLog);
+    await runInteractive(agent, displayName, search, wrapWidth, resumeSession, resumeLatest, styled, searchTool, modelIsDefault, searchIsDefault, initialTemp, statusEnabled, tInteractive, hideThinking, hideTools, permissions, agentRegistry, tools, projectRules, config.logEnabled || flagLog, baseUrlOverride);
     return;
   }
 
@@ -434,7 +434,7 @@ export async function run(): Promise<void> {
       console.log(`${tConfig.bold('Default model:')}  ${config.defaultModel || '(none)'}`);
       const modelValid = config.validateModel();
       if (!modelValid.valid) console.log(`  ${tConfig.warning(modelValid.message.replace(/\n/g, '\n  '))}`);
-      console.log(`${tConfig.bold('Permission:')}    ${config.permissions?.mode || 'ask (default)'}`);
+      console.log(`${tConfig.bold('Permission:')}    ${config.permissions?.ask ? 'ask (--ask)' : 'auto (default)'}`);
       console.log(`${tConfig.bold('Search provider:')} ${config.searchProvider || 'auto-detect'}`);
       const searchValid = config.validateSearchProvider();
       if (!searchValid.valid) console.log(`  ${tConfig.warning(searchValid.message.replace(/\n/g, '\n  '))}`);
@@ -612,7 +612,7 @@ export async function run(): Promise<void> {
         resumeSessionId: resumeSession || undefined,
         resumeLatest: resumeLatest || undefined,
         permConfig: {
-          mode: config.permissions?.mode,
+          ask: config.permissions?.ask,
           tools: config.permissions?.tools,
         },
         pipelineRunner,

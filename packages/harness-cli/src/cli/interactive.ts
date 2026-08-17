@@ -8,6 +8,7 @@ import type { PermissionEngine } from '@harness/core-agent';
 import type { AgentTool } from '@harness/core-agent';
 import type { WebSearchTool } from '@harness/core-agent';
 import { getShellInfo } from '@harness/core-agent';
+import { createProvider } from '@harness/core-ai';
 import type { Message, SearchProviderType } from '@harness/shared';
 import { TextWrapper, SessionManager, isWSL, isCygwin, CliTheme, writeSessionSummary, Logger, ConfigManager } from '@harness/shared';
 import type { ProviderOptions } from '@harness/core-ai';
@@ -113,7 +114,7 @@ function formatSessionExport(messages: Message[], ext: string, sid: string, mode
   return lines.join('\n');
 }
 
-export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, permissions?: PermissionEngine, agentRegistry?: import('@harness/shared').AgentRegistry, allTools?: AgentTool[], interactiveProjectRules?: string | null, logEnabled?: boolean): Promise<void> {
+export async function runInteractive(agent: Agent, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, resumeSessionId?: string, resumeLatest?: boolean, styled?: boolean, searchTool?: WebSearchTool, modelIsDefault: boolean = false, searchIsDefault: boolean = true, initialTemp?: number, statusEnabled: boolean = true, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, permissions?: PermissionEngine, agentRegistry?: import('@harness/shared').AgentRegistry, allTools?: AgentTool[], interactiveProjectRules?: string | null, logEnabled?: boolean, baseUrlOverride?: string): Promise<void> {
   const t = theme ?? new CliTheme();
   let currentSearch: SearchProviderType | 'auto' = searchProvider || 'auto';
   const searchProviders: SearchProviderType[] = ['tavily', 'duckduckgo'];
@@ -124,6 +125,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
   let processingController: AbortController | undefined;
   let undoStack: Message[][] = [];
   let currentMode: 'plan' | 'build' = agent.getMode();
+  let currentBaseUrlOverride = baseUrlOverride;
   let modeChangeListener: ((str: string, key: { name: string }) => void) | null = null;
   let rawDataHandler: ((data: Buffer) => void) | null = null;
   let escapeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -681,6 +683,56 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
         currentMode = agent.getMode();
         rl.setPrompt(`${getModePrefix()}${t.success('❯')} `);
         process.stdout.write(t.success(`Switched to agent "${agentName}"`) + '\n\n');
+        rl.prompt();
+        return;
+      }
+
+      if (trimmed.startsWith('/model ')) {
+        const rest = trimmed.slice(7).trim();
+        const urlMatch = rest.match(/--base-url\s+(\S+)/);
+        const modelMatch = rest.match(/--model-id\s+(\S+)/);
+        const url = urlMatch?.[1];
+        const modelId = modelMatch?.[1];
+        const simpleName = !url && !modelId ? rest.split(/\s+/)[0] : undefined;
+        const name = modelId || simpleName;
+
+        if (!name) {
+          process.stdout.write(t.error('Specify a model name or use --model-id.\n'));
+          rl.prompt();
+          return;
+        }
+
+        const { ConfigManager, CliTheme } = await import('@harness/shared');
+        const cfg = new ConfigManager();
+        const tM = new CliTheme();
+
+        if (url && modelId) {
+          currentBaseUrlOverride = url;
+          const resolved = cfg.resolveModel(modelId, url);
+          if (!resolved) {
+            process.stdout.write(tM.error(`Could not resolve model "${modelId}" at ${url}.\n`));
+            rl.prompt();
+            return;
+          }
+          const newProvider = createProvider(resolved.config.model, resolved.config, resolved.apiKey, { anonymous: cfg.anonymous });
+          agent.setProvider(newProvider);
+          modelName = modelId;
+          process.stdout.write(tM.success(`Switched to ephemeral model "${modelId}" at ${url}.\n`));
+          rl.prompt();
+          return;
+        }
+
+        const resolved = cfg.resolveModel(name, currentBaseUrlOverride);
+        if (!resolved) {
+          process.stdout.write(tM.error(`Model "${name}" not found in config.`));
+          process.stdout.write(`\nUse ${tM.warning('/model --base-url <url> --model-id <name>')} for an ephemeral model.\n`);
+          rl.prompt();
+          return;
+        }
+        const newProvider = createProvider(resolved.config.model, resolved.config, resolved.apiKey, { anonymous: cfg.anonymous });
+        agent.setProvider(newProvider);
+        modelName = name;
+        process.stdout.write(tM.success(`Switched to model "${name}".\n`));
         rl.prompt();
         return;
       }

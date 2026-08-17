@@ -18,4 +18,22 @@ export const LANGUAGE_SERVERS: Record<string, LspServerDef> = {
     extensions: ['.py', '.pyw'],
     installHint: 'pip install python-lsp-server',
   },
+  rust: {
+    binary: 'rust-analyzer',
+    args: [],
+    extensions: ['.rs'],
+    installHint: 'rustup component add rust-analyzer',
+  },
+  go: {
+    binary: 'gopls',
+    args: [],
+    extensions: ['.go'],
+    installHint: 'go install golang.org/x/tools/gopls@latest',
+  },
+  c: {
+    binary: 'clangd',
+    args: [],
+    extensions: ['.c', '.h', '.cpp', '.hpp', '.cc', '.cxx', '.cuh', '.cu'],
+    installHint: 'Install clangd via your package manager (apt install clangd, brew install llvm, etc.)',
+  },
 };
