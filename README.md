@@ -6,6 +6,9 @@ A minimal, extensible AI agentic coding CLI. Bring your own models —
 llama.cpp, Ollama, OpenRouter, OpenAI, or any OpenAI-compatible API —
 and keep full control over your code and your data.
 
+> **Primary development:** [GitLab](https://gitlab.com/x0rn/harness)  
+> **Mirror:** [GitHub](https://github.com/Matt-Osborn/harness) — Issues, Discussions, and PRs welcome.
+
 ## Quick Start
 
 ### Install
