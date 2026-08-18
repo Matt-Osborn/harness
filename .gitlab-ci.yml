@@ -7,6 +7,7 @@ stages:
 publish-npm:
   stage: publish
   script:
+    - echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc
     - npm ci
     - npm run build
     - cd packages/harness-cli && npm run bundle
@@ -20,8 +21,6 @@ publish-npm:
           JSON.stringify(p, null, 2) + '\n'
         );
       "
-    - echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc
-    - npm whoami
     - npm publish
   rules:
     - if: $CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+/
