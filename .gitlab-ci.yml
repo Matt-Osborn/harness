@@ -21,6 +21,6 @@ publish-npm:
           JSON.stringify(p, null, 2) + '\n'
         );
       "
-    - npm publish
+    - npm publish --access public
   rules:
     - if: $CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+/

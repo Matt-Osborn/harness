@@ -1,5 +1,5 @@
 {
-  "name": "harness-cli",
+  "name": "@x0rn/harness-cli",
   "version": "0.9.0",
   "type": "module",
   "main": "./dist/index.js",
