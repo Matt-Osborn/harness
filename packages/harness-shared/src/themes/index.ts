@@ -14,6 +14,7 @@ import catppuccin from './catppuccin.json' with { type: 'json' };
 import synthwave84 from './synthwave84.json' with { type: 'json' };
 import terminal from './terminal.json' with { type: 'json' };
 import campbell from './campbell.json' with { type: 'json' };
+import harnessCli from './harness-cli.json' with { type: 'json' };
 
 export const BUNDLED_THEMES: Record<string, OpenCodeTheme> = {
   github: github as OpenCodeTheme,
@@ -30,4 +31,5 @@ export const BUNDLED_THEMES: Record<string, OpenCodeTheme> = {
   synthwave84: synthwave84 as OpenCodeTheme,
   terminal: terminal as OpenCodeTheme,
   campbell: campbell as OpenCodeTheme,
+  'harness-cli': harnessCli as OpenCodeTheme,
 };
