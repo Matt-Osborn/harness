@@ -12,7 +12,14 @@ earlier session, or export a session for sharing or documentation.
 
 ```
 Start harness ──→ Auto-save on exit ──→ Resume with -S or -r
-                                            │
+                                             │
+                                        ┌────┴────┐
+                                        │         │
+                                   /session    harness -S <id>
+                                        │
+                                        ▼
+                                   Tokens: 1,234 in / 5,678 out (from API)
+                                   Duration: 2m 34s
                                             └──→ Continue working
                                                    │
                                                    └──→ Auto-save on exit

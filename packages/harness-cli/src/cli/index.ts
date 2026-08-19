@@ -57,7 +57,10 @@ export async function run(): Promise<void> {
   loadEnvFiles();
 
   const themeFlag = parseArg(args, '--theme');
-  const themeOverride: ThemeConfig | undefined = themeFlag ? { file: themeFlag } : undefined;
+  const themeOverride: ThemeConfig | undefined = themeFlag ? (() => {
+    const [file, mode] = themeFlag.split(':');
+    return { file, mode: (mode === 'light' || mode === 'dark') ? mode : undefined };
+  })() : undefined;
 
   if (args.includes('--list-themes')) {
     const { BUNDLED_THEMES } = await import('@harness/shared');

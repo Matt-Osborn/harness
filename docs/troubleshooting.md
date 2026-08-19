@@ -6,6 +6,17 @@ Common issues and their solutions.
 
 Something isn't working and you're not sure why.
 
+## "Out of memory" or "cudaMalloc" errors
+
+These occur when a local provider runs out of GPU VRAM. The CLI detects the
+provider and shows a targeted hint:
+
+- **Ollama:** Unload unused models with `ollama stop <name>`, or set
+  `OLLAMA_KEEP_ALIVE=0` to unload after each request.
+- **llama.cpp:** Reduce GPU layers with `--n-gpu-layers 0` (CPU only) or
+  use a smaller / more quantized model.
+- **Other local providers:** Try a smaller model or reduce GPU offloading.
+
 ## "Command failed" or non-zero exit codes
 
 harness treats any non-zero exit code as an error. Some Unix tools use

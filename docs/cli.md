@@ -26,6 +26,7 @@ harness [OPTIONS] [COMMAND]
 | Flag | Type | Description |
 |------|------|-------------|
 | `-m <name>`, `--model <name>` | string | Select a model by config key. Defaults to `[models].default`. |
+| `--base-url <url>` | string | Override the model's base URL. Also works with an unmatched `--model` name to create an ephemeral model on the fly. |
 | `--temperature <0-2>` | float (0–2) | Override sampling temperature. When unset, model default is used. |
 | `--top-p <0-1>` | float (0–1) | Override nucleus sampling. When unset, model default is used. |
 | `--seed <int>` | int | Override random seed for deterministic sampling. |
@@ -93,6 +94,10 @@ harness [OPTIONS] [COMMAND]
 | `skill enable <name>` | Enable a skill by adding a hint to AGENTS.md. |
 | `skill disable <name>` | Disable a skill by removing its hint from AGENTS.md. |
 | `tui` | Launch the blessed-contrib Terminal UI. |
+| `launch <ollama\|llama\|headless\|sandbox>` | Start local inference servers or a sandboxed harness in Docker. |
+| `lsp` | Show LSP server status. |
+| `lsp list` | List supported language servers with install status. |
+| `key <ENV_VAR>` | Set an API key for this session (persists to `~/.harness/.env`). |
 
 ## Interactive Slash Commands
 

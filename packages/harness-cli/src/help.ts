@@ -11,6 +11,7 @@ ${t.bold('USAGE:')}
 ${t.bold('OPTIONS:')}
   -p, --prompt <text>    Run a single prompt in print mode (must be last argument)
   -m, --model <name>     Specify which model to use
+  --base-url <url>       Override the model's base URL (also works with unmatched --model for ephemeral models)
   -s, --search <provider> Search provider (tavily, duckduckgo, exa, searxng)
   -w, --width <cols>     Wrap output at column width (default: auto, fallback 80)
   -S, --session <id>     Resume a specific session
@@ -76,6 +77,8 @@ ${t.bold('EXAMPLES:')}
   ${t.warning('harness lsp')}                      Show LSP status or list supported servers
 
 Run '${t.warning('harness --help v')}' for verbose help with all flags.
+Run '${t.warning('harness help <topic>')}' for topic help (search, model, theme, etc.).
+Run '${t.warning('harness help index')}' for a list of all help topics.
 `);
 }
 
@@ -89,6 +92,7 @@ ${t.bold('USAGE:')}
 
 ${t.bold('MODEL SETTINGS:')}
   -m, --model <name>         Select a model by config key
+  --base-url <url>           Override the model's base URL (ephemeral: works with unmatched --model)
   --temperature <0-2>        Override sampling temperature (omitted = model default)
   --top-p <0-1>              Override nucleus sampling (omitted = model default)
   --seed <int>               Override random seed for deterministic sampling
@@ -177,5 +181,8 @@ ${t.bold('EXAMPLES:')}
   harness --drop-params            Strip unsupported params automatically
   harness --no-context-management  Disable context truncation
   harness init                     Set up default config
+
+Run '${t.warning('harness help <topic>')}' for topic help (search, model, theme, etc.).
+Run '${t.warning('harness help index')}' for a list of all help topics.
 `);
 }

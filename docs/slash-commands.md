@@ -31,6 +31,8 @@ are available without leaving the terminal.
 | `/skill <name>` | Enable a skill |
 | `/undo` | Undo the last conversation exchange |
 | `/redo` | Redo the last undone exchange |
+| `/temperature <n>` | Set the temperature for this session |
+| `/model --base-url <url> --model-id <name>` | Switch to an ephemeral model mid-session |
 | `/help` | Show this help |
 
 ## TUI mode
