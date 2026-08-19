@@ -1,5 +1,3 @@
-import { NodeHtmlMarkdown } from 'node-html-markdown';
-import { Readability } from '@mozilla/readability';
 import { AgentTool } from '../tool.js';
 
 let jsdomPromise: Promise<{ JSDOM: typeof import('jsdom').JSDOM }> | null = null;
@@ -80,6 +78,7 @@ export class WebFetchTool implements AgentTool {
         if (format === 'text') {
           result = await this.extractPlainText(rawText);
         } else if (contentType.includes('text/html')) {
+          const { NodeHtmlMarkdown } = await import('node-html-markdown');
           result = await this.extractWithReadability(rawText, url) || NodeHtmlMarkdown.translate(rawText);
         } else {
           result = rawText;
@@ -122,6 +121,7 @@ export class WebFetchTool implements AgentTool {
 
   private async extractWithReadability(html: string, url: string): Promise<string | null> {
     try {
+      const { Readability } = await import('@mozilla/readability');
       const { JSDOM } = await getJSDOM();
       const origWarn = console.warn;
       console.warn = () => {};
