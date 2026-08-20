@@ -206,7 +206,7 @@ export async function runInteractive(agent: Agent, modelName?: string, searchPro
 
   function reprintConversation(messages: Message[]): void {
     if (messages.length === 0) return;
-    const md = styled ? new MarkdownRenderer(wrapWidth, t) : null;
+    const md = styled ? new MarkdownRenderer(wrapWidth) : null;
     for (const msg of messages) {
       if (msg.role === 'system') continue;
       if (msg.role === 'user') {
@@ -845,7 +845,7 @@ process.stdout.write(`\nUse ${tM.warning('/model <name>')} to switch.\n`);
       undoStack = [];
       history.push({ role: 'user' as const, content: trimmed, timestamp: Date.now() });
       const textWrap = styled ? null : new TextWrapper(wrapWidth);
-      const md = styled ? new MarkdownRenderer(wrapWidth, t) : null;
+      const md = styled ? new MarkdownRenderer(wrapWidth) : null;
       let streamBuf = '';
       let thinkingBuf = '';
       let lastCallLine = '';

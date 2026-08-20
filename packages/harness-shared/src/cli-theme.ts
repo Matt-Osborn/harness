@@ -125,6 +125,10 @@ export class CliTheme {
     return null;
   }
 
+  getColor(key: string): string | undefined {
+    return this.colors[key];
+  }
+
   color(key: string): string {
     const value = this.colors[key];
     if (!value || this.stripColors) return '';

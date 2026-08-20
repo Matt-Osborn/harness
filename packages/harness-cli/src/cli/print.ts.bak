@@ -131,7 +131,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
   const messages = [{ role: 'user' as const, content: prompt, timestamp: Date.now() }];
   const useStyled = styled !== undefined ? styled : (process.stdout.isTTY ?? false);
   const textWrap = useStyled ? null : new TextWrapper(wrapWidth);
-  const md = useStyled ? new MarkdownRenderer(wrapWidth, t) : null;
+  const md = useStyled ? new MarkdownRenderer(wrapWidth) : null;
   const seenTools = new Set<string>();
   let streamBuf = '';
   let thinkingBuf = '';
