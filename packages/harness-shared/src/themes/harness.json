@@ -1,0 +1,209 @@
+{
+  "$schema": "https://opencode.ai/theme.json",
+  "theme": {
+    "background": {
+      "dark": "#0c0c0c",
+      "light": "#f5f5f8"
+    },
+    "backgroundPanel": {
+      "dark": "#1a1a1a",
+      "light": "#ffffff"
+    },
+    "backgroundElement": {
+      "dark": "#242424",
+      "light": "#f0f0f5"
+    },
+    "backgroundMenu": {
+      "dark": "#1a1a1a",
+      "light": "#ffffff"
+    },
+    "text": {
+      "dark": "#f8f8f2",
+      "light": "#1a1a1e"
+    },
+    "textMuted": {
+      "dark": "#888888",
+      "light": "#6b6b76"
+    },
+    "primary": {
+      "dark": "#50fa7b",
+      "light": "#55d66b"
+    },
+    "accent": {
+      "dark": "#50fa7b",
+      "light": "#55d66b"
+    },
+    "success": {
+      "dark": "#50fa7b",
+      "light": "#55d66b"
+    },
+    "warning": {
+      "dark": "#b8860b",
+      "light": "#b8860b"
+    },
+    "error": {
+      "dark": "#ff6b6b",
+      "light": "#d93a3a"
+    },
+    "info": {
+      "dark": "#8be9fd",
+      "light": "#00b4b0"
+    },
+    "border": {
+      "dark": "#2a2a2a",
+      "light": "#d8d8d8"
+    },
+    "borderActive": {
+      "dark": "#50fa7b",
+      "light": "#55d66b"
+    },
+    "borderSubtle": {
+      "dark": "#3a3a3a",
+      "light": "#c0c0cc"
+    },
+    "diffAdded": {
+      "dark": "#50fa7b",
+      "light": "#55d66b"
+    },
+    "diffRemoved": {
+      "dark": "#ff6b6b",
+      "light": "#d93a3a"
+    },
+    "diffContext": {
+      "dark": "#888888",
+      "light": "#6b6b76"
+    },
+    "diffHunkHeader": {
+      "dark": "#50fa7b",
+      "light": "#55d66b"
+    },
+    "diffHighlightAdded": {
+      "dark": "#50fa7b",
+      "light": "#55d66b"
+    },
+    "diffHighlightRemoved": {
+      "dark": "#ff6b6b",
+      "light": "#d93a3a"
+    },
+    "diffAddedBg": {
+      "dark": "#1a3a1a",
+      "light": "#e8f5e8"
+    },
+    "diffRemovedBg": {
+      "dark": "#3a1a1a",
+      "light": "#f5e8e8"
+    },
+    "diffContextBg": {
+      "dark": "#1a1a1a",
+      "light": "#f0f0f5"
+    },
+    "diffLineNumber": {
+      "dark": "#555555",
+      "light": "#9a9aa5"
+    },
+    "diffAddedLineNumberBg": {
+      "dark": "#1a3a1a",
+      "light": "#e8f5e8"
+    },
+    "diffRemovedLineNumberBg": {
+      "dark": "#3a1a1a",
+      "light": "#f5e8e8"
+    },
+    "syntaxComment": {
+      "dark": "#555555",
+      "light": "#9a9aa5"
+    },
+    "syntaxKeyword": {
+      "dark": "#bd93f9",
+      "light": "#8855dd"
+    },
+    "syntaxString": {
+      "dark": "#b8860b",
+      "light": "#b8860b"
+    },
+    "syntaxFunction": {
+      "dark": "#f8f8f2",
+      "light": "#1a1a1e"
+    },
+    "syntaxVariable": {
+      "dark": "#ff6b6b",
+      "light": "#d93a3a"
+    },
+    "syntaxProperty": {
+      "dark": "#8be9fd",
+      "light": "#00b4b0"
+    },
+    "syntaxType": {
+      "dark": "#bd93f9",
+      "light": "#8855dd"
+    },
+    "syntaxConstant": {
+      "dark": "#50fa7b",
+      "light": "#55d66b"
+    },
+    "syntaxOperator": {
+      "dark": "#8be9fd",
+      "light": "#00b4b0"
+    },
+    "syntaxPunctuation": {
+      "dark": "#f8f8f2",
+      "light": "#1a1a1e"
+    },
+    "markdownHeading": {
+      "dark": "#bd93f9",
+      "light": "#8855dd"
+    },
+    "markdownText": {
+      "dark": "#f8f8f2",
+      "light": "#1a1a1e"
+    },
+    "markdownLink": {
+      "dark": "#8be9fd",
+      "light": "#00b4b0"
+    },
+    "markdownLinkText": {
+      "dark": "#50fa7b",
+      "light": "#55d66b"
+    },
+    "markdownCode": {
+      "dark": "#50fa7b",
+      "light": "#55d66b"
+    },
+    "markdownBlockQuote": {
+      "dark": "#888888",
+      "light": "#6b6b76"
+    },
+    "markdownEmph": {
+      "dark": "#b8860b",
+      "light": "#b8860b"
+    },
+    "markdownStrong": {
+      "dark": "#50fa7b",
+      "light": "#55d66b"
+    },
+    "markdownHorizontalRule": {
+      "dark": "#888888",
+      "light": "#6b6b76"
+    },
+    "markdownListItem": {
+      "dark": "#50fa7b",
+      "light": "#55d66b"
+    },
+    "markdownListEnumeration": {
+      "dark": "#8be9fd",
+      "light": "#00b4b0"
+    },
+    "markdownImage": {
+      "dark": "#8be9fd",
+      "light": "#00b4b0"
+    },
+    "markdownImageText": {
+      "dark": "#888888",
+      "light": "#6b6b76"
+    },
+    "markdownCodeBlock": {
+      "dark": "#f8f8f2",
+      "light": "#1a1a1e"
+    }
+  }
+}

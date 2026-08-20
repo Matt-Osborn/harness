@@ -1,7 +1,6 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { execFileSync } from 'node:child_process';
 
 export type ColorValue = string | number | { dark: string | number; light: string | number };
 
@@ -33,32 +32,7 @@ export function loadThemeJson(path: string): OpenCodeTheme {
   return parsed as OpenCodeTheme;
 }
 
-function tryExec(args: string[]): string | null {
-  try {
-    return execFileSync(args[0], args.slice(1), {
-      stdio: 'pipe',
-      encoding: 'utf-8',
-      timeout: 1000,
-    }).trim();
-  } catch {
-    return null;
-  }
-}
-
 export function detectColorMode(): 'dark' | 'light' {
-  const mac = tryExec(['defaults', 'read', '-g', 'AppleInterfaceStyle']);
-  if (mac !== null) return mac === 'Dark' ? 'dark' : 'light';
-
-  const linux = tryExec(['gsettings', 'get', 'org.gnome.desktop.interface', 'color-scheme']);
-  if (linux !== null) {
-    if (linux.includes('dark')) return 'dark';
-    if (linux.includes('light')) return 'light';
-  }
-
-  const win = tryExec(['powershell', '-NoProfile', '-Command',
-    '(Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize").AppsUseLightTheme']);
-  if (win !== null) return win === '0' ? 'dark' : 'light';
-
   return 'dark';
 }
 
