@@ -11,6 +11,7 @@ export { buildAgentFromDefinition } from './agent-definition.js';
 export type { BuildAgentOptions } from './agent-definition.js';
 
 export { ReadTool } from './tools/read.js';
+export { readMultipleTool } from './tools/read-multiple.js';
 export { WriteTool } from './tools/write.js';
 export { EditTool } from './tools/edit.js';
 export { bashReadTool, bashWriteTool, bashDeleteTool, bashTools, getShellInfo } from './tools/bash.js';
@@ -27,6 +28,7 @@ export type { SearchProvider } from './tools/search/index.js';
 
 import type { FormatConfig, SearchProviderType, SkillRegistry } from '@harness/shared';
 import { ReadTool } from './tools/read.js';
+import { readMultipleTool } from './tools/read-multiple.js';
 import { WriteTool } from './tools/write.js';
 import { EditTool } from './tools/edit.js';
 import { bashTools, bashReadTool } from './tools/bash.js';
@@ -47,6 +49,7 @@ export function createDefaultTools(opts?: {
   const searchTool = opts?.searchTool ?? new WebSearchTool(opts?.searchProvider);
   const tools: AgentTool[] = [
     new ReadTool(),
+    readMultipleTool,
     new WriteTool(opts?.formatConfig),
     new EditTool(opts?.formatConfig),
     new GlobTool(),

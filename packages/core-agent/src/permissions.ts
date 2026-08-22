@@ -1,6 +1,6 @@
 import type { PermissionMode, PermissionConfig, ReadonlyMode } from '@harness/shared';
 
-export const READ_ONLY_TOOLS = ['read', 'grep', 'glob', 'web_fetch', 'web_search', 'skill', 'bash_read'];
+export const READ_ONLY_TOOLS = ['read', 'read_multiple', 'grep', 'glob', 'web_fetch', 'web_search', 'skill', 'bash_read'];
 
 export type PermissionDecision = 'yes' | 'no' | 'always' | 'deny-session';
 
