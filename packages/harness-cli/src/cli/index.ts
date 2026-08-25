@@ -909,6 +909,19 @@ if (process.stdin.isTTY) {
     case 'provider': {
       const provTheme = new CliTheme();
 
+      function normalizeBaseUrl(url: string): string {
+        url = url.replace(/\/+$/, '');
+        try {
+          const parsed = new URL(url);
+          if (parsed.pathname === '/' || parsed.pathname === '') {
+            return `${url}/v1`;
+          }
+        } catch {
+          // invalid URL — leave as-is
+        }
+        return url;
+      }
+
       if (commands[1] === 'add') {
         const providerName = commands[2]?.toLowerCase();
         const allProviders = [...LOCAL_MODEL_PROVIDERS, ...Object.values(KNOWN_MODEL_PROVIDERS)];
@@ -952,7 +965,9 @@ if (process.stdin.isTTY) {
               console.log(provTheme.info('Cancelled.'));
               break;
             }
+            const normalizedUrl = custom.baseUrl ? normalizeBaseUrl(String(custom.baseUrl)) : undefined;
             console.log(provTheme.success(`Custom provider "${custom.name}" noted.`));
+            if (normalizedUrl) console.log(`  Base URL: ${provTheme.dim(normalizedUrl)}`);
             console.log(`Set ${custom.envVar} with ${provTheme.warning('harness key ' + custom.envVar)}`);
             break;
           }

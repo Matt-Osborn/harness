@@ -24,6 +24,7 @@ export const KNOWN_MODEL_PROVIDERS: Record<string, ProviderKeyInfo> = {
     envVar: 'OPENROUTER_API_KEY',
     instructions: 'Get a key at https://openrouter.ai/keys',
     keyUrl: 'https://openrouter.ai/keys',
+    baseUrl: 'https://openrouter.ai/api/v1',
   },
   'api.openai.com': {
     name: 'OpenAI',

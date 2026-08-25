@@ -67,6 +67,7 @@ export async function runModelAdd(knownProviders: Record<string, ProviderKeyInfo
   const modelDetails = await renderForm('Model details', [
     { id: 'modelId', type: 'text', label: 'Model ID', placeholder: modelPlaceholder },
     { id: 'alias', type: 'text', label: 'Alias (config key)', placeholder: displayName.toLowerCase().replace(/\s+/g, '-') },
+    { id: 'dropParams', type: 'confirm', label: 'Enable drop_params? (recommended for reasoning/thinking models like DeepSeek Reasoner, o-series, stealth/ox-alpha)' },
   ], { cancelable: true });
   if (modelDetails === null) {
     console.log(t.info('Cancelled.'));
@@ -75,6 +76,7 @@ export async function runModelAdd(knownProviders: Record<string, ProviderKeyInfo
 
   const alias = String(modelDetails.alias || displayName.toLowerCase().replace(/\s+/g, '-'));
   const modelId = String(modelDetails.modelId);
+  const dropParams = !!modelDetails.dropParams;
 
   const confirmDefault = await renderForm('Default?', [
     { id: 'setDefault', type: 'confirm', label: 'Set as default model?' },
@@ -90,6 +92,7 @@ export async function runModelAdd(knownProviders: Record<string, ProviderKeyInfo
     api_key_env: apiKeyEnv || undefined,
     name: `${displayName} — ${modelId}`,
     kind: 'openai-compatible',
+    ...(dropParams ? { drop_params: true } : {}),
   }, { setDefault: !!confirmDefault.setDefault });
 
   console.log(t.success(`\nModel "${alias}" added.`));
@@ -97,5 +100,7 @@ export async function runModelAdd(knownProviders: Record<string, ProviderKeyInfo
   console.log(`  [model.${alias}]\n  model = "${modelId}"`);
   if (baseUrl) console.log(`  base_url = "${baseUrl}"`);
   if (apiKeyEnv) console.log(`  api_key_env = "${apiKeyEnv}"`);
-  console.log(`  kind = "openai-compatible"\n`);
+  console.log(`  kind = "openai-compatible"`);
+  if (dropParams) console.log(`  drop_params = true`);
+  console.log('');
 }
