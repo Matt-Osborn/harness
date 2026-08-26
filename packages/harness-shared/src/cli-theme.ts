@@ -42,6 +42,10 @@ function supportsTruecolor(): boolean {
   if (colorterm === 'truecolor' || colorterm === '24bit') return true;
   const term = process.env.TERM?.toLowerCase() || '';
   if (term.includes('truecolor') || term.includes('24bit')) return true;
+  if (process.env.WT_SESSION) return true;
+  if (process.env.TERM_PROGRAM === 'vscode') return true;
+  if (process.env.TERM_PROGRAM === 'mintty') return true;
+  if (process.env.ConEmuPID) return true;
   return false;
 }
 
