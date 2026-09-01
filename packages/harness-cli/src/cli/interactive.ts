@@ -1088,9 +1088,9 @@ process.stdout.write(`\nUse ${tM.warning('/model <name>')} to switch.\n`);
     }
   });
 
-  console.log(`${t.green('harness-cli')} — Interactive mode (Ctrl+C to quit)`);
+  console.log(`\x1b[38;2;80;250;123mharness-cli\x1b[0m — Interactive mode (Ctrl+C to quit)`);
   if (modelName) console.log(`Model: ${t.highlight(modelName)}${modelIsDefault ? ` ${t.dim('(default)')}` : ''}`);
-  console.log(`Search: ${t.green(currentSearch)}${searchIsDefault ? ` ${t.dim('(default)')}` : ''}`);
+  console.log(`Search: \x1b[38;2;80;250;123m${currentSearch}\x1b[0m${searchIsDefault ? ` ${t.dim('(default)')}` : ''}`);
   console.log(`Mode:   ${currentMode === 'plan' ? t.warning('plan') : t.success('build')}`);
 
   if (resumeSessionId || resumeLatest) {
