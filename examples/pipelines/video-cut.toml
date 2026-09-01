@@ -1,0 +1,25 @@
+type = "pipeline"
+name = "video-cut"
+description = "List clips, make a shot list, emit Kdenlive XML or EDL as text"
+
+[[steps]]
+agent = "architect"
+prompt = """
+Review the clips at {{path}}.
+List files and durations. Use ls or ffprobe. Report what you find.
+"""
+
+[[steps]]
+agent = "architect"
+prompt = """
+From the listing above, produce a simple shot list: keep / drop / order,
+with rough in and out points. Edit-assist only — not a generative studio.
+"""
+
+[[steps]]
+agent = "architect"
+prompt = """
+Write a Kdenlive project file or an EDL as text output from the shot list.
+Do not render a final master. The user should be able to paste or save
+this and open it in Kdenlive.
+"""

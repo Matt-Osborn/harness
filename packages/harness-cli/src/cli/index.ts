@@ -26,7 +26,7 @@ function parseArg(args: string[], ...names: string[]): string | undefined {
   return undefined;
 }
 
-const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme','--agent','--max-iterations','--base-url','--model-id','--name']);
+const FLAGS_WITH_VALUE = new Set(['-p','--prompt','-m','--model','-s','--search','-w','--width','-S','--session','--temperature','--top-p','--seed','--theme','--agent','--max-iterations','--base-url','--model-id','--name','--pipeline']);
 const BOOLEAN_FLAGS = new Set(['-r', '--resume', '--sessions', '--purge-empty-sessions', '--dry-run', '-h', '--help', '--styled', '--no-styled', '--context-management', '--no-context-management', '--status-line', '--no-status-line', '--drop-params', '--no-drop-params', '--list-themes', '--hide-thinking', '--hide-tools', '--ansi-256', '--plan', '--build', '--log', '--all', '--subagent', '--set-default', '--lsp', '--no-lsp']);
 
 function extractCommands(args: string[]): string[] {
@@ -166,6 +166,18 @@ export async function run(): Promise<void> {
   CliTheme.defaultForceAnsi256 = forceAnsi256;
 
   const baseUrlOverride = parseArg(args, '--base-url');
+  const printPipelineFlag = parseArg(args, '--pipeline');
+  const pipelineVars: Record<string, string> = {};
+  if (printPipelineFlag) {
+    for (const a of args) {
+      const eqIdx = a.indexOf('=');
+      if (eqIdx > 0 && !a.startsWith('-')) {
+        const key = a.slice(0, eqIdx);
+        const val = a.slice(eqIdx + 1).replace(/^["']|["']$/g, '');
+        pipelineVars[key] = val;
+      }
+    }
+  }
 
   if (prompt !== undefined) {
     const config = new ConfigManager();
@@ -177,7 +189,21 @@ export async function run(): Promise<void> {
     }
     const printAgentFlag = parseArg(args, '--agent');
     const lspActive = args.includes('--lsp') ? true : args.includes('--no-lsp') ? false : config.lspEnabled;
-    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools, printAgentFlag, config.logEnabled || flagLog, routingOverride, suffixOverride, baseUrlOverride, resolved, lspActive);
+    await runPrintMode(prompt, model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools, printPipelineFlag || printAgentFlag, config.logEnabled || flagLog, routingOverride, suffixOverride, baseUrlOverride, resolved, lspActive, pipelineVars);
+    return;
+  }
+
+  // --pipeline without -p: auto-route to print mode with empty prompt
+  if (printPipelineFlag && prompt === undefined) {
+    const config = new ConfigManager();
+    const tPrompt = new CliTheme({ ...config.themeConfig, ...themeOverride });
+    const resolved = config.resolveModel(model, baseUrlOverride);
+    if (!resolved) {
+      console.error(tPrompt.error('No model configured. Use --model or set a default model.'));
+      process.exit(1);
+    }
+    const lspActive = args.includes('--lsp') ? true : args.includes('--no-lsp') ? false : config.lspEnabled;
+    await runPrintMode('', model, searchOverride, wrapWidth, resumeSession, styled, temperatureOverride, topPOverride, seedOverride, flagDropParams, tPrompt, hideThinking, hideTools, printPipelineFlag, config.logEnabled || flagLog, routingOverride, suffixOverride, baseUrlOverride, resolved, lspActive, pipelineVars);
     return;
   }
 
@@ -302,6 +328,19 @@ export async function run(): Promise<void> {
     }
 
     const agentFlag = parseArg(args, '--agent');
+    const pipelineFlag = parseArg(args, '--pipeline');
+    const pipelineVars: Record<string, string> = {};
+    if (pipelineFlag) {
+      // Extract key=value pairs from remaining args
+      for (const a of args) {
+        const eqIdx = a.indexOf('=');
+        if (eqIdx > 0 && !a.startsWith('-')) {
+          const key = a.slice(0, eqIdx);
+          const val = a.slice(eqIdx + 1).replace(/^["']|["']$/g, '');
+          pipelineVars[key] = val;
+        }
+      }
+    }
     const agentRegistry = new AgentRegistry();
     if (args.includes('--subagent')) {
       agentRegistry.registerOrchestrator();

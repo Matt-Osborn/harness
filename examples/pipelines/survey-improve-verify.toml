@@ -1,0 +1,39 @@
+type = "pipeline"
+name = "survey-improve-verify"
+description = "Survey a project, make a small improvement, and verify the result"
+
+[[steps]]
+agent = "architect"
+prompt = """
+Survey the project in the current directory.
+List the top-level directory structure and identify:
+1. What kind of project this is (language, framework, build system)
+2. The main entry point or primary module
+3. One noticeable code quality issue or improvement opportunity
+
+Be brief — 3-5 bullet points maximum.
+"""
+
+[[steps]]
+agent = "coder"
+prompt = """
+Based on the survey above, make one small improvement:
+- Fix a typo, add a missing docstring, or improve a comment
+- Do NOT change functionality
+- Read the file first, then make the minimal edit
+
+If the survey identified a specific issue, address that.
+If not, find a small improvement yourself.
+"""
+
+[[steps]]
+agent = "reviewer"
+prompt = """
+Read the file that was just modified.
+Verify that:
+1. The change is syntactically valid
+2. The change does not alter functionality
+3. The change is genuinely an improvement
+
+Report your findings in one sentence.
+"""

@@ -1,0 +1,33 @@
+type = "pipeline"
+name = "os-mutate"
+description = "Plan then optionally apply a change to the Omarchy desktop"
+
+[[steps]]
+agent = "architect"
+prompt = """
+Plan an OS mutation from this request: {{change}}
+Name the surface (Omarchy menu, Quickshell widget, Hyprland bind, theme).
+List every file you will touch.
+"""
+
+[[steps]]
+agent = "architect"
+prompt = """
+Write the change in plan mode. Read the relevant files first.
+Do not write any files.
+If apply={{apply}} is not "yes", stop after the plan.
+"""
+
+[[steps]]
+agent = "coder"
+prompt = """
+If apply={{apply}} is "yes", apply the smallest patch from the plan.
+Otherwise report what you would do and exit.
+"""
+
+[[steps]]
+agent = "reviewer"
+prompt = """
+Verify the result. If a reload or keybind works, confirm it.
+If not, explain how to revert (omarchy snapshot or git checkout).
+"""

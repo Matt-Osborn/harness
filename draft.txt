@@ -1,0 +1,28 @@
+Greetings
+
+I am following up regarding our brief exchange on X about potential token sponsorship from Omacaom Foundation. I have two, related, proposals:
+
+1) harness-cli
+
+Omarchy already ships many heavy agent CLIs. What it does not ship is a light harness or a saved route for a job that is bigger than one chat.
+
+I built harness-cli for that: provider-independent, CLI-first, MIT. Same OpenAI-compatible path as OpenCode (Ollama, llama.cpp, OpenRouter, OpenAI, xAI), less machinery. On DeepSeek V4 Flash in one OpenRouter window, OpenCode calls were ~330k input tokens and ~$0.005–$0.028 each; harness-cli calls were 2k–19k input and ~$0.0003–$0.002. Same model: small harness-cli prompts ran ~70 tok/s; OpenCode’s huge-context calls often fell into the teens.
+
+
+Screenshot?
+
+2) Pipelines
+
+Pipelines are a second primitive on the same tool. Format is a small TOML file: named agents that already exist (debugger, architect, coder, reviewer), mode = plan|build, steps chained by output/input. 
+
+Three Omarchy-shaped routes run today:
+
+    crash-diagnose-patch-test — diagnose a pid/coredump, plan a patch only if it is user-owned config, apply and smoke-test, fail closed. No auto-filed issues. Upstream Hyprland/Quickshell stops at “say so.”
+    os-mutate — scope files, plan with no writes, apply only if the user said apply, reviewer checks revert (omarchy snapshot / git).
+    video-cut — list clips, shot list, emit Kdenlive XML or EDL as text. No renderer. The project-file step is an architect stub, not a dedicated Kdenlive tool.
+
+Rather than replacing OpenCode, OpenClaw, mise, or Herdr, it sits next to them: a thinner CLI, and a pipeline format that can drive those harnesses as well.
+
+Tokens would cover the first integration: first-class Omarchy agent, mise stub, and those three pipelines, verified on Omarchy and vanilla Arch. If it is worth keeping current after that, I can keep working on it. Happy to start with tokens.
+
+Repo: https://gitlab.com/x0rn/harness

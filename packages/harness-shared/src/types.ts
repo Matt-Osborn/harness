@@ -203,6 +203,7 @@ export interface AgentDefinition {
 export interface PipelineStep {
   agent: string;
   mode?: 'plan' | 'build';
+  prompt?: string;
   prompt_prefix?: string;
   prompt_suffix?: string;
   input?: string;

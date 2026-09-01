@@ -9,7 +9,7 @@ import { MarkdownRenderer } from './markdown.js';
 import { renderForm } from '../prompts/render-form.js';
 import type { FormQuestion } from '../prompts/render-form.js';
 
-export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, agentName?: string, logEnabled?: boolean, routingOverride?: 'balanced' | 'cost' | 'speed' | 'quality', suffixOverride?: string, baseUrlOverride?: string, preResolved?: { config: import('@harness/shared').ModelConfig; apiKey: string | undefined }, lspActive?: boolean): Promise<void> {
+export async function runPrintMode(prompt: string, modelName?: string, searchProvider?: SearchProviderType, wrapWidth: number = 80, sessionId?: string, styled?: boolean, temperatureOverride?: number, topPOverride?: number, seedOverride?: number, dropParamsOverride?: boolean, theme?: CliTheme, hideThinking: boolean = false, hideTools: boolean = false, agentName?: string, logEnabled?: boolean, routingOverride?: 'balanced' | 'cost' | 'speed' | 'quality', suffixOverride?: string, baseUrlOverride?: string, preResolved?: { config: import('@harness/shared').ModelConfig; apiKey: string | undefined }, lspActive?: boolean, pipelineVars?: Record<string, string>): Promise<void> {
   const config = new ConfigManager();
   const t = theme ?? new CliTheme(config.themeConfig);
   const startTime = Date.now();
@@ -138,7 +138,7 @@ export async function runPrintMode(prompt: string, modelName?: string, searchPro
 
   try {
     const eventSource = agentRunnable && agentRegistry
-      ? runRunnable(agentRunnable, prompt, { config, tools, permissionCheck: (toolName, args) => permissions.check(toolName, undefined, args), projectRules: projectRules ?? undefined, providerOverride: modelName, compactificationProvider }, agentRegistry)
+      ? runRunnable(agentRunnable, prompt, { config, tools, permissionCheck: (toolName, args) => permissions.check(toolName, undefined, args), projectRules: projectRules ?? undefined, providerOverride: modelName, compactificationProvider }, agentRegistry, undefined, pipelineVars)
       : agent.run(messages);
     for await (const event of eventSource) {
       switch (event.type) {

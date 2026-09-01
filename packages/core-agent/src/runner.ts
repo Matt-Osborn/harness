@@ -23,6 +23,7 @@ export async function* runRunnable(
   buildOptions: Omit<BuildAgentOptions, 'definition'>,
   registry: AgentRegistry,
   signal?: AbortSignal,
+  vars?: Record<string, string>,
 ): AsyncIterable<AgentEvent> {
   if (runnable.type === 'agent') {
     // Single agent — run directly
@@ -44,7 +45,7 @@ export async function* runRunnable(
       });
     };
 
-    const executor = new PipelineExecutor(registry);
+    const executor = new PipelineExecutor(registry, vars);
     yield* executor.run(runnable, userPrompt, agentFactory, signal);
   }
 }

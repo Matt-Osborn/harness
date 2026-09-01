@@ -121,6 +121,7 @@ function parseRunnableFile(filePath: string): Runnable | null {
     const steps: PipelineStep[] = stepsRaw.map((s) => ({
       agent: s.agent as string,
       mode: s.mode as 'plan' | 'build' | undefined,
+      prompt: s.prompt as string | undefined,
       prompt_prefix: s.prompt_prefix as string | undefined,
       prompt_suffix: s.prompt_suffix as string | undefined,
       input: s.input as string | undefined,

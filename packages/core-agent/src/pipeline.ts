@@ -18,22 +18,25 @@ export type AgentFactory = (
 export class PipelineExecutor {
   private registry: AgentRegistry;
   private context: Map<string, string> = new Map();
+  private vars: Record<string, string> = {};
 
-  constructor(registry: AgentRegistry) {
+  constructor(registry: AgentRegistry, vars?: Record<string, string>) {
     this.registry = registry;
+    this.vars = vars ?? {};
   }
 
   /**
-   * Interpolate {{context.<name>}} template variables in a string.
+   * Interpolate {{key}} and {{context.<name>}} template variables in a string.
    */
   private interpolate(template: string, userPrompt: string): string {
     let result = template;
-    // Replace {{context.<name>}} with saved context values
-    result = result.replace(/\{\{context\.(\w+)\}\}/g, (_match, name) => {
-      return this.context.get(name) ?? `<missing context: ${name}>`;
+    // Replace {{key}} with user-provided pipeline variables
+    result = result.replace(/\{\{(\w+)\}\}/g, (_match, name) => {
+      if (name === 'user_prompt') return userPrompt;
+      if (this.vars[name] !== undefined) return this.vars[name];
+      if (this.context.has(name)) return this.context.get(name)!;
+      return `<missing: ${name}>`;
     });
-    // Replace {{user_prompt}} with the original user input
-    result = result.replace(/\{\{user_prompt\}\}/g, userPrompt);
     return result;
   }
 
@@ -77,7 +80,11 @@ export class PipelineExecutor {
       if (step.prompt_prefix) {
         parts.push(this.interpolate(step.prompt_prefix, userPrompt));
       }
-      parts.push(userPrompt);
+      if (step.prompt) {
+        parts.push(this.interpolate(step.prompt, userPrompt));
+      } else {
+        parts.push(userPrompt);
+      }
       if (step.input) {
         const inputVal = this.context.get(step.input);
         if (inputVal) parts.push(inputVal);

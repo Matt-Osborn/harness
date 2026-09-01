@@ -1,0 +1,29 @@
+type = "pipeline"
+name = "crash-diagnose-patch-test"
+description = "Diagnose a pid or coredump, patch only user-owned config, smoke-test"
+
+[[steps]]
+agent = "debugger"
+prompt = """
+Diagnose the crash identified by {{target}}.
+Produce a short root-cause note: which process, which file is likely
+involved, and whether it is Omarchy-local or an upstream Hyprland /
+Quickshell issue.
+"""
+
+[[steps]]
+agent = "architect"
+prompt = """
+Based on the diagnosis above, propose a minimal diff only if the crash
+is in config or scripts the user owns.
+If it is a Hyprland or Quickshell upstream issue, say so and stop.
+Do not propose a diff. Do not file GitHub issues.
+"""
+
+[[steps]]
+agent = "coder"
+prompt = """
+Apply the planned patch only if a concrete diff was given.
+Then run a one-line smoke test. Fail closed if the patch is unclear
+or absent. Do not file GitHub issues.
+"""
