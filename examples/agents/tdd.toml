@@ -1,0 +1,10 @@
+type = "agent"
+name = "tdd"
+description = "Writes and runs tests. Build mode."
+mode = "build"
+
+[tool_permissions]
+bash_read = "auto"
+bash_write = "auto"
+write = "auto"
+edit = "auto"

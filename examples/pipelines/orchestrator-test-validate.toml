@@ -1,0 +1,48 @@
+type = "pipeline"
+name = "orchestrator-test-validate"
+description = "Orchestrator delegates work to subagents, tests it, then validates"
+
+# Step 1 — Orchestrate
+[[steps]]
+agent = "architect"
+mode = "plan"
+prompt_prefix = """
+You are an orchestrator. Input: {{user_prompt}}.
+Break the task into subtasks and delegate each one using
+the subagent tool with a clear prompt. Do not do the work
+yourself — delegate it. Collect results and pass them on.
+"""
+output = "delegation_result"
+
+# Step 2 — Subagent work
+[[steps]]
+agent = "coder"
+mode = "build"
+prompt_prefix = """
+Implement what was delegated to you in the plan above.
+Read first, write small, and confirm the work compiles.
+"""
+input = "delegation_result"
+output = "implementation"
+
+# Step 3 — Test
+[[steps]]
+agent = "tdd"
+mode = "build"
+prompt_prefix = """
+Write or update tests for the implementation above.
+Run them and confirm they pass.
+"""
+input = "implementation"
+output = "test_result"
+
+# Step 4 — Validate
+[[steps]]
+agent = "reviewer"
+mode = "plan"
+prompt_prefix = """
+Review the implementation and test results above.
+Report any issues, risks, or suggestions.
+Do not make changes — only report.
+"""
+input = "test_result"
